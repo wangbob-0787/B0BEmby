@@ -873,6 +873,9 @@ object EmbyApi {
                                 addProperty("Value", finalLevel)
                                 addProperty("IsRequired", false)
                             })
+                            // 只接受 SDR:遇到 HDR/DV 让服务端转码并做色调映射,
+                            // 否则播放器直连 HDR 信号,在 SDR 屏(投影)上画面发灰
+                            add(sdrOnlyCondition())
                         })
                     })
 
@@ -887,6 +890,8 @@ object EmbyApi {
                                     addProperty("Value", "hvc1|hev1|hevc|hdmv")
                                     addProperty("IsRequired", false)
                                 })
+                                // 同 h264:不支持 HDR,交给服务端色调映射
+                                add(sdrOnlyCondition())
                             })
                         })
                     }
@@ -919,6 +924,14 @@ object EmbyApi {
             ErrorHandler.logError("EmbyApi", "API请求失败", e)
             return JsonObject()
         }
+    }
+
+    /** 只接受 SDR 范围:非 SDR( HDR10/HLG/DV )触发服务端转码 + 色调映射 */
+    private fun sdrOnlyCondition(): JsonObject = JsonObject().apply {
+        addProperty("Condition", "EqualsAny")
+        addProperty("Property", "VideoRangeType")
+        addProperty("Value", "SDR")
+        addProperty("IsRequired", true)
     }
 
     private fun createTranscodingProfile(
