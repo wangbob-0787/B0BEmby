@@ -21,6 +21,17 @@ object ThemeColorManager {
     
     @Composable
     fun getThemeColors(context: Context) = listOf(
+        // 暗夜(默认):近黑背景 + 低饱和灰蓝强调色,适合关灯看片
+        ThemeColor(
+            id = "dark",
+            name = "暗夜",
+            primary = Color(0xFF8FA3BF),
+            primaryLight = Color(0xFFA8BAD3),
+            primaryDark = Color(0xFF0C0D10),
+            secondary = Color(0xFF465064),
+            secondaryLight = Color(0xFF17191D),
+            secondaryDark = Color(0xFF101216)
+        ),
         ThemeColor(
             id = "rose",
             name = context.getString(com.xxxx.emby_tv.R.string.theme_color_rose),
@@ -42,16 +53,6 @@ object ThemeColorManager {
             secondary = Color(0xFF9c27b0),
             secondaryLight = Color(0xFFba68c8),
             secondaryDark = Color(0xFF7b1fa2)
-        ),
-        ThemeColor(
-            id = "purple", // 参照标准
-            name = context.getString(com.xxxx.emby_tv.R.string.theme_color_purple),
-            primary = Color(0xFF9c27b0),
-            primaryLight = Color(0xFFba68c8),
-            primaryDark = Color(0xFF7b1fa2),
-            secondary = Color(0xFFe91e63),
-            secondaryLight = Color(0xFFf06292),
-            secondaryDark = Color(0xFFc2185b)
         ),
         ThemeColor(
             id = "teal",

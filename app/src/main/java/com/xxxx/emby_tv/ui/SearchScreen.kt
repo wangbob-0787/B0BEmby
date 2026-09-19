@@ -173,7 +173,7 @@ fun SearchScreen(
                                 contentDescription = stringResource(R.string.scan_qr_hint),
                                 modifier = Modifier
                                     .size(180.dp)
-                                    .background(Color.White, RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
                                     .padding(6.dp)
                             )
                             Text(

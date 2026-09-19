@@ -194,7 +194,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_PROXY_USERNAME = "proxy_username"
         private const val KEY_PROXY_PASSWORD = "proxy_password"
 
-        private const val DEFAULT_THEME_ID = "purple"
+        private const val DEFAULT_THEME_ID = "dark"
         const val DEFAULT_PROXY_TYPE = "http"
         const val DEFAULT_PROXY_PORT = 1080
 

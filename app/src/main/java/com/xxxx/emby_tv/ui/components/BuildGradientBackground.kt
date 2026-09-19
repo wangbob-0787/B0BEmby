@@ -15,7 +15,7 @@ import com.xxxx.emby_tv.ui.theme.ThemeColorManager
 @Composable
 fun BuildGradientBackground(
     context: Context,
-    themeColor: ThemeColor = ThemeColorManager.getThemeColorById(context, "purple"), // 默认使用紫罗兰色
+    themeColor: ThemeColor = ThemeColorManager.getThemeColorById(context, "dark"), // 默认暗色调
     content: @Composable () -> Unit
 ) {
 

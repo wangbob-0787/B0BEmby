@@ -30,7 +30,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = EmbyRepository.getInstance(application)
 
     // === 主题 ===
-    var currentThemeId by mutableStateOf("purple")
+    var currentThemeId by mutableStateOf("dark")
         private set
 
     // === 登录状态（从 Repository 观察）===

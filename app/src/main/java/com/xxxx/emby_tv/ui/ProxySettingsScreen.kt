@@ -162,7 +162,7 @@ fun ProxySettingsScreen(
                         contentDescription = stringResource(R.string.proxy_scan_hint),
                         modifier = Modifier
                             .size(200.dp)
-                            .background(Color.White, RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
                             .padding(12.dp)
                     )
                     Spacer(modifier = Modifier.height(24.dp))
