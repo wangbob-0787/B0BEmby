@@ -40,8 +40,16 @@ android {
         jvmTarget = "17"
     }
 
-    // key.properties 不存在时(CI 环境)不创建 release 签名配置,避免配置阶段 NPE
+    // 固定调试签名:云端 runner 每次生成的 debug key 都不同,会导致 APK 无法覆盖升级,
+    // 故统一用仓库内 keystore/b0bemby.p12(私有仓库)
     signingConfigs {
+        create("fixedDebug") {
+            storeFile = rootProject.file("keystore/b0bemby.p12")
+            storeType = "PKCS12"
+            storePassword = "b0bemby"
+            keyAlias = "b0bemby"
+            keyPassword = "b0bemby"
+        }
         if (keystorePropertiesFile.exists()) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
@@ -52,12 +60,15 @@ android {
         }
     }
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("fixedDebug")
+        }
         release {
             // 有 key.properties 时用 release 签名,否则退回 debug 签名(云端 CI 走这条)
             signingConfig = if (keystorePropertiesFile.exists())
                 signingConfigs.getByName("release")
             else
-                signingConfigs.getByName("debug")
+                signingConfigs.getByName("fixedDebug")
         }
     }
 }
