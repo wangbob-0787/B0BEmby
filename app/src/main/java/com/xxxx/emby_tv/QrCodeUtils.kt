@@ -42,19 +42,33 @@ object QrCodeUtils {
         return null
     }
 
+    /**
+     * 取本机局域网地址(扫码配置用)。
+     * 原实现返回"第一个非回环 IPv4",在投影/电视上会命中 WiFi-Direct 虚拟网卡 p2p0(192.168.82.x),
+     * 导致二维码地址在局域网内不可达。现改为:排除虚拟网卡 → 优先 wlan/eth/ap。
+     */
     fun getLocalIpAddress(): String? {
+        val virtualPrefixes = listOf("p2p", "rmnet", "dummy", "tun", "ppp", "clat", "sit", "ip6tnl")
+        val preferredPrefixes = listOf("wlan", "eth", "ap")
         try {
+            val candidates = mutableListOf<Pair<String, String>>()
             val en = NetworkInterface.getNetworkInterfaces()
             while (en.hasMoreElements()) {
                 val intf = en.nextElement()
-                val enumIpAddr = intf.inetAddresses
-                while (enumIpAddr.hasMoreElements()) {
-                    val inetAddress = enumIpAddr.nextElement()
-                    if (!inetAddress.isLoopbackAddress && inetAddress is Inet4Address) {
-                        return inetAddress.hostAddress
+                val name = intf.name.lowercase()
+                if (!intf.isUp || intf.isLoopback) continue
+                if (virtualPrefixes.any { name.startsWith(it) }) continue
+                for (a in intf.inetAddresses) {
+                    if (!a.isLoopbackAddress && a is Inet4Address) {
+                        candidates.add(name to (a.hostAddress ?: continue))
+                        break
                     }
                 }
             }
+            preferredPrefixes.forEach { p ->
+                candidates.firstOrNull { it.first.startsWith(p) }?.let { return it.second }
+            }
+            candidates.firstOrNull()?.let { return it.second }
         } catch (ex: Exception) {
             ex.printStackTrace()
         }
