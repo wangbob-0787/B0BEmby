@@ -87,6 +87,9 @@ import com.xxxx.emby_tv.ui.components.getVideoTrack
 import com.xxxx.emby_tv.ui.player.PlayerTrackManager
 import com.xxxx.emby_tv.ui.player.SubtitleConfigBuilder
 import com.xxxx.emby_tv.ui.player.SubtitleOffsetController
+import com.xxxx.emby_tv.danmaku.AssDanmakuParser
+import com.xxxx.emby_tv.danmaku.DanmakuTrack
+import com.xxxx.emby_tv.danmaku.DanmakuView
 import com.xxxx.emby_tv.ui.viewmodel.PlayerViewModel
 import com.xxxx.emby_tv.util.ErrorHandler
 import com.xxxx.emby_tv.util.IntroSkipHelper
@@ -94,6 +97,8 @@ import com.xxxx.emby_tv.data.local.PreferencesManager
 import com.xxxx.emby_tv.data.remote.EmbyApi
 import com.xxxx.emby_tv.data.remote.EmbyApi.CLIENT_VERSION
 import com.xxxx.emby_tv.data.remote.HttpClient
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -252,6 +257,9 @@ fun PlayerScreen(
     var subtitleTimeOffsetMs by remember { mutableLongStateOf(0L) }
     val subtitleOffsetController = remember { SubtitleOffsetController() }
     val overlaySubtitleView = remember { mutableStateOf<SubtitleView?>(null) }
+    // 独立弹幕层:自解析 ASS 的 \move 定位,逐帧绘制(不依赖 Media3 的 SSA 解析,后者不支持 \move)
+    var danmakuTrack by remember { mutableStateOf<DanmakuTrack?>(null) }
+    val danmakuViewRef = remember { mutableStateOf<DanmakuView?>(null) }
 
     // 收集设备支持的杜比视界profile
     val supportedDvProfiles by playerViewModel.supportedDvProfiles.collectAsState()
@@ -555,6 +563,10 @@ fun PlayerScreen(
     var rightKeyDownTime by remember { mutableStateOf(0L) }
 
     // 即使暂停播放也不会熄屏
+    DisposableEffect(danmakuViewRef.value) {
+        onDispose { danmakuViewRef.value?.stop() }
+    }
+
     DisposableEffect(view) {
         val previous = view.keepScreenOn
         view.keepScreenOn = true
@@ -811,6 +823,28 @@ fun PlayerScreen(
         } catch (e: Throwable) {
             Log.e("PlayerScreen", "加载播放信息失败", e)
         }
+    }
+
+    // 弹幕层:选中 ASS 字幕轨时,单独拉取字幕文件自行解析,交给独立弹幕 View 绘制
+    LaunchedEffect(selectedSubtitleIndex, videoUrl, subtitleTracks) {
+        danmakuTrack = null
+        val idx = selectedSubtitleIndex
+        if (idx < 0) return@LaunchedEffect
+        val st = subtitleTracks.firstOrNull { it.index == idx } ?: return@LaunchedEffect
+        val codec = (st.codec ?: "").lowercase()
+        if (codec != "ass" && codec != "ssa") return@LaunchedEffect
+        val srcId = media.mediaSources?.firstOrNull()?.id ?: return@LaunchedEffect
+        val url = "${serverUrl}/emby/Videos/$mediaId/$srcId/Subtitles/$idx/Stream.ass?api_key=$apiKey"
+        val raw = withContext(Dispatchers.IO) {
+            runCatching {
+                OkHttpClient().newCall(Request.Builder().url(url).build()).execute().use { r ->
+                    r.body?.string()
+                }
+            }.getOrNull()
+        } ?: return@LaunchedEffect
+        val parsed = AssDanmakuParser.parse(raw)
+        danmakuTrack = parsed
+        Log.i("PlayerScreen", "弹幕层加载完成: ${parsed.items.size} 条 / 画布 ${parsed.playResX}x${parsed.playResY}")
     }
 
     // 设置 MediaItem 和 字幕
@@ -1439,7 +1473,22 @@ fun PlayerScreen(
                     view.setBottomPaddingFraction(
                         subtitleBottomPadding * (1f - SUBTITLE_TOP_RESERVED_FRACTION)
                     )
+                    // 弹幕层生效时让普通字幕层让位,避免两套渲染叠在一起
+                    view.visibility = if (danmakuTrack != null) View.GONE else View.VISIBLE
                 },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // 1.6 弹幕层 - 独立一层,逐帧按播放时间计算位置(不抖)
+            AndroidView(
+                factory = { ctx ->
+                    DanmakuView(ctx).apply {
+                        setPositionProvider { player.currentPosition }
+                        danmakuViewRef.value = this
+                        start()
+                    }
+                },
+                update = { v -> v.setTrack(danmakuTrack) },
                 modifier = Modifier.fillMaxSize()
             )
 
