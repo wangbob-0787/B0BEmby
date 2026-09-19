@@ -750,7 +750,9 @@ fun PlayerScreen(
                 if (position > 0) position * 10000 else playbackPositionTicks,
                 requestAudioIndex,
                 requestSubtitleIndex,
-                hasTriedTranscodeFallback || playbackCorrection == 1
+                // 首次播放不要因为"以前某次失败过"就降级成 h264(会把 4K/HDR 一起丢掉);
+                // 只有用户显式设置(playbackCorrection==1)才降级,失败后的回退仍走下面的专用分支
+                playbackCorrection == 1
             )
 
             if (mediaResult.mediaSources.isNullOrEmpty()) {
