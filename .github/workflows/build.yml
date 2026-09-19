@@ -51,3 +51,12 @@ jobs:
           name: openemby-debug-apk
           path: out/*.apk
           retention-days: 14
+
+      - name: 发布到 Release(便于经镜像下载)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: B0BEmby build ${{ github.run_number }}
+          body: 自动编译产物(debug 签名)
+          files: out/*.apk
+          draft: false
