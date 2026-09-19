@@ -43,7 +43,8 @@ object AssDanmakuParser {
 
     private val MOVE_RE = Regex("""\\move\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)""")
     private val POS_RE = Regex("""\\pos\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)""")
-    private val TAG_RE = Regex("""\{[^}]*}""")
+    // 右花括号必须转义:裸 } 在部分 JDK 的 Pattern 里会抛 PatternSyntaxException(曾导致播放页闪退)
+    private val TAG_RE = Regex("""\{[^}]*\}""")
     private val TIME_RE = Regex("""(\d+):(\d{1,2}):(\d{1,2})[.:](\d{1,2})""")
 
     fun parse(raw: String): DanmakuTrack {

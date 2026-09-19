@@ -842,7 +842,8 @@ fun PlayerScreen(
                 }
             }.getOrNull()
         } ?: return@LaunchedEffect
-        val parsed = AssDanmakuParser.parse(raw)
+        // 弹幕解析失败不能影响播放:任何异常都退化为"没有弹幕"
+        val parsed = runCatching { AssDanmakuParser.parse(raw) }.getOrNull() ?: return@LaunchedEffect
         danmakuTrack = parsed
         Log.i("PlayerScreen", "弹幕层加载完成: ${parsed.items.size} 条 / 画布 ${parsed.playResX}x${parsed.playResY}")
     }
