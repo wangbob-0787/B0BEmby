@@ -60,6 +60,25 @@ class DanmakuView(context: Context) : View(context) {
         running = false
     }
 
+    /**
+     * 滚动弹幕的实际消失时间。
+     *
+     * 源 ASS 的 \move 终点是固定坐标(如 -810),长弹幕会在还没完全出屏时就消失(画面里"突然不见")。
+     * 这里按文字实测宽度推算"完全滚出屏幕"所需时间,取两者较大值 → 弹幕完整地从屏幕外滚入、再完整滚出。
+     */
+    private fun effectiveEndMs(item: DanmakuItem, scale: Float): Long {
+        if (!item.isMove) return item.endMs
+        val spanMs = (item.endMs - item.startMs).coerceAtLeast(1L)
+        val dx = item.x1 - item.x2
+        if (dx <= 0f) return item.endMs
+        fillPaint.textSize = max(10f, item.style.fontSize * scale)
+        val textWidthInPlayRes = fillPaint.measureText(item.text) / scale.coerceAtLeast(0.01f)
+        val speed = dx / spanMs                       // PlayRes 单位 / 毫秒
+        if (speed <= 0f) return item.endMs
+        val fullExitMs = ((item.x1 + textWidthInPlayRes) / speed).toLong()
+        return item.startMs + max(spanMs, fullExitMs)
+    }
+
     override fun onDetachedFromWindow() {
         running = false
         super.onDetachedFromWindow()
@@ -77,7 +96,7 @@ class DanmakuView(context: Context) : View(context) {
         val scale = if (t.playResX > 0f) (width / t.playResX) * userScale else userScale
         for (item in t.items) {
             if (item.startMs > nowMs) break          // 已按开始时间排序,后面都还没到
-            if (item.endMs < nowMs) continue         // 已结束
+            if (effectiveEndMs(item, scale) < nowMs) continue   // 已完全滚出屏幕
             drawItem(canvas, item, nowMs, scale)
         }
         if (running) postInvalidateOnAnimation()
