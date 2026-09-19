@@ -100,7 +100,7 @@ fun TopStatusBar(
                 }
 
                 Text(
-                    text ="OpenEmby TV "+ currentVersion,
+                    text ="B0BEmby "+ currentVersion,
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold

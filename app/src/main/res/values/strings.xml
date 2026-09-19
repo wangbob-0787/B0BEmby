@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">OpenEmby TV</string>
+    <string name="app_name">B0BEmby</string>
     <string name="new_version_available">New version available: %1$s</string>
     <string name="server_url">Server URL</string>
     <string name="host">Host</string>

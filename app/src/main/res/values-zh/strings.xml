@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">OpenEmby TV</string>
+    <string name="app_name">B0BEmby</string>
     <string name="new_version_available">新版本可用: %1$s</string>
     <string name="info">信息</string>
     <string name="server_url">服务器地址</string>

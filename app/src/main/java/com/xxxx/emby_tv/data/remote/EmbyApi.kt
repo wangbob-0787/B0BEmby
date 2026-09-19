@@ -35,7 +35,7 @@ import java.net.UnknownHostException
  */
 object EmbyApi {
     private const val TAG = "EmbyApi"
-    const val CLIENT = "shareven/openemby_tv"
+    const val CLIENT = "B0BEmby"
     val CLIENT_VERSION: String = BuildConfig.VERSION_NAME
     val DEVICE_NAME: String = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
@@ -511,7 +511,7 @@ object EmbyApi {
      * 获取最新版本信息
      */
     suspend fun getNewVersion(context: Context): JsonObject = withContext(Dispatchers.IO) {
-        val url = "https://api.github.com/repos/shareven/openemby_tv/releases/latest"
+        val url = "https://api.github.com/repos/wangbob-0787/B0BEmby/releases/latest"
         val request = Request.Builder()
             .url(url)
             .addHeader("Accept", "application/json")
