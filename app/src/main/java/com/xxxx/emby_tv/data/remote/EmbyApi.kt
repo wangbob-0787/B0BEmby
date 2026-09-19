@@ -329,6 +329,9 @@ object EmbyApi {
                     "&IsPlayback=true" +
                     "&AutoOpenLiveStream=true" +
                     "&MaxStreamingBitrate=200000000" +
+                    // 禁止直连原始文件:直连(拉网盘原始 mp4/mkv)时播放器拿不到 HDR 色彩信息,
+                    // 屏幕收到的是无色彩标记的画面 → 发灰。改由服务端转封装成 HLS/TS 后再播。
+                    "&EnableDirectPlay=false" +
                     "&X-Emby-Token=$apiKey" +
                     "&X-Emby-Language=zh-cn" +
                     "&reqformat=json" +
