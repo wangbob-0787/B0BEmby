@@ -563,10 +563,6 @@ fun PlayerScreen(
     var rightKeyDownTime by remember { mutableStateOf(0L) }
 
     // 即使暂停播放也不会熄屏
-    DisposableEffect(danmakuViewRef.value) {
-        onDispose { danmakuViewRef.value?.stop() }
-    }
-
     DisposableEffect(view) {
         val previous = view.keepScreenOn
         view.keepScreenOn = true

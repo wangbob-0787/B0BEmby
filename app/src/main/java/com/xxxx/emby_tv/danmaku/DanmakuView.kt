@@ -60,6 +60,11 @@ class DanmakuView(context: Context) : View(context) {
         running = false
     }
 
+    override fun onDetachedFromWindow() {
+        running = false
+        super.onDetachedFromWindow()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val t = track
