@@ -86,7 +86,11 @@ fun PlayerMenu(
     subtitleBottomPadding: Float = 0.08f,
     onSubtitleBottomPaddingChange: (Float) -> Unit = {},
     subtitleTimeOffsetMs: Long = 0L,
-    onSubtitleTimeOffsetChange: (Long) -> Unit = {}
+    onSubtitleTimeOffsetChange: (Long) -> Unit = {},
+    danmakuEnabled: Boolean = true,
+    onDanmakuEnabledChange: (Boolean) -> Unit = {},
+    danmakuScale: Float = 1.0f,
+    onDanmakuScaleChange: (Float) -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -100,6 +104,7 @@ fun PlayerMenu(
         list.add("Info") // 0 or 1
         list.add("Speed") // 倍速
         list.add("Subtitles") // 2 or 1
+        list.add("Danmaku") // 弹幕字号/开关
         list.add("Audio") // 3 or 2
         if (isSeries) list.add("Mode")
         list.add("Correction") // ...
@@ -154,6 +159,7 @@ fun PlayerMenu(
                                 "Subtitles" -> stringResource(R.string.subtitles)
                                 "Audio" -> stringResource(R.string.audio_label)
                                 "Mode" -> stringResource(R.string.play_mode)
+                                "Danmaku" -> "弹幕"
                                 "Correction" -> stringResource(R.string.playback_correction)
                                 "IntroSkip" -> stringResource(R.string.skip_intro)
                                 "Buffer" -> stringResource(R.string.buffer_settings)
@@ -218,6 +224,12 @@ fun PlayerMenu(
                             "Audio" -> AudioTab(audioTracks, selectedAudioIndex, onAudioSelect)
                             "Speed" -> SpeedTab(playbackSpeed, onPlaybackSpeedChange)
                             "Mode" -> PlayModeTab(playMode, onPlayModeChange)
+                            "Danmaku" -> DanmakuTab(
+                                enabled = danmakuEnabled,
+                                onEnabledChange = onDanmakuEnabledChange,
+                                scale = danmakuScale,
+                                onScaleChange = onDanmakuScaleChange
+                            )
                             "Correction" -> PlaybackCorrectionTab(
                                 playbackCorrection,
                                 onPlaybackCorrectionChange
@@ -845,6 +857,69 @@ fun SpeedTab(currentSpeed: Float, onChange: (Float) -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MenuRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
+            focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+            containerColor = if (selected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
+                alpha = 0.5f
+            ) else Color.Transparent,
+            contentColor = TvMaterialTheme.colorScheme.onSurface
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, style = TvMaterialTheme.typography.bodyLarge)
+            if (selected) Icon(Icons.Default.Check, null, tint = LocalContentColor.current)
+        }
+    }
+}
+
+/** 弹幕设置:开关 + 字号档位 */
+@Composable
+fun DanmakuTab(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    scale: Float,
+    onScaleChange: (Float) -> Unit
+) {
+    val scaleOptions = listOf(
+        0.8f to "小",
+        1.0f to "标准",
+        1.3f to "大",
+        1.6f to "特大"
+    )
+    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+        item {
+            MenuRow(
+                label = if (enabled) "显示弹幕:开" else "显示弹幕:关",
+                selected = enabled,
+                onClick = { onEnabledChange(!enabled) }
+            )
+        }
+        items(scaleOptions) { (value, label) ->
+            MenuRow(
+                label = "字号:$label",
+                selected = kotlin.math.abs(scale - value) < 0.01f,
+                onClick = { onScaleChange(value) }
+            )
         }
     }
 }

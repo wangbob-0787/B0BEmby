@@ -258,6 +258,10 @@ fun PlayerScreen(
     val subtitleOffsetController = remember { SubtitleOffsetController() }
     val overlaySubtitleView = remember { mutableStateOf<SubtitleView?>(null) }
     // 独立弹幕层:自解析 ASS 的 \move 定位,逐帧绘制(不依赖 Media3 的 SSA 解析,后者不支持 \move)
+    // 弹幕设置(记忆到本地)
+    val danmakuPrefs = remember { context.getSharedPreferences("emby_tv_prefs", Context.MODE_PRIVATE) }
+    var danmakuScale by remember { mutableFloatStateOf(danmakuPrefs.getFloat("danmaku_scale", 1.0f)) }
+    var danmakuEnabled by remember { mutableStateOf(danmakuPrefs.getBoolean("danmaku_enabled", true)) }
     var danmakuTrack by remember { mutableStateOf<DanmakuTrack?>(null) }
     val danmakuViewRef = remember { mutableStateOf<DanmakuView?>(null) }
 
@@ -1473,7 +1477,8 @@ fun PlayerScreen(
                         subtitleBottomPadding * (1f - SUBTITLE_TOP_RESERVED_FRACTION)
                     )
                     // 弹幕层生效时让普通字幕层让位,避免两套渲染叠在一起
-                    view.visibility = if (danmakuTrack != null) View.GONE else View.VISIBLE
+                    view.visibility =
+                        if (danmakuEnabled && danmakuTrack != null) View.GONE else View.VISIBLE
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -1487,7 +1492,10 @@ fun PlayerScreen(
                         start()
                     }
                 },
-                update = { v -> v.setTrack(danmakuTrack) },
+                update = { v ->
+                    v.userScale = danmakuScale
+                    v.setTrack(if (danmakuEnabled) danmakuTrack else null)
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -1626,6 +1634,16 @@ fun PlayerScreen(
                     audioTracks = audioTracks,
                     selectedAudioIndex = selectedAudioIndex,
                     onAudioSelect = { index -> changeTrack(index, selectedSubtitleIndex) },
+                    danmakuEnabled = danmakuEnabled,
+                    onDanmakuEnabledChange = {
+                        danmakuEnabled = it
+                        danmakuPrefs.edit().putBoolean("danmaku_enabled", it).apply()
+                    },
+                    danmakuScale = danmakuScale,
+                    onDanmakuScaleChange = {
+                        danmakuScale = it
+                        danmakuPrefs.edit().putFloat("danmaku_scale", it).apply()
+                    },
                     playbackCorrection = playbackCorrection,
                     onPlaybackCorrectionChange = {
                         // 只对当前播放视频生效，不持久化保存
