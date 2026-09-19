@@ -103,6 +103,16 @@ fun HomeScreen(
         navController.navigate("player/$id?position=$position")
     }
 
+    /** 首页条目 → 进详情页(剧集进剧集详情,其余进通用详情);"继续观看"仍保留一键续播 */
+    fun openDetail(item: BaseItemDto) {
+        val id = item.id ?: return
+        if (item.isSeries) {
+            navController.navigate("series/$id")
+        } else {
+            navController.navigate("media/$id")
+        }
+    }
+
     // Calculate User Info
     val currentAccountId = repository.currentAccountId
     val currentAccount = repository.savedAccounts.find { it.id == currentAccountId }
@@ -187,7 +197,7 @@ fun HomeScreen(
                             items = favoriteItems,
                             isShowImg17 = true,
                             serverUrl = serverUrl,
-                            onItemSelected = { item -> goPlay(item) },
+                            onItemSelected = { item -> openDetail(item) },
                             onMenuPressed = { showMenu = true }
                         )
                     }
@@ -202,20 +212,7 @@ fun HomeScreen(
                         title = library.name ?: "",
                         items = library.latestItems ?: emptyList(),
                         serverUrl = serverUrl,
-                        onItemSelected = { item ->
-                            if (item.isSeries) {
-                                val seriesId = item.id
-                                if (!seriesId.isNullOrEmpty()) {
-                                    homeViewModel.playNextUp(seriesId) { nextItem: BaseItemDto ->
-                                        goPlay(nextItem)
-                                    }
-                                } else {
-                                    goPlay(item)
-                                }
-                            } else {
-                                goPlay(item)
-                            }
-                        },
+                        onItemSelected = { item -> openDetail(item) },
                         onMenuPressed = { showMenu = true }
                     )
                 }
