@@ -76,8 +76,12 @@ object HttpClient {
                 maxRequestsPerHost = 20
             })
             .connectionPool(ConnectionPool(10, 2, TimeUnit.MINUTES))
-            .connectTimeout(6, TimeUnit.SECONDS)
-            .readTimeout(6, TimeUnit.SECONDS)
+            // 小雅网盘库很大,Emby 首页查询(继续观看/收藏/最新)单次约 6 秒,
+            // 原来的 6 秒超时会把请求自己掐断 → 表现为"首页要等一会"和"无法连接服务器"
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(45, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
 
         if (config.enabled && config.host.isNotEmpty()) {
