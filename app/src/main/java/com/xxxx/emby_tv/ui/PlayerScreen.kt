@@ -261,6 +261,8 @@ fun PlayerScreen(
     // 弹幕设置(记忆到本地)
     val danmakuPrefs = remember { context.getSharedPreferences("emby_tv_prefs", Context.MODE_PRIVATE) }
     var danmakuScale by remember { mutableFloatStateOf(danmakuPrefs.getFloat("danmaku_scale", 1.0f)) }
+    // 右上角实时网速(父亲 2026-09-19 要求)
+    var showSpeed by remember { mutableStateOf(danmakuPrefs.getBoolean("show_speed", true)) }
     var danmakuEnabled by remember { mutableStateOf(danmakuPrefs.getBoolean("danmaku_enabled", true)) }
     var danmakuTrack by remember { mutableStateOf<DanmakuTrack?>(null) }
     val danmakuViewRef = remember { mutableStateOf<DanmakuView?>(null) }
@@ -1498,6 +1500,23 @@ fun PlayerScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
+
+            // 1.7 右上角实时网速(暂停/无流量时自动消失)
+            if (showSpeed) {
+                val speedText = Utils.formatBandwidth(downloadSpeed)
+                if (speedText.isNotEmpty()) {
+                    Text(
+                        text = speedText,
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 18.dp, end = 22.dp)
+                            .background(Color.Black.copy(alpha = 0.40f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
 
 
             // 2. Full Info Overlay Layer (only when isShowInfo)
