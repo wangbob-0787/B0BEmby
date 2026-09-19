@@ -37,8 +37,34 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
+    // === 首屏缓存:上次首页数据先画出来,网络请求在后台刷新(大库首查约 6 秒,不能干等) ===
+    private val cacheFile = java.io.File(application.filesDir, "home_cache.json")
+    private val gson = com.google.gson.Gson()
+
     init {
+        restoreFromCache()
         loadData()
+    }
+
+    private fun restoreFromCache() {
+        try {
+            if (!cacheFile.exists()) return
+            val cache = gson.fromJson(cacheFile.readText(), HomeCache::class.java) ?: return
+            resumeItems = cache.resume
+            libraryLatestItems = cache.latest
+            favoriteItems = cache.favorites
+        } catch (e: Exception) {
+            ErrorHandler.logError("HomeViewModel", "读取首页缓存失败", e)
+        }
+    }
+
+    private fun saveCache() {
+        try {
+            if (resumeItems.isNullOrEmpty() && libraryLatestItems.isNullOrEmpty() && favoriteItems.isNullOrEmpty()) return
+            cacheFile.writeText(gson.toJson(HomeCache(resumeItems, libraryLatestItems, favoriteItems)))
+        } catch (e: Exception) {
+            ErrorHandler.logError("HomeViewModel", "写入首页缓存失败", e)
+        }
     }
 
     /**
@@ -80,6 +106,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 favoriteItems = emptyList()
             } finally {
                 isLoading = false
+                saveCache()
             }
         }
     }
@@ -112,3 +139,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         errorMessage = null
     }
 }
+
+/** 首页首屏缓存,字段名即 JSON 键 */
+private data class HomeCache(
+    val resume: List<BaseItemDto>? = null,
+    val latest: List<BaseItemDto>? = null,
+    val favorites: List<BaseItemDto>? = null
+)
