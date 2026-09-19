@@ -799,7 +799,9 @@ object EmbyApi {
                         addProperty("Container", "mkv")
                         addProperty("Type", "Video")
                         addProperty("AudioCodec", supportedAudio)
-                        addProperty("VideoCodec", if (actualDisableHevc) "h264" else supportedVideo)
+                        // 不再声明 HEVC 直连:HEVC/HDR 内容改走服务端转封装(HLS/TS),
+                        // 与能正常输出 HDR 的客户端路径一致;直连原始文件时播放器拿不到 HDR 信息
+                        addProperty("VideoCodec", "h264")
                         addProperty("Context", "Static")
                         addProperty("MaxAudioChannels", "8")
                         addProperty("CopyTimestamps", true)
