@@ -423,17 +423,24 @@ fun PlayerScreen(
                             buildChannelMixingMatrix(inputChannels, outputChannels)
                         )
                     }
+                    val speedActive = preferencesManager.playbackSpeed != 1.0f
+                    DiagLog.w(
+                        context, "audio",
+                        "AudioSink 构建 倍速=${preferencesManager.playbackSpeed}x float输出=$enableFloatOutput " +
+                                "→ 强制Sonic=true float=${!speedActive && enableFloatOutput} PCM=${speedActive}"
+                    )
                     DefaultAudioSink.Builder(context)
-                        .setEnableFloatOutput(enableFloatOutput)
+                        // 变速时不能开 float 输出:Sonic 只处理 16bit PCM,float 会让它失效 →
+                        // ExoPlayer 判定"不支持变速"并把速度 mask 回 1.0(实测日志:声明 2.0x,5 秒后变 1.0x)
+                        .setEnableFloatOutput(if (speedActive) false else enableFloatOutput)
                         // 电视固件(海信/Vidda 实测)不支持 AudioTrack 的 playbackParams 变速:
                         // 开着它时播放器内部 speed 显示改成功、实际音画都不动 —— 强制走 Sonic 软件变速
                         .setEnableAudioTrackPlaybackParams(false)
                         // 保留 Sonic（倍速支持）并前置声道降混处理器
                         .setAudioProcessors(arrayOf(channelMixer, SonicAudioProcessor()))
                         .apply {
-                            // 倍速 ≠ 1.0 时必须走 PCM:音频直通(passthrough)下 ExoPlayer 会把速度 mask 回 1.0,
-                            // 实测现象 = 选了 2.0x、5 秒后日志里"播放器声明"自己变回 1.0x
-                            if (preferencesManager.playbackSpeed != 1.0f) {
+                            // 倍速 ≠ 1.0 时必须走 PCM:音频直通(passthrough)下 ExoPlayer 同样会放弃变速
+                            if (speedActive) {
                                 setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
                             }
                         }
@@ -696,10 +703,12 @@ fun PlayerScreen(
             val wallSec = (nowAt - lastAt) / 1000.0
             val deltaSec = (nowPos - lastPos) / 1000.0
             val measured = if (wallSec > 0) deltaSec / wallSec else 0.0
+            val af = player.audioFormat
             DiagLog.w(
                 context, "speedProbe",
                 "位置+${"%.1f".format(deltaSec)}s / 经过${"%.1f".format(wallSec)}s = " +
-                        "${"%.2f".format(measured)}x(播放器声明 ${player.playbackParameters.speed}x)"
+                        "${"%.2f".format(measured)}x(播放器声明 ${player.playbackParameters.speed}x " +
+                        "音频=${af?.sampleMimeType ?: "无"} ${af?.channelCount ?: 0}ch)"
             )
             lastPos = nowPos
             lastAt = nowAt
