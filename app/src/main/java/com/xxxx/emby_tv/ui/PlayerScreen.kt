@@ -1641,6 +1641,8 @@ fun PlayerScreen(
                     }
                 }
 
+                // 信息打开时整排控制收起,整屏只留信息(照官方信息页)
+                if (activeItem != PlayerMenuItem.INFO) {
                 PlayerControlPanel(
                     title = panelTitle(),
                     playMethodLabel = playMethodLabel(session),
@@ -1669,6 +1671,7 @@ fun PlayerScreen(
                     onSeekForward = { player.seekForward() },
                     onPlayPause = { if (isPlaying) player.pause() else player.play() }
                 )
+                }
 
                 if (activeItem != null) {
                     val item = activeItem!!
@@ -1683,7 +1686,7 @@ fun PlayerScreen(
                             ),
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(start = 44.dp, bottom = 256.dp),
+                                .padding(start = 56.dp, bottom = 56.dp),
                             firstFocus = sheetFirstFocus
                         )
                     } else {

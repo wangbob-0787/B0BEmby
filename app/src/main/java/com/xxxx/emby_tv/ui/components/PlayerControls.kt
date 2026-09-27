@@ -487,34 +487,34 @@ fun InfoSheet(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .width(132.dp)
-                        .height(198.dp)
+                        .width(160.dp)
+                        .height(240.dp)
                         .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
                 )
-                Spacer(modifier = Modifier.width(20.dp))
+                Spacer(modifier = Modifier.width(22.dp))
             }
-            Column(modifier = Modifier.width(540.dp)) {
+            Column(modifier = Modifier.width(620.dp)) {
                 Text(
                     text = title,
-                    fontSize = 28.sp,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     style = OverlayTextStyle
                 )
                 if (metaLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = metaLine,
                         color = Color(0xFFE0E0E0),
-                        fontSize = 15.sp,
+                        fontSize = 16.sp,
                         style = OverlayTextStyleSoft
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     text = mediaInfo.overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介",
-                    fontSize = 16.sp,
-                    lineHeight = 24.sp,
+                    fontSize = 17.sp,
+                    lineHeight = 26.sp,
                     color = Color(0xFFEDEDED),
                     style = OverlayTextStyleSoft
                 )
