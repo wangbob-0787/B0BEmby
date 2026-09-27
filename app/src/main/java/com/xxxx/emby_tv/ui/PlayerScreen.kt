@@ -352,11 +352,18 @@ fun PlayerScreen(
                     .build()
 
                 // 2. 动态判断隧道模式：仅在电视支持且非音频软解时开启
+                //    非 1.0 倍速时一律关隧道 —— 隧道模式走 MediaCodec 直通渲染,不支持改变播放速率,
+                //    这也是"倍速调了没反应"的原因(切倍速时会重建播放器让开关跟着变)
                 isTunnelingSafe = checkActualHardwareTunnelingSupport()
+                val tunnelingEnabled = isTunnelingSafe && preferencesManager.playbackSpeed == 1.0f
+                DiagLog.w(
+                    context, "tunnel",
+                    "隧道模式=${tunnelingEnabled} (硬件支持=${isTunnelingSafe}, 当前倍速=${preferencesManager.playbackSpeed}x)"
+                )
 
                 setParameters(
                     baseParameters.buildUpon()
-                        .setTunnelingEnabled(isTunnelingSafe)
+                        .setTunnelingEnabled(tunnelingEnabled)
                         .build()
                 )
             }
@@ -513,6 +520,10 @@ fun PlayerScreen(
             "B0BEmbyPlayer",
             "LoadControl min=${minMs} max=${maxMs} play=${playMs} rebuf=${reBufMs} targetBytes=$targetBytes"
         )
+        DiagLog.w(
+            context, "buffer",
+            "LoadControl min=${minMs} max=${maxMs} play=${playMs} rebuf=${reBufMs} targetBytes=$targetBytes"
+        )
 
         return DefaultLoadControl.Builder()
             .setBufferDurationsMs(
@@ -587,6 +598,7 @@ fun PlayerScreen(
         newPlayer.playWhenReady = wasPlaying
         player = newPlayer
         Log.i("B0BEmbyPlayer", "已按新缓冲参数重建播放器(position=${resumePositionMs}ms)")
+        DiagLog.w(context, "buffer", "已按新缓冲参数重建播放器 position=${resumePositionMs}ms 续播")
     }
 
     // ===== 音频故障自动恢复（全程自动，无用户交互）=====
@@ -654,6 +666,10 @@ fun PlayerScreen(
     LaunchedEffect(player, playbackSpeed) {
         player.setPlaybackSpeed(playbackSpeed)
         Log.i("B0BEmbyPlayer", "应用倍速 ${playbackSpeed}x player=${player.hashCode()}")
+        DiagLog.w(
+            context, "speed",
+            "应用倍速 ${playbackSpeed}x → 播放器实际 ${player.playbackParameters.speed}x"
+        )
     }
 
     // 字幕时间偏移：接管字幕渲染（内置 subtitleView 已隐藏，由 overlay SubtitleView 显示）
@@ -1962,12 +1978,22 @@ fun PlayerScreen(
 
                             PlayerMenuItem.SPEED -> SpeedSheet(
                                 current = playbackSpeed,
-                                onChange = {
-                                    playbackSpeed = it
-                                    preferencesManager.playbackSpeed = it
-                                    // 双保险:状态驱动之外直接下发一次,避免面板打开期间不生效
-                                    player.setPlaybackSpeed(it)
-                                    Log.i("B0BEmbyPlayer", "用户选择倍速 ${it}x")
+                                onChange = { newSpeed ->
+                                    val wasNormal = preferencesManager.playbackSpeed == 1.0f
+                                    val willBeNormal = newSpeed == 1.0f
+                                    playbackSpeed = newSpeed
+                                    preferencesManager.playbackSpeed = newSpeed
+                                    if (wasNormal != willBeNormal) {
+                                        // 跨过 1.0x:隧道开关必须跟着变,只能重建播放器(隧道不支持变速)
+                                        rebuildPlayerKeepingPosition()
+                                    } else {
+                                        player.setPlaybackSpeed(newSpeed)
+                                    }
+                                    DiagLog.w(
+                                        context, "speed",
+                                        "选择 ${newSpeed}x(重建=${wasNormal != willBeNormal}) " +
+                                                "→ 播放器实际 ${player.playbackParameters.speed}x"
+                                    )
                                 },
                                 firstFocus = sheetFirstFocus
                             )
