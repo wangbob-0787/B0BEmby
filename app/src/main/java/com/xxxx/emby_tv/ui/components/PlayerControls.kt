@@ -144,6 +144,91 @@ val OverlayTextStyleSoft = TextStyle(
 )
 
 /**
+ * 左右键快进快退时唤出的进度条:只有时间与进度条,不展开控制条、不抢焦点。
+ * 用途:播放中未按 ↓、直接按左右键时,给一个"快进/快退到哪了"的可视反馈。
+ */
+@Composable
+fun SeekHud(
+    position: Long,
+    duration: Long,
+    buffered: Long,
+    forward: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 58.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = formatDuration(position) + " / " + formatDuration(duration),
+                color = Color.White,
+                fontSize = 20.sp,
+                style = OverlayTextStyleSoft
+            )
+            Text(
+                text = if (forward) "快进" else "快退",
+                color = Color.White,
+                fontSize = 18.sp,
+                style = OverlayTextStyleSoft
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 与控制条内同款进度条(白条 + 当前位置圆点)
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+        ) {
+            val barWidth = maxWidth
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .align(Alignment.CenterStart)
+                    .background(Color.White.copy(alpha = 0.30f))
+            ) {
+                if (duration > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(
+                                (buffered.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                            )
+                            .background(Color.White.copy(alpha = 0.45f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(
+                                (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                            )
+                            .background(Color.White)
+                    )
+                }
+            }
+            if (duration > 0) {
+                val fraction = (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .offset(x = (barWidth * fraction) - 6.dp)
+                        .size(12.dp)
+                        .background(Color.White, CircleShape)
+                )
+            }
+        }
+    }
+}
+
+/**
  * 底部播放控制区:标题行 + 进度 + 播放三键 + 一级菜单文字行;
  * 二级菜单从一级菜单上方浮出(半透明框)。整块没有底色。
  */

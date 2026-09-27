@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -80,6 +81,7 @@ import com.xxxx.emby_tv.data.model.MediaStreamDto
 import com.xxxx.emby_tv.data.model.SessionDto
 import com.xxxx.emby_tv.ui.components.PlayerControlPanel
 import com.xxxx.emby_tv.ui.components.PlayerMenuItem
+import com.xxxx.emby_tv.ui.components.SeekHud
 import com.xxxx.emby_tv.ui.components.PLAYER_MAIN_MENU
 import com.xxxx.emby_tv.ui.components.PLAYER_MORE_MENU
 import com.xxxx.emby_tv.ui.components.QUALITY_ORIGINAL
@@ -251,6 +253,9 @@ fun PlayerScreen(
     var inMoreMenu by remember { mutableStateOf(false) }
     var maxStreamingBitrate by remember { mutableIntStateOf(QUALITY_ORIGINAL) }
     var interactionTick by remember { mutableIntStateOf(0) }
+    // 未按 ↓ 时按左右键快进快退:只唤出一条进度条(不展开整条控制条,不抢焦点)
+    var seekHud by remember { mutableStateOf(false) }
+    var seekHudForward by remember { mutableStateOf(true) }
     val sheetFirstFocus = remember { FocusRequester() }
     var showStats by remember { mutableStateOf(false) }
 
@@ -1442,6 +1447,18 @@ fun PlayerScreen(
         }
     }
 
+    // 返回键分层收起(兜底:焦点不在控制条里时按键走不到下面的 onKeyEvent):
+    // 二级菜单/信息页 → 一级菜单(「更多」列 → 图标行) → 收起控制条,再按一次才交给系统退出播放
+    androidx.activity.compose.BackHandler(
+        enabled = activeItem != null || inMoreMenu || showPanel
+    ) {
+        when {
+            activeItem != null -> activeItem = null
+            inMoreMenu -> inMoreMenu = false
+            else -> showPanel = false
+        }
+    }
+
     // 监听按键显示菜单
     val focusRequester = remember { FocusRequester() }
 
@@ -1464,6 +1481,19 @@ fun PlayerScreen(
                         isShowInfo = false
                     }
                 })
+                // 二级菜单打开时禁止左右键:Preview 阶段(父→子)先吃掉,
+                // 否则横向列表/滚动容器会先消费掉,变成焦点乱跳;
+                // 一级控制条内仍交给焦点系统左右移动;演职人员是横排头像卡片,保留左右
+                .onPreviewKeyEvent { event ->
+                    val secondaryOpen = inMoreMenu ||
+                            (activeItem != null && activeItem != PlayerMenuItem.CAST)
+                    if (secondaryOpen &&
+                        (event.key == Key.DirectionLeft || event.key == Key.DirectionRight)
+                    ) {
+                        return@onPreviewKeyEvent true
+                    }
+                    false
+                }
                 .onKeyEvent { event ->
                     // 如果 Resume 按钮正在显示，让按钮处理焦点，不拦截按键
                     if (showResumeButtons && playbackPositionTicks > 0) {
@@ -1488,13 +1518,15 @@ fun PlayerScreen(
                         }
                         return@onKeyEvent false
                     }
-                    // 面板显示时,左右键交给焦点系统在面板内移动
+                    // 左右键:控制条未展开时快退/快进,并唤出进度条(seekHud);
+                    // 一级控制条展开时交给焦点系统在条内移动焦点(二级菜单已被 Preview 拦掉)
                     if (event.key == Key.DirectionLeft) {
-                        if (showPanel) return@onKeyEvent false
+                        if (showPanel || activeItem != null || inMoreMenu) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             if (leftKeyDownTime == 0L) {
                                 leftKeyDownTime = System.currentTimeMillis()
-                                isShowInfo = true
+                                seekHudForward = false
+                                seekHud = true
                             }
                         } else if (event.type == KeyEventType.KeyUp) {
                             if (leftKeyDownTime > 0) {
@@ -1507,11 +1539,12 @@ fun PlayerScreen(
                         return@onKeyEvent true
                     }
                     if (event.key == Key.DirectionRight) {
-                        if (showPanel) return@onKeyEvent false
+                        if (showPanel || activeItem != null || inMoreMenu) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             if (rightKeyDownTime == 0L) {
                                 rightKeyDownTime = System.currentTimeMillis()
-                                isShowInfo = true
+                                seekHudForward = true
+                                seekHud = true
                             }
                         } else if (event.type == KeyEventType.KeyUp) {
                             if (rightKeyDownTime > 0) {
@@ -1538,6 +1571,7 @@ fun PlayerScreen(
                                 showPanel = false
                                 inMoreMenu = false
                             } else {
+                                seekHud = false
                                 showPanel = true
                             }
                             return@onKeyEvent true
@@ -1546,6 +1580,7 @@ fun PlayerScreen(
                         if (event.key == Key.DirectionDown || event.key == Key.DirectionUp) {
                             if (showPanel) return@onKeyEvent false
                             if (event.key == Key.DirectionDown) {
+                                seekHud = false
                                 showPanel = true
                                 inMoreMenu = false
                                 activeItem = null
@@ -1672,6 +1707,19 @@ fun PlayerScreen(
                 }
             }
 
+
+            // 1.9 左右键快进快退唤出的进度条(未按 ↓ 时不展开整条控制条,不抢焦点)
+            if (seekHud && !showPanel && activeItem == null && !inMoreMenu) {
+                SeekHud(
+                    position = position,
+                    duration = duration,
+                    buffered = buffered,
+                    forward = seekHudForward,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 120.dp)
+                )
+            }
 
             // 2. 播放控制面板(按 ↓ 唤出):整块无底色,二级菜单浮在上方
             if (showPanel) {
@@ -1914,6 +1962,13 @@ fun PlayerScreen(
                         kotlinx.coroutines.delay(8000)
                         showPanel = false
                     }
+                }
+
+                // 左右键唤出的进度条:8 秒无操作后收起(暂停时也收,它只是快进快退的即时反馈)
+                LaunchedEffect(seekHud, interactionTick) {
+                    if (!seekHud) return@LaunchedEffect
+                    kotlinx.coroutines.delay(8000)
+                    seekHud = false
                 }
             }
 
