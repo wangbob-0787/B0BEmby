@@ -401,6 +401,10 @@ fun PlayerScreen(
             "音频输出配置: 上报最大声道数=$reportedMaxChannels, 设备实测PCM声道=$devicePcmChannels, " +
                 "可用声道数=$capableChannels, 目标输出声道数=$targetChannels"
         )
+        DiagLog.w(
+            context, "audio",
+            "变速路径: 强制 Sonic(原有 AudioTrack.playbackParams 被关闭)"
+        )
         return object : DefaultRenderersFactory(context) {
             override fun buildAudioSink(
                 context: Context,
@@ -421,7 +425,9 @@ fun PlayerScreen(
                     }
                     DefaultAudioSink.Builder(context)
                         .setEnableFloatOutput(enableFloatOutput)
-                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                        // 电视固件(海信/Vidda 实测)不支持 AudioTrack 的 playbackParams 变速:
+                        // 开着它时播放器内部 speed 显示改成功、实际音画都不动 —— 强制走 Sonic 软件变速
+                        .setEnableAudioTrackPlaybackParams(false)
                         // 保留 Sonic（倍速支持）并前置声道降混处理器
                         .setAudioProcessors(arrayOf(channelMixer, SonicAudioProcessor()))
                         .build()

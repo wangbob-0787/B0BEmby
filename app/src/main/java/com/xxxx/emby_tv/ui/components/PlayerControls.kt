@@ -723,7 +723,7 @@ fun InfoSheet(
             Spacer(modifier = Modifier.height(46.dp))
             Text(
                 text = title,
-                fontSize = 28.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 maxLines = 1,
@@ -735,7 +735,7 @@ fun InfoSheet(
                 Text(
                     text = metaLine,
                     color = Color(0xFFE0E0E0),
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = OverlayTextStyleSoft
@@ -746,7 +746,7 @@ fun InfoSheet(
                 Text(
                     text = techLine,
                     color = Color(0xFFBDBDBD),
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = OverlayTextStyleSoft
@@ -755,8 +755,8 @@ fun InfoSheet(
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = overview,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 color = Color(0xFFEDEDED),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
