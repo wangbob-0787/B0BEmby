@@ -430,6 +430,13 @@ fun PlayerScreen(
                         .setEnableAudioTrackPlaybackParams(false)
                         // 保留 Sonic（倍速支持）并前置声道降混处理器
                         .setAudioProcessors(arrayOf(channelMixer, SonicAudioProcessor()))
+                        .apply {
+                            // 倍速 ≠ 1.0 时必须走 PCM:音频直通(passthrough)下 ExoPlayer 会把速度 mask 回 1.0,
+                            // 实测现象 = 选了 2.0x、5 秒后日志里"播放器声明"自己变回 1.0x
+                            if (preferencesManager.playbackSpeed != 1.0f) {
+                                setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
+                            }
+                        }
                         .build()
                 } catch (e: Exception) {
                     // 兜底：任何矩阵/构建异常都回落到原生 sink，绝不影响进入播放页

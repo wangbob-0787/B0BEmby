@@ -398,17 +398,7 @@ fun PlayerControlPanel(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 第四行:播放三键 + 一级菜单同一行(焦点移到哪个图标,名称显示在这一行上方)
-            var focusedLabel by remember { mutableStateOf("") }
-            if (focusedLabel.isNotEmpty()) {
-                Text(
-                    text = focusedLabel,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    style = OverlayTextStyleSoft
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
+            // 第四行:播放三键 + 一级菜单同一行(不再在焦点项上方显示菜单名,省下那一行高度)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PanelIcon(
                     icon = Icons.Default.Replay10,
@@ -455,7 +445,6 @@ fun PlayerControlPanel(
                             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
                             modifier = Modifier
                                 .focusRequester(itemFocus[index.coerceAtMost(itemFocus.lastIndex)])
-                                .onFocusChanged { if (it.isFocused) focusedLabel = item.label }
                         ) {
                             Icon(
                                 imageVector = item.icon,
