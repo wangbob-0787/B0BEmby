@@ -8,6 +8,9 @@ import com.google.gson.annotations.SerializedName
  */
 data class BaseItemDto(
     @SerializedName("Name") val name: String? = null,
+    // 库里(视图)的类型：movies / tvshows / music / boxsets / livetv …
+    // 首页据此跳过 Live TV（它不是真媒体库，/Items/Latest 会被服务端忽略）
+    @SerializedName("CollectionType") val collectionType: String? = null,
     @SerializedName("SeriesName") val seriesName: String? = null,
     @SerializedName("OriginalTitle") val originalTitle: String? = null,
     @SerializedName("ServerId") val serverId: String? = null,

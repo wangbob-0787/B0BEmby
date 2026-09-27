@@ -224,15 +224,24 @@ object EmbyApi {
         userId: String
     ): List<BaseItemDto> {
         val views = getViews(context, serverUrl, apiKey, deviceId, userId)
-        return views.map { view ->
-            val id = view.id ?: ""
-            if (id.isNotEmpty()) {
-                val items = getLatestItemsByViews(context, serverUrl, apiKey, deviceId, userId, id)
-                view.copy(latestItems = items)
-            } else {
-                view
+        // 首页数据修正（2026-09-27 父亲反馈"主界面内容对不上"）：
+        // 1) Live TV 视图（CollectionType=livetv）不是真正的媒体库，
+        //    /Users/{uid}/Items/Latest?ParentId=<livetv> 会被 Emby 忽略 → 返回全库最新，
+        //    表现为「电视直播」一行里全是电视剧每日更新的剧集。该行直接不展示。
+        // 2) 服务端存在同名重复库（例如两个「网易云音乐」），同名只保留第一个，避免首页两行内容一样。
+        val seenNames = HashSet<String>()
+        return views
+            .filter { !it.collectionType.equals("livetv", ignoreCase = true) }
+            .filter { view -> view.name == null || seenNames.add(view.name) }
+            .map { view ->
+                val id = view.id ?: ""
+                if (id.isNotEmpty()) {
+                    val items = getLatestItemsByViews(context, serverUrl, apiKey, deviceId, userId, id)
+                    view.copy(latestItems = items)
+                } else {
+                    view
+                }
             }
-        }
     }
 
     // ==================== 详情与剧集 ====================
