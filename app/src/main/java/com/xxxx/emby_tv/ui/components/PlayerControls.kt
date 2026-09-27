@@ -446,12 +446,13 @@ fun SheetRow(
 
 // ---------------- 各二级菜单内容 ----------------
 
-/** 信息:海报 + 剧名 + 元数据 + 剧情简介 */
+/** 信息:海报 + 剧名 + 元数据 + 剧情简介(直接叠在画面上,无底色无边框) */
 @Composable
 fun InfoSheet(
     mediaInfo: BaseItemDto,
     serverUrl: String,
     techLine: String,
+    modifier: Modifier = Modifier,
     firstFocus: FocusRequester,
 ) {
     val posterUrl = remember(mediaInfo.id, serverUrl) {
@@ -464,7 +465,7 @@ fun InfoSheet(
         if (season != null && episode != null) append("S$season:E$episode ")
         mediaInfo.name?.takeIf { it.isNotBlank() && it != title }?.let { append("$it ") }
         mediaInfo.productionYear?.let { append("$it ") }
-        mediaInfo.runTimeTicks?.let { append("${it / 600_000_000} 分钟 ") }
+        mediaInfo.runTimeTicks?.let { append("${it / 600_000_000}m ") }
         mediaInfo.officialRating?.takeIf { it.isNotBlank() }?.let { append(it) }
     }.trim()
 
@@ -474,42 +475,57 @@ fun InfoSheet(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = Color.White.copy(alpha = 0.18f),
+            focusedContainerColor = Color.Transparent,
             focusedContentColor = Color.White
         ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusRequester(firstFocus)
+        modifier = modifier.focusRequester(firstFocus)
     ) {
-        Row(modifier = Modifier.padding(10.dp)) {
+        Row {
             if (posterUrl.isNotEmpty()) {
                 AsyncImage(
                     model = posterUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .width(118.dp)
-                        .height(176.dp)
+                        .width(132.dp)
+                        .height(198.dp)
                         .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
             }
-            Column(modifier = Modifier.width(440.dp)) {
-                Text(text = title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.width(540.dp)) {
+                Text(
+                    text = title,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    style = OverlayTextStyle
+                )
                 if (metaLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(text = metaLine, color = Color(0xFFCFCFCF), fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = metaLine,
+                        color = Color(0xFFE0E0E0),
+                        fontSize = 15.sp,
+                        style = OverlayTextStyleSoft
+                    )
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = mediaInfo.overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介",
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    color = Color(0xFFE8E8E8)
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp,
+                    color = Color(0xFFEDEDED),
+                    style = OverlayTextStyleSoft
                 )
                 if (techLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = techLine, color = Color(0xFF9E9E9E), fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = techLine,
+                        color = Color(0xFFBDBDBD),
+                        fontSize = 13.sp,
+                        style = OverlayTextStyleSoft
+                    )
                 }
             }
         }

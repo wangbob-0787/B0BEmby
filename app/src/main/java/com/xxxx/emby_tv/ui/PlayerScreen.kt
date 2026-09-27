@@ -1672,13 +1672,27 @@ fun PlayerScreen(
 
                 if (activeItem != null) {
                     val item = activeItem!!
+                    if (item == PlayerMenuItem.INFO) {
+                        // 信息:无框,海报+文字直接叠在画面左下(照官方排版)
+                        InfoSheet(
+                            mediaInfo = mediaInfo,
+                            serverUrl = serverUrl,
+                            techLine = techLineOf(
+                                media.mediaSources?.firstOrNull(),
+                                getVideoTrack(media)?.displayTitle ?: ""
+                            ),
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 44.dp, bottom = 256.dp),
+                            firstFocus = sheetFirstFocus
+                        )
+                    } else {
                     SheetShell(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 44.dp, bottom = 262.dp),
                         title = item.label,
                         contentWidth = when (item) {
-                            PlayerMenuItem.INFO -> 660.dp
                             PlayerMenuItem.CAST -> 940.dp
                             PlayerMenuItem.BUFFER -> 540.dp
                             else -> 420.dp
@@ -1687,16 +1701,6 @@ fun PlayerScreen(
                         scrollable = item != PlayerMenuItem.CAST
                     ) {
                         when (item) {
-                            PlayerMenuItem.INFO -> InfoSheet(
-                                mediaInfo = mediaInfo,
-                                serverUrl = serverUrl,
-                                techLine = techLineOf(
-                                    media.mediaSources?.firstOrNull(),
-                                    getVideoTrack(media)?.displayTitle ?: ""
-                                ),
-                                firstFocus = sheetFirstFocus
-                            )
-
                             PlayerMenuItem.EPISODES -> EpisodeListSheet(
                                 seriesId = mediaInfo.seriesId,
                                 currentId = mediaInfo.id,
@@ -1812,6 +1816,7 @@ fun PlayerScreen(
 
                             else -> {}
                         }
+                    }
                     }
                 }
 
