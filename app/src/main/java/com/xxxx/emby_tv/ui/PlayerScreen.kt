@@ -253,6 +253,8 @@ fun PlayerScreen(
     var inMoreMenu by remember { mutableStateOf(false) }
     var maxStreamingBitrate by remember { mutableIntStateOf(QUALITY_ORIGINAL) }
     var interactionTick by remember { mutableIntStateOf(0) }
+    // 最近一次处理返回键的时刻:长按/连按返回只算第一下,避免一口气退光所有层级
+    var lastBackAt by remember { mutableLongStateOf(0L) }
     // 未按 ↓ 时按左右键快进快退:只唤出一条进度条(不展开整条控制条,不抢焦点)
     var seekHud by remember { mutableStateOf(false) }
     var seekHudForward by remember { mutableStateOf(true) }
@@ -1464,6 +1466,10 @@ fun PlayerScreen(
     androidx.activity.compose.BackHandler(
         enabled = activeItem != null || inMoreMenu || showPanel
     ) {
+        // 兜底路径同样防连按;若上面的 onKeyEvent 刚处理过这次返回就跳过(避免一次退两层)
+        val now = System.currentTimeMillis()
+        if (now - lastBackAt < 300) return@BackHandler
+        lastBackAt = now
         when {
             activeItem != null -> activeItem = null
             inMoreMenu -> inMoreMenu = false
@@ -1516,6 +1522,16 @@ fun PlayerScreen(
                     if (event.type == KeyEventType.KeyDown) interactionTick++
 
                     if (event.key == Key.Back || event.key == Key.Escape) {
+                        // 只在按下时处理:松开也会进这里,不拦就会一次按键退两层
+                        // (KeyDown 关二级菜单 + KeyUp 又把控制条收起 = 看着像"直接退出菜单")
+                        if (event.type == KeyEventType.KeyUp) return@onKeyEvent true
+                        // 长按/连按返回会连发 KeyDown:300ms 内的第二下忽略,
+                        // 避免一次操作把"二级菜单→一级菜单→收起控制条"全退光
+                        if (event.type == KeyEventType.KeyDown) {
+                            val now = System.currentTimeMillis()
+                            if (now - lastBackAt < 300) return@onKeyEvent true
+                            lastBackAt = now
+                        }
                         if (activeItem != null) {
                             activeItem = null
                             return@onKeyEvent true
