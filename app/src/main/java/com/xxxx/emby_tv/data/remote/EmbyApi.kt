@@ -1032,13 +1032,12 @@ object EmbyApi {
                     addProperty("IsRequired", "false")
                 })
 
-                // 3. 保留原有的非次要音频判断
-                add(JsonObject().apply {
-                    addProperty("Condition", "Equals")
-                    addProperty("Property", "IsSecondaryAudio")
-                    addProperty("Value", "false")
-                    addProperty("IsRequired", "false")
-                })
+                // 3. 这里原来有一条 Property=IsSecondaryAudio 的条件，**已删除**（2026-09-27）：
+                //    它只对「视频里的次要音轨」有意义，一旦服务端拿它去评估纯音频文件（音乐），
+                //    Emby 的 MediaInfoService 会直接抛
+                //      ArgumentException: Unexpected condition on audio file: IsSecondaryAudio
+                //    → PlaybackInfo 500 → 客户端「获取播放信息失败」/ 播放页一直转圈。
+                //    音频只保留上面的声道上限条件即可。
             })
         }
     }
