@@ -1,6 +1,7 @@
 package com.xxxx.emby_tv.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -190,7 +191,7 @@ fun PlayerControlPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 44.dp)
+                .padding(horizontal = 58.dp)
                 .padding(bottom = 26.dp)
         ) {
             // 标题:片名(大) + (播放方式)
@@ -226,14 +227,14 @@ fun PlayerControlPanel(
                 Text(
                     text = formatDuration(position),
                     color = Color.White,
-                    fontSize = 15.sp,
+                    fontSize = 18.sp,
                     style = OverlayTextStyleSoft
                 )
                 Text(
                     text = "-" + formatDuration((duration - position).coerceAtLeast(0L)) +
                             " / " + formatDuration(duration),
                     color = Color(0xFFD0D0D0),
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
                     style = OverlayTextStyleSoft
                 )
             }
@@ -320,7 +321,7 @@ fun PlayerControlPanel(
                 Text(
                     text = focusedLabel,
                     color = Color.White,
-                    fontSize = 16.sp,
+                    fontSize = 18.sp,
                     style = OverlayTextStyleSoft
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -328,30 +329,46 @@ fun PlayerControlPanel(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 menuItems.forEachIndexed { index, item ->
                     val selected = activeItem == item
-                    Surface(
-                        onClick = {
-                            lastIconIndex = index
-                            onMenuSelect(item)
-                        },
-                        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
-                        colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (selected) EmbyGreen.copy(alpha = 0.45f) else Color.Transparent,
-                            contentColor = Color.White,
-                            focusedContainerColor = EmbyGreen.copy(alpha = 0.55f),
-                            focusedContentColor = Color.White
-                        ),
-                        modifier = Modifier
-                            .padding(end = 6.dp)
-                            .focusRequester(itemFocus[index.coerceAtMost(itemFocus.lastIndex)])
-                            .onFocusChanged { if (it.isFocused) focusedLabel = item.label }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(end = 6.dp)
                     ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.label,
-                            tint = Color.White,
+                        Surface(
+                            onClick = {
+                                lastIconIndex = index
+                                onMenuSelect(item)
+                            },
+                            shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = if (selected) EmbyGreen.copy(alpha = 0.45f) else Color.Transparent,
+                                contentColor = Color.White,
+                                focusedContainerColor = EmbyGreen.copy(alpha = 0.55f),
+                                focusedContentColor = Color.White
+                            ),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
                             modifier = Modifier
-                                .padding(9.dp)
-                                .size(26.dp)
+                                .focusRequester(itemFocus[index.coerceAtMost(itemFocus.lastIndex)])
+                                .onFocusChanged { if (it.isFocused) focusedLabel = item.label }
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.label,
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .padding(9.dp)
+                                    .size(26.dp)
+                            )
+                        }
+                        // 当前打开的是哪一项,用下划线标出来(官方:不要只靠颜色传达信息)
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 3.dp)
+                                .width(24.dp)
+                                .height(3.dp)
+                                .background(
+                                    if (selected) EmbyGreen else Color.Transparent,
+                                    RoundedCornerShape(2.dp)
+                                )
                         )
                     }
                 }
@@ -386,7 +403,8 @@ private fun PanelIcon(
                 } else {
                     Modifier
                 }
-            )
+            ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f)
     ) {
         Icon(
             imageVector = icon,
@@ -411,7 +429,7 @@ fun SheetShell(
 ) {
     Column(
         modifier = modifier
-            .background(Color(0xE6757575), RoundedCornerShape(10.dp))
+            .background(Color(0xE66E6E6E), RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .focusGroup()
     ) {
@@ -419,7 +437,7 @@ fun SheetShell(
             Text(
                 text = title,
                 color = Color.White,
-                fontSize = 16.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -477,7 +495,8 @@ fun SheetRow(
             }
             .then(
                 if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier
-            )
+            ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
     ) {
         Row(
             modifier = Modifier
@@ -488,36 +507,47 @@ fun SheetRow(
         ) {
             Text(
                 text = label,
-                fontSize = 13.sp,
+                fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false)
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!selected && !trailing.isNullOrEmpty()) {
-                    Text(text = trailing, fontSize = 11.sp, color = Color(0xFFBDBDBD))
+                    Text(text = trailing, fontSize = 14.sp, color = Color(0xFFBDBDBD))
                     Spacer(modifier = Modifier.width(6.dp))
                 }
                 if (showArrow) {
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.75f),
-                        modifier = Modifier.size(14.dp)
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(20.dp)
                     )
                 } else if (selected) {
-                    Icon(
-                        imageVector = Icons.Default.CheckBox,
-                        contentDescription = null,
-                        tint = EmbyGreen,
-                        modifier = Modifier.size(14.dp)
-                    )
+                    // 选中改「绿色实心方框 + 深色勾」:原来绿勾压中灰底只有 1.7:1,官方要高对比,这样约 6:1
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .background(EmbyGreen, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color(0xFF101010),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                 } else {
-                    Icon(
-                        imageVector = Icons.Default.CheckBoxOutlineBlank,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.65f),
-                        modifier = Modifier.size(14.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .border(
+                                2.dp,
+                                Color.White.copy(alpha = 0.85f),
+                                RoundedCornerShape(4.dp)
+                            )
                     )
                 }
             }
@@ -571,7 +601,7 @@ fun InfoSheet(
             focusedContentColor = Color.White
         ),
         modifier = modifier
-            .background(Color(0xCC757575), RoundedCornerShape(10.dp))
+            .background(Color(0xCC6E6E6E), RoundedCornerShape(10.dp))
             .padding(10.dp)
             .focusRequester(firstFocus)
     ) {
@@ -591,7 +621,7 @@ fun InfoSheet(
             Column(modifier = Modifier.width(310.dp)) {
                 Text(
                     text = title,
-                    fontSize = 17.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     style = OverlayTextStyle
@@ -601,15 +631,15 @@ fun InfoSheet(
                     Text(
                         text = metaLine,
                         color = Color(0xFFE0E0E0),
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         style = OverlayTextStyleSoft
                     )
                 }
                 Spacer(modifier = Modifier.height(7.dp))
                 Text(
                     text = mediaInfo.overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介",
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp,
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp,
                     color = Color(0xFFEDEDED),
                     maxLines = 6,
                     overflow = TextOverflow.Ellipsis,
@@ -620,7 +650,7 @@ fun InfoSheet(
                     Text(
                         text = techLine,
                         color = Color(0xFFBDBDBD),
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                         style = OverlayTextStyleSoft
                     )
                 }
@@ -660,7 +690,7 @@ fun EpisodeListSheet(
             Text(
                 text = "加载中…",
                 color = Color(0xFFAFAFAF),
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
             )
             return@Column
@@ -669,7 +699,7 @@ fun EpisodeListSheet(
             Text(
                 text = "没有其它剧集",
                 color = Color(0xFFAFAFAF),
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
             )
             return@Column
@@ -702,13 +732,13 @@ fun CastListSheet(
 ) {
     Column(
         modifier = modifier
-            .background(Color(0xCC757575), RoundedCornerShape(10.dp))
+            .background(Color(0xCC6E6E6E), RoundedCornerShape(10.dp))
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         Text(
             text = "演职人员",
-            fontSize = 17.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             style = OverlayTextStyle
@@ -717,7 +747,7 @@ fun CastListSheet(
             Text(
                 text = "暂无演职人员信息",
                 color = Color(0xFFBDBDBD),
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 style = OverlayTextStyleSoft
             )
             return@Column
@@ -835,7 +865,7 @@ fun AudioSheet(
             Text(
                 text = "暂无可切换音轨",
                 color = Color(0xFFBDBDBD),
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 10.dp)
             )
             return@Column

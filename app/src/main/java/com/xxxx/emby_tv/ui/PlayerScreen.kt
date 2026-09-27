@@ -1399,6 +1399,35 @@ fun PlayerScreen(
         }
     }
 
+    // 切出应用(回主页/切后台)立即暂停:官方 TV 质量清单要求视频应用切出即暂停
+    val hostActivity = LocalContext.current as? android.app.Activity
+    DisposableEffect(hostActivity) {
+        val callbacks = object : android.app.Application.ActivityLifecycleCallbacks {
+            override fun onActivityStopped(activity: android.app.Activity) {
+                if (activity === hostActivity) runCatching { player.pause() }
+            }
+
+            override fun onActivityCreated(
+                activity: android.app.Activity,
+                savedInstanceState: android.os.Bundle?
+            ) {
+            }
+
+            override fun onActivityStarted(activity: android.app.Activity) {}
+            override fun onActivityResumed(activity: android.app.Activity) {}
+            override fun onActivityPaused(activity: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(
+                activity: android.app.Activity,
+                outState: android.os.Bundle
+            ) {
+            }
+
+            override fun onActivityDestroyed(activity: android.app.Activity) {}
+        }
+        hostActivity?.application?.registerActivityLifecycleCallbacks(callbacks)
+        onDispose { hostActivity?.application?.unregisterActivityLifecycleCallbacks(callbacks) }
+    }
+
     // 退出播放页时上报停止（与播放器实例重建解耦，音频自动恢复重建时不会误报）
     DisposableEffect(Unit) {
         onDispose {
@@ -1496,6 +1525,11 @@ fun PlayerScreen(
                     }
 
                     if (event.type == KeyEventType.KeyDown) {
+                        // 遥控器/蓝牙遥控上的播放暂停键:官方 TV-PP 要求必须能切换状态
+                        if (event.key == Key.MediaPlayPause) {
+                            if (isPlaying) player.pause() else player.play()
+                            return@onKeyEvent true
+                        }
                         // Menu 键:开关面板
                         if (event.key == Key.Menu) {
                             if (activeItem != null) {
@@ -1686,7 +1720,7 @@ fun PlayerScreen(
                     SheetShell(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(start = 444.dp, bottom = 84.dp),
+                            .padding(start = 458.dp, bottom = 84.dp),
                         title = "",
                         contentWidth = 190.dp
                     ) {
@@ -1726,7 +1760,7 @@ fun PlayerScreen(
                                 ),
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
-                                    .padding(start = 56.dp, bottom = 56.dp),
+                                    .padding(start = 58.dp, bottom = 56.dp),
                                 firstFocus = sheetFirstFocus
                             )
                         } else {
@@ -1737,7 +1771,7 @@ fun PlayerScreen(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
                                     .width(1500.dp)
-                                    .padding(start = 56.dp, bottom = 56.dp),
+                                    .padding(start = 58.dp, bottom = 56.dp),
                                 firstFocus = sheetFirstFocus
                             )
                         }
@@ -1747,11 +1781,11 @@ fun PlayerScreen(
                             // 字幕菜单放画面左侧中部:官方就是这样做的,避免挡住画面底部的字幕
                             Modifier
                                 .align(Alignment.CenterStart)
-                                .padding(start = 56.dp)
+                                .padding(start = 58.dp)
                         } else {
                             Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(start = 44.dp, bottom = 84.dp)
+                                .padding(start = 58.dp, bottom = 84.dp)
                         },
                         title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
                         contentWidth = when (item) {
