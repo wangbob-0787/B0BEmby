@@ -125,13 +125,11 @@ val PLAYER_MAIN_MENU = listOf(
     PlayerMenuItem.MORE
 )
 
-/** 「更多」页 */
+/** 「更多」页(播放校正与视频质量功能重复,已去掉;返回靠遥控器返回键,不再放菜单项) */
 val PLAYER_MORE_MENU = listOf(
     PlayerMenuItem.QUALITY,
     PlayerMenuItem.PLAY_MODE,
-    PlayerMenuItem.CORRECTION,
-    PlayerMenuItem.BUFFER,
-    PlayerMenuItem.BACK
+    PlayerMenuItem.BUFFER
 )
 
 /** 白字黑描边:底部区域没有底衬,靠阴影保证亮画面上可读 */
@@ -255,16 +253,25 @@ fun PlayerControlPanel(
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onPlayPause: () -> Unit,
+    // 控制条重新出现时焦点落在哪个一级图标上(-1 = 落在播放暂停);
+    // 从信息/演职人员整屏返回时用它把焦点还给刚才那项,而不是跳到暂停
+    initialFocusIndex: Int = -1,
 ) {
     val playKeyFocus = remember { List(3) { FocusRequester() } } // 0 后退 / 1 播放暂停 / 2 前进
     val itemFocus = remember { List(PLAYER_MAIN_MENU.size) { FocusRequester() } }
-    var lastIconIndex by remember { mutableIntStateOf(0) }
+    var lastIconIndex by remember { mutableIntStateOf(initialFocusIndex.coerceAtLeast(0)) }
     var sheetWasOpen by remember { mutableStateOf(false) }
 
-    // 面板出现时焦点落在播放暂停
+    // 面板出现时:默认焦点落在播放暂停;若是从信息/演职人员返回,还给原来那个图标
     LaunchedEffect(Unit) {
         delay(60)
-        runCatching { playKeyFocus[1].requestFocus() }
+        if (initialFocusIndex >= 0) {
+            runCatching {
+                itemFocus[initialFocusIndex.coerceIn(0, itemFocus.lastIndex)].requestFocus()
+            }
+        } else {
+            runCatching { playKeyFocus[1].requestFocus() }
+        }
     }
 
     // 二级菜单关掉后,焦点回到刚才点开它的那个图标
@@ -678,77 +685,75 @@ fun InfoSheet(
     val metaLine = buildString {
         val season = mediaInfo.parentIndexNumber
         val episode = mediaInfo.indexNumber
-        if (season != null && episode != null) append("S$season:E$episode ")
+        if (season != null && episode != null) append("S$season E$episode ")
         mediaInfo.name?.takeIf { it.isNotBlank() && it != title }?.let { append("$it ") }
         mediaInfo.productionYear?.let { append("$it ") }
         mediaInfo.runTimeTicks?.let { append("${it / 600_000_000}m ") }
         mediaInfo.officialRating?.takeIf { it.isNotBlank() }?.let { append(it) }
     }.trim()
+    val overview = mediaInfo.overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介"
 
-    Surface(
-        onClick = {},
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            contentColor = Color.White,
-            focusedContainerColor = Color.Transparent,
-            focusedContentColor = Color.White
-        ),
+    // 无框:左边海报(高度与整条一致) + 右边文字;整条左右边距相等、几乎充满屏宽(照官方排版)
+    Row(
         modifier = modifier
-            .background(Color(0xCC6E6E6E), RoundedCornerShape(10.dp))
-            .padding(10.dp)
             .focusRequester(firstFocus)
+            .height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.Bottom
     ) {
-        Row {
-            if (posterUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = posterUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(80.dp)
-                        .height(120.dp)
-                        .background(Color(0xFF2A2A2A), RoundedCornerShape(6.dp))
-                )
-                Spacer(modifier = Modifier.width(11.dp))
-            }
-            Column(modifier = Modifier.width(310.dp)) {
+        if (posterUrl.isNotEmpty()) {
+            AsyncImage(
+                model = posterUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(112.dp)
+                    .background(Color(0xFF2A2A2A), RoundedCornerShape(6.dp))
+            )
+            Spacer(modifier = Modifier.width(20.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = OverlayTextStyle
+            )
+            if (metaLine.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = title,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    style = OverlayTextStyle
-                )
-                if (metaLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(5.dp))
-                    Text(
-                        text = metaLine,
-                        color = Color(0xFFE0E0E0),
-                        fontSize = 14.sp,
-                        style = OverlayTextStyleSoft
-                    )
-                }
-                Spacer(modifier = Modifier.height(7.dp))
-                Text(
-                    text = mediaInfo.overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介",
-                    fontSize = 16.sp,
-                    lineHeight = 24.sp,
-                    color = Color(0xFFEDEDED),
-                    maxLines = 6,
+                    text = metaLine,
+                    color = Color(0xFFE0E0E0),
+                    fontSize = 17.sp,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = OverlayTextStyleSoft
                 )
-                if (techLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = techLine,
-                        color = Color(0xFFBDBDBD),
-                        fontSize = 13.sp,
-                        style = OverlayTextStyleSoft
-                    )
-                }
             }
+            if (techLine.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = techLine,
+                    color = Color(0xFFBDBDBD),
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = OverlayTextStyleSoft
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = overview,
+                fontSize = 17.sp,
+                lineHeight = 25.sp,
+                color = Color(0xFFEDEDED),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                style = OverlayTextStyleSoft
+            )
         }
     }
 }
@@ -824,24 +829,21 @@ fun CastListSheet(
     modifier: Modifier = Modifier,
     firstFocus: FocusRequester,
 ) {
-    Column(
-        modifier = modifier
-            .background(Color(0xCC6E6E6E), RoundedCornerShape(10.dp))
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp)
-    ) {
+    // 无框:标题 + 一排大头像卡片;卡片可以超出屏幕边,左右键横向滚动(照官方排版)
+    Column(modifier = modifier) {
         Text(
             text = "演职人员",
-            fontSize = 24.sp,
+            fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             style = OverlayTextStyle
         )
+        Spacer(modifier = Modifier.height(10.dp))
         if (people.isEmpty()) {
             Text(
                 text = "暂无演职人员信息",
                 color = Color(0xFFBDBDBD),
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 style = OverlayTextStyleSoft
             )
             return@Column
@@ -854,17 +856,17 @@ fun CastListSheet(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp)
+                .height(250.dp)
                 .focusRequester(rowFocus)
                 .focusGroup()
                 .focusable(),
-            horizontalArrangement = Arrangement.spacedBy(9.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(people, key = { it.id ?: it.hashCode() }) { person ->
                 PersonCard(
                     person = person,
-                    imgWidth = 75.dp,
-                    aspectRatio = 0.66f,
+                    imgWidth = 130.dp,
+                    aspectRatio = 0.68f,
                     serverUrl = serverUrl
                 )
             }

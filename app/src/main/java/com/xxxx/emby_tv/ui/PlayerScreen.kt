@@ -255,9 +255,13 @@ fun PlayerScreen(
     var interactionTick by remember { mutableIntStateOf(0) }
     // 最近一次处理返回键的时刻:长按/连按返回只算第一下,避免一口气退光所有层级
     var lastBackAt by remember { mutableLongStateOf(0L) }
+    // 最近一次点开的一级菜单图标下标:从信息/演职人员返回时把焦点还给这一项
+    var lastMenuIndex by remember { mutableIntStateOf(-1) }
     // 未按 ↓ 时按左右键快进快退:只唤出一条进度条(不展开整条控制条,不抢焦点)
     var seekHud by remember { mutableStateOf(false) }
     var seekHudForward by remember { mutableStateOf(true) }
+    // 最后一次快进/快退的时刻:进度条按它计时 5 秒收起(别的按键不给它续命)
+    var seekHudAt by remember { mutableLongStateOf(0L) }
     val sheetFirstFocus = remember { FocusRequester() }
     var showStats by remember { mutableStateOf(false) }
 
@@ -1555,6 +1559,7 @@ fun PlayerScreen(
                                 leftKeyDownTime = System.currentTimeMillis()
                                 seekHudForward = false
                                 seekHud = true
+                                seekHudAt = System.currentTimeMillis()
                             }
                         } else if (event.type == KeyEventType.KeyUp) {
                             if (leftKeyDownTime > 0) {
@@ -1573,6 +1578,7 @@ fun PlayerScreen(
                                 rightKeyDownTime = System.currentTimeMillis()
                                 seekHudForward = true
                                 seekHud = true
+                                seekHudAt = System.currentTimeMillis()
                             }
                         } else if (event.type == KeyEventType.KeyUp) {
                             if (rightKeyDownTime > 0) {
@@ -1588,6 +1594,7 @@ fun PlayerScreen(
                     if (event.type == KeyEventType.KeyDown) {
                         // 遥控器/蓝牙遥控上的播放暂停键:官方 TV-PP 要求必须能切换状态
                         if (event.key == Key.MediaPlayPause) {
+                            seekHud = false
                             if (isPlaying) player.pause() else player.play()
                             return@onKeyEvent true
                         }
@@ -1607,8 +1614,8 @@ fun PlayerScreen(
                         // 面板显示时,上下键全部交给焦点系统(二级菜单里才能移动焦点)
                         if (event.key == Key.DirectionDown || event.key == Key.DirectionUp) {
                             if (showPanel) return@onKeyEvent false
+                            seekHud = false
                             if (event.key == Key.DirectionDown) {
-                                seekHud = false
                                 showPanel = true
                                 inMoreMenu = false
                                 activeItem = null
@@ -1617,6 +1624,7 @@ fun PlayerScreen(
                         }
                         if (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) {
                             if (showPanel) return@onKeyEvent false
+                            seekHud = false
                             if (isPlaying) {
                                 player.pause()
                                 isShowInfo = true
@@ -1772,6 +1780,7 @@ fun PlayerScreen(
                     menuItems = mainMenu,
                     activeItem = if (inMoreMenu) PlayerMenuItem.MORE else activeItem,
                     onMenuSelect = { item ->
+                        lastMenuIndex = mainMenu.indexOf(item).coerceAtLeast(0)
                         when (item) {
                             PlayerMenuItem.MORE -> {
                                 inMoreMenu = true
@@ -1788,7 +1797,8 @@ fun PlayerScreen(
                     },
                     onSeekBack = { player.seekBack() },
                     onSeekForward = { player.seekForward() },
-                    onPlayPause = { if (isPlaying) player.pause() else player.play() }
+                    onPlayPause = { if (isPlaying) player.pause() else player.play() },
+                    initialFocusIndex = lastMenuIndex
                 )
                 }
 
@@ -1837,7 +1847,8 @@ fun PlayerScreen(
                                 ),
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
-                                    .padding(start = 58.dp, bottom = 56.dp),
+                                    .fillMaxWidth()
+                                    .padding(start = 58.dp, end = 58.dp, bottom = 56.dp),
                                 firstFocus = sheetFirstFocus
                             )
                         } else {
@@ -1847,7 +1858,7 @@ fun PlayerScreen(
                                 serverUrl = serverUrl,
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
-                                    .width(1500.dp)
+                                    .fillMaxWidth()
                                     .padding(start = 58.dp, bottom = 56.dp),
                                 firstFocus = sheetFirstFocus
                             )
@@ -1993,11 +2004,13 @@ fun PlayerScreen(
                     }
                 }
 
-                // 左右键唤出的进度条:5 秒无操作后收起(暂停时也收,它只是快进快退的即时反馈)
-                LaunchedEffect(seekHud, interactionTick) {
-                    if (!seekHud) return@LaunchedEffect
+                // 左右键唤出的进度条:最后一次快进/快退后 5 秒收起
+                // (只认左右键自己的时间戳,别的按键不给它续命,免得看着"不消失")
+                LaunchedEffect(seekHudAt) {
+                    if (seekHudAt == 0L) return@LaunchedEffect
                     kotlinx.coroutines.delay(5000)
                     seekHud = false
+                    seekHudAt = 0L
                 }
             }
 
