@@ -206,9 +206,13 @@ object EmbyApi {
         apiKey: String,
         deviceId: String,
         userId: String,
-        parentId: String
+        parentId: String,
+        // 音乐库默认返回的是「专辑」，而我们的专辑没有封面（封面图是跟歌曲同名的 .jpg）；
+        // 传 Audio 直接取歌曲条目，歌曲是有封面的（2026-09-27 实测 597 首全有 Primary 图）
+        includeItemTypes: String? = null
     ): List<BaseItemDto> {
-        val url = "/Users/$userId/Items/Latest?Limit=20&ParentId=$parentId" +
+        val typesParam = if (includeItemTypes.isNullOrEmpty()) "" else "&IncludeItemTypes=$includeItemTypes"
+        val url = "/Users/$userId/Items/Latest?Limit=20&ParentId=$parentId$typesParam" +
                 "&Fields=PrimaryImageAspectRatio,ProductionYear&X-Emby-Token=$apiKey"
         return httpAsBaseItemDtoListDirect(context, serverUrl, apiKey, deviceId, url)
     }
@@ -236,7 +240,8 @@ object EmbyApi {
             .map { view ->
                 val id = view.id ?: ""
                 if (id.isNotEmpty()) {
-                    val items = getLatestItemsByViews(context, serverUrl, apiKey, deviceId, userId, id)
+                    val types = if (view.collectionType.equals("music", ignoreCase = true)) "Audio" else null
+                    val items = getLatestItemsByViews(context, serverUrl, apiKey, deviceId, userId, id, types)
                     view.copy(latestItems = items)
                 } else {
                     view

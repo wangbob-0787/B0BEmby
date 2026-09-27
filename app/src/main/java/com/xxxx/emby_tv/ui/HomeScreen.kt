@@ -203,9 +203,10 @@ fun HomeScreen(
                     }
                 }
 
-                // 各库最新内容
+                // 各库最新内容（空库不占一行——合集/PikPak电影/115蓝光原盘 没有最新条目，
+                // 原来会渲染一行空占位；「我的媒体库」那一排仍然保留所有库的入口）
                 itemsIndexed(
-                    libraryLatestItems ?: emptyList(),
+                    (libraryLatestItems ?: emptyList()).filter { !it.latestItems.isNullOrEmpty() },
                     key = { _, library -> library.id ?: library.hashCode() }
                 ) { _, library ->
                     MediaSection(
