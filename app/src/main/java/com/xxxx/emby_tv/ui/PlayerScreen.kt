@@ -93,6 +93,7 @@ import com.xxxx.emby_tv.danmaku.DanmakuTrack
 import com.xxxx.emby_tv.danmaku.DanmakuView
 import com.xxxx.emby_tv.ui.viewmodel.PlayerViewModel
 import com.xxxx.emby_tv.util.ErrorHandler
+import com.xxxx.emby_tv.util.DiagLog
 import com.xxxx.emby_tv.util.IntroSkipHelper
 import com.xxxx.emby_tv.data.local.PreferencesManager
 import com.xxxx.emby_tv.data.remote.EmbyApi
@@ -847,9 +848,14 @@ fun PlayerScreen(
             }
 
             videoUrl = if (path != null) "${serverUrl}/emby$path" else null
+            DiagLog.w(context, "playerUrl",
+                "mediaId=$mediaId type=${mediaInfoResult.type} container=${source?.container} " +
+                "directStream=${source?.directStreamUrl != null} transcode=${source?.transcodingUrl != null} " +
+                "url=${videoUrl?.take(220)}")
             hasReportedPlaying = false
         } catch (e: Throwable) {
             Log.e("PlayerScreen", "加载播放信息失败", e)
+            DiagLog.w(context, "playerUrl异常", "mediaId=$mediaId ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
@@ -1213,6 +1219,7 @@ fun PlayerScreen(
             }
 
             override fun onPlaybackStateChanged(state: Int) {
+                DiagLog.w(context, "playerState", "state=$state (1=IDLE 2=BUFFERING 3=READY 4=ENDED)")
                 if (state == Player.STATE_BUFFERING) {
                     isBuffering = true
                 } else if (state == Player.STATE_READY) {
@@ -1276,6 +1283,9 @@ fun PlayerScreen(
 
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("PlayerScreen", "播放器错误: ${error.message}", error)
+                DiagLog.w(context, "playerError",
+                    "${error.errorCodeName}: ${error.message} | cause=${error.cause?.javaClass?.simpleName}: ${error.cause?.message}")
+
                 val causeMsg = error.cause?.message ?: ""
                 if (causeMsg.contains("SOCKS", ignoreCase = true) ||
                     causeMsg.contains("Proxy", ignoreCase = true) ||
