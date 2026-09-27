@@ -678,6 +678,27 @@ fun PlayerScreen(
         )
     }
 
+    // 倍速实锤:每 5 秒记一次"播放位置增量 / 真实经过时间",真 2x 应该 ≈ 2.0
+    LaunchedEffect(player) {
+        var lastPos = player.currentPosition
+        var lastAt = System.currentTimeMillis()
+        while (isActive) {
+            delay(5000)
+            val nowPos = player.currentPosition
+            val nowAt = System.currentTimeMillis()
+            val wallSec = (nowAt - lastAt) / 1000.0
+            val deltaSec = (nowPos - lastPos) / 1000.0
+            val measured = if (wallSec > 0) deltaSec / wallSec else 0.0
+            DiagLog.w(
+                context, "speedProbe",
+                "位置+${"%.1f".format(deltaSec)}s / 经过${"%.1f".format(wallSec)}s = " +
+                        "${"%.2f".format(measured)}x(播放器声明 ${player.playbackParameters.speed}x)"
+            )
+            lastPos = nowPos
+            lastAt = nowAt
+        }
+    }
+
     // 字幕时间偏移：接管字幕渲染（内置 subtitleView 已隐藏，由 overlay SubtitleView 显示）
     DisposableEffect(player) {
         val listener = object : Player.Listener {

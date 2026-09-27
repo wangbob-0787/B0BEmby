@@ -575,6 +575,9 @@ fun SheetRow(
     firstFocus: FocusRequester? = null,
     trailing: String? = null,
     showArrow: Boolean = false,
+    // 操作型条目(如"字幕提前/延后")不要勾选框:它们不是可选项,方框看着像"取消按钮"
+    showCheckbox: Boolean = true,
+    externalBringIntoView: BringIntoViewRequester? = null,
 ) {
     LaunchedEffect(firstFocus) {
         if (firstFocus != null) {
@@ -583,7 +586,8 @@ fun SheetRow(
         }
     }
     val scope = rememberCoroutineScope()
-    val bringIntoView = remember { BringIntoViewRequester() }
+    val ownBringIntoView = remember { BringIntoViewRequester() }
+    val bringIntoView = externalBringIntoView ?: ownBringIntoView
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -631,6 +635,8 @@ fun SheetRow(
                         tint = Color.White.copy(alpha = 0.85f),
                         modifier = Modifier.size(20.dp)
                     )
+                } else if (!showCheckbox) {
+                    // 操作型条目:右侧不放任何方框
                 } else if (selected) {
                     // 选中改「绿色实心方框 + 深色勾」:原来绿勾压中灰底只有 1.7:1,官方要高对比,这样约 6:1
                     Box(
@@ -811,6 +817,15 @@ fun EpisodeListSheet(
             )
             return@Column
         }
+        // 打开选集时要停在当前播放这一集,并把焦点也放在它上面(照官方客户端)
+        val currentRequester = remember { BringIntoViewRequester() }
+        val currentIndex = episodes.indexOfFirst { it.id == currentId }
+        LaunchedEffect(episodes) {
+            if (currentIndex >= 0) {
+                delay(120)
+                runCatching { currentRequester.bringIntoView() }
+            }
+        }
         episodes.forEachIndexed { i, ep ->
             val season = ep.parentIndexNumber
             val number = ep.indexNumber
@@ -823,7 +838,8 @@ fun EpisodeListSheet(
                 label = prefix + (ep.name ?: ""),
                 selected = ep.id == currentId,
                 onClick = { if (ep.id != currentId) onPlay(ep) },
-                firstFocus = if (i == 0) firstFocus else null
+                firstFocus = if (i == if (currentIndex >= 0) currentIndex else 0) firstFocus else null,
+                externalBringIntoView = if (i == currentIndex) currentRequester else null
             )
         }
     }
@@ -956,18 +972,21 @@ fun SubtitleSheet(
         SheetRow(
             label = "字幕提前 0.5 秒",
             selected = false,
-            onClick = { onTimeOffsetChange(timeOffsetMs - 500L) }
+            onClick = { onTimeOffsetChange(timeOffsetMs - 500L) },
+            showCheckbox = false
         )
         SheetRow(
             label = "字幕延后 0.5 秒",
             selected = false,
-            onClick = { onTimeOffsetChange(timeOffsetMs + 500L) }
+            onClick = { onTimeOffsetChange(timeOffsetMs + 500L) },
+            showCheckbox = false
         )
         SheetRow(
             label = "偏移复位",
             selected = timeOffsetMs == 0L,
             onClick = { onTimeOffsetChange(0L) },
-            trailing = String.format("%.1fs", timeOffsetMs / 1000f)
+            trailing = String.format("%.1fs", timeOffsetMs / 1000f),
+            showCheckbox = false
         )
     }
 }
