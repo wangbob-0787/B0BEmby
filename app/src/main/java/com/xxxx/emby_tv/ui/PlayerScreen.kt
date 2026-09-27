@@ -1675,17 +1675,21 @@ fun PlayerScreen(
                     SheetShell(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(start = 44.dp, bottom = 236.dp),
+                            .padding(start = 44.dp, bottom = 262.dp),
                         title = item.label,
                         contentWidth = when (item) {
-                            PlayerMenuItem.INFO -> 620.dp
+                            PlayerMenuItem.INFO -> 660.dp
+                            PlayerMenuItem.CAST -> 940.dp
                             PlayerMenuItem.BUFFER -> 540.dp
                             else -> 420.dp
-                        }
+                        },
+                        contentHeight = if (item == PlayerMenuItem.CAST) 300.dp else null,
+                        scrollable = item != PlayerMenuItem.CAST
                     ) {
                         when (item) {
                             PlayerMenuItem.INFO -> InfoSheet(
-                                overview = mediaInfo.overview,
+                                mediaInfo = mediaInfo,
+                                serverUrl = serverUrl,
                                 techLine = techLineOf(
                                     media.mediaSources?.firstOrNull(),
                                     getVideoTrack(media)?.displayTitle ?: ""
@@ -1707,6 +1711,7 @@ fun PlayerScreen(
 
                             PlayerMenuItem.CAST -> CastListSheet(
                                 people = mediaInfo.people ?: emptyList(),
+                                serverUrl = serverUrl,
                                 firstFocus = sheetFirstFocus
                             )
 

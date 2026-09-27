@@ -1,16 +1,35 @@
 package com.xxxx.emby_tv.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +41,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -30,9 +51,14 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
+import com.xxxx.emby_tv.Utils
 import com.xxxx.emby_tv.Utils.formatDuration
-import com.xxxx.emby_tv.data.model.MediaStreamDto
+import com.xxxx.emby_tv.data.model.BaseItemDto
 import com.xxxx.emby_tv.data.model.MediaSourceInfoDto
+import com.xxxx.emby_tv.data.model.MediaStreamDto
+import com.xxxx.emby_tv.data.model.PersonInfo
+import com.xxxx.emby_tv.ui.PersonCard
 import kotlinx.coroutines.delay
 
 /** 播放控制面板上的一级菜单项 */
@@ -54,6 +80,25 @@ enum class PlayerMenuItem(val label: String) {
 
     /** 二级菜单标题(与一级文字一致,除"返回") */
     val sheetTitle: String get() = label
+
+    /** 图标行使用的图标 */
+    val icon: ImageVector
+        get() = when (this) {
+            INFO -> Icons.Default.Info
+            EPISODES -> Icons.Default.ViewList
+            CAST -> Icons.Default.Person
+            SUBTITLE -> Icons.Default.ClosedCaption
+            DANMAKU -> Icons.Default.Chat
+            SPEED -> Icons.Default.Speed
+            INTRO -> Icons.Default.SkipNext
+            AUDIO -> Icons.Default.VolumeUp
+            MORE -> Icons.Default.MoreHoriz
+            QUALITY -> Icons.Default.HighQuality
+            PLAY_MODE -> Icons.Default.Repeat
+            CORRECTION -> Icons.Default.Tune
+            BUFFER -> Icons.Default.Memory
+            BACK -> Icons.Default.ArrowBack
+        }
 }
 
 /** 主菜单(常用放外面);选集/演职人员由调用方按内容有无过滤 */
@@ -222,7 +267,17 @@ fun PlayerControlPanel(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 一级菜单(纯文字)
+            // 一级菜单(图标行;焦点项名称显示在行上方)
+            var focusedLabel by remember { mutableStateOf("") }
+            if (focusedLabel.isNotEmpty()) {
+                Text(
+                    text = focusedLabel,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    style = OverlayTextStyleSoft
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 menuItems.forEachIndexed { index, item ->
                     val selected = activeItem == item
@@ -230,21 +285,23 @@ fun PlayerControlPanel(
                         onClick = { onMenuSelect(item) },
                         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = Color.Transparent,
-                            contentColor = if (selected) Color.White else Color(0xFFD8D8D8),
-                            focusedContainerColor = Color.White.copy(alpha = 0.26f),
+                            containerColor = if (selected) Color.White.copy(alpha = 0.22f) else Color.Transparent,
+                            contentColor = Color.White,
+                            focusedContainerColor = Color.White.copy(alpha = 0.32f),
                             focusedContentColor = Color.White
                         ),
                         modifier = Modifier
-                            .padding(end = 8.dp)
+                            .padding(end = 6.dp)
                             .focusRequester(itemFocus[index.coerceAtMost(itemFocus.lastIndex)])
+                            .onFocusChanged { if (it.isFocused) focusedLabel = item.label }
                     ) {
-                        Text(
-                            text = item.label,
-                            fontSize = 19.sp,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                            style = OverlayTextStyle,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.label,
+                            tint = Color.White,
+                            modifier = Modifier
+                                .padding(9.dp)
+                                .size(26.dp)
                         )
                     }
                 }
@@ -362,15 +419,26 @@ fun SheetRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(text = label, fontSize = 17.sp)
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            } else if (!trailing.isNullOrEmpty()) {
-                Text(text = trailing, fontSize = 15.sp, color = Color(0xFFBDBDBD))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!selected && !trailing.isNullOrEmpty()) {
+                    Text(text = trailing, fontSize = 15.sp, color = Color(0xFFBDBDBD))
+                    Spacer(modifier = Modifier.width(10.dp))
+                }
+                if (selected) {
+                    Icon(
+                        imageVector = Icons.Default.CheckBox,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.CheckBoxOutlineBlank,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.55f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
     }
@@ -378,35 +446,71 @@ fun SheetRow(
 
 // ---------------- 各二级菜单内容 ----------------
 
-/** 信息:剧情简介 + 一行技术小字 */
+/** 信息:海报 + 剧名 + 元数据 + 剧情简介 */
 @Composable
 fun InfoSheet(
-    overview: String?,
+    mediaInfo: BaseItemDto,
+    serverUrl: String,
     techLine: String,
     firstFocus: FocusRequester,
 ) {
+    val posterUrl = remember(mediaInfo.id, serverUrl) {
+        if (serverUrl.isEmpty()) "" else Utils.getImageUrl(serverUrl, mediaInfo, false)
+    }
+    val title = mediaInfo.seriesName ?: mediaInfo.name ?: ""
+    val metaLine = buildString {
+        val season = mediaInfo.parentIndexNumber
+        val episode = mediaInfo.indexNumber
+        if (season != null && episode != null) append("S$season:E$episode ")
+        mediaInfo.name?.takeIf { it.isNotBlank() && it != title }?.let { append("$it ") }
+        mediaInfo.productionYear?.let { append("$it ") }
+        mediaInfo.runTimeTicks?.let { append("${it / 600_000_000} 分钟 ") }
+        mediaInfo.officialRating?.takeIf { it.isNotBlank() }?.let { append(it) }
+    }.trim()
+
     Surface(
         onClick = {},
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = Color.White.copy(alpha = 0.22f),
+            focusedContainerColor = Color.White.copy(alpha = 0.18f),
             focusedContentColor = Color.White
         ),
         modifier = Modifier
             .fillMaxWidth()
             .focusRequester(firstFocus)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Text(
-                text = overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介",
-                fontSize = 16.sp,
-                lineHeight = 24.sp
-            )
-            if (techLine.isNotEmpty()) {
+        Row(modifier = Modifier.padding(10.dp)) {
+            if (posterUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = posterUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .width(118.dp)
+                        .height(176.dp)
+                        .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column(modifier = Modifier.width(440.dp)) {
+                Text(text = title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                if (metaLine.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(text = metaLine, color = Color(0xFFCFCFCF), fontSize = 14.sp)
+                }
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(text = techLine, color = Color(0xFFAFAFAF), fontSize = 13.sp)
+                Text(
+                    text = mediaInfo.overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介",
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    color = Color(0xFFE8E8E8)
+                )
+                if (techLine.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(text = techLine, color = Color(0xFF9E9E9E), fontSize = 13.sp)
+                }
             }
         }
     }
@@ -475,30 +579,41 @@ fun EpisodeListSheet(
     }
 }
 
-/** 演职人员:文字列表 */
+/** 演职人员:横向头像卡片 */
 @Composable
 fun CastListSheet(
-    people: List<com.xxxx.emby_tv.data.model.PersonInfo>,
+    people: List<PersonInfo>,
+    serverUrl: String,
     firstFocus: FocusRequester,
 ) {
-    Column {
-        if (people.isEmpty()) {
-            Text(
-                text = "暂无演职人员信息",
-                color = Color(0xFFAFAFAF),
-                fontSize = 15.sp,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-            )
-            return@Column
-        }
-        people.forEachIndexed { i, person ->
-            val role = person.role?.takeIf { it.isNotBlank() }
-            SheetRow(
-                label = person.name ?: "",
-                selected = false,
-                onClick = {},
-                firstFocus = if (i == 0) firstFocus else null,
-                trailing = role
+    if (people.isEmpty()) {
+        Text(
+            text = "暂无演职人员信息",
+            color = Color(0xFFAFAFAF),
+            fontSize = 15.sp,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+        )
+        return
+    }
+    val rowFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        delay(80)
+        runCatching { rowFocus.requestFocus() }
+    }
+    LazyRow(
+        modifier = Modifier
+            .fillMaxSize()
+            .focusRequester(rowFocus)
+            .focusGroup()
+            .focusable(),
+        horizontalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        items(people, key = { it.id ?: it.hashCode() }) { person ->
+            PersonCard(
+                person = person,
+                imgWidth = 130.dp,
+                aspectRatio = 0.66f,
+                serverUrl = serverUrl
             )
         }
     }
