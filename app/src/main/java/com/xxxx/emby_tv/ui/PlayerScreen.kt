@@ -682,9 +682,13 @@ fun PlayerScreen(
                 // 获取转码URL - 优先使用直链（音频两类 URL 可能都为 null，回退拼静态直链）
                 var path = source?.directStreamUrl ?: source?.transcodingUrl
                 val audioOnly = source?.mediaStreams?.none { it.type.equals("Video", ignoreCase = true) } != false
-                if (path == null && audioOnly) {
-                    val ext = source?.container?.takeIf { it.isNotBlank() } ?: "mp3"
-                    path = "/Audio/$mediaId/stream.$ext?static=true&api_key=$apiKey"
+                if (audioOnly) {
+                    if (path == null) {
+                        val ext = source?.container?.takeIf { it.isNotBlank() } ?: "mp3"
+                        path = "/Audio/$mediaId/stream.$ext?static=true&api_key=$apiKey"
+                    } else if (!path.contains("static=")) {
+                        path = path + (if (path.contains("?")) "&" else "?") + "static=true"
+                    }
                 }
 
                 if (path != null) {
@@ -827,14 +831,19 @@ fun PlayerScreen(
                 }
             }
 
-            // 音频条目：Emby 的 PlaybackInfo 对 Audio 两类 URL 都可能不返回（实测 2026-09-27：
-            // 网易云音乐与本地音乐的 DirectStreamUrl / TranscodingUrl 全是 null），
-            // 客户端原来拿到 null 就不 setMediaItem → 一直转圈。这里自己拼直链：
-            // /Audio/{id}/stream.{容器}?static=true&api_key=...（实测 206 + audio/flac）
-            if (path == null && mediaInfoResult.type.equals("Audio", ignoreCase = true)) {
-                val ext = source?.container?.takeIf { it.isNotBlank() } ?: "mp3"
-                path = "/Audio/$mediaId/stream.$ext?static=true&api_key=$apiKey"
-                Log.i("PlayerScreen", "音频直链回退: $path")
+            // 音频条目两处修正（2026-09-27 实测 虚拟.wav）：
+            // 1) Emby 给的 DirectStreamUrl 形如 /audio/{id}/stream?...（不带 static），
+            //    直接拉会 500；必须补 static=true → 206 原样直出。
+            // 2) 若两类 URL 都没返回（音乐条目常见），自己拼 /Audio/{id}/stream.{容器}?static=true&api_key=...。
+            if (mediaInfoResult.type.equals("Audio", ignoreCase = true)) {
+                if (path == null) {
+                    val ext = source?.container?.takeIf { it.isNotBlank() } ?: "mp3"
+                    path = "/Audio/$mediaId/stream.$ext?static=true&api_key=$apiKey"
+                    Log.i("PlayerScreen", "音频直链回退(自拼): $path")
+                } else if (!path.contains("static=")) {
+                    path = path + (if (path.contains("?")) "&" else "?") + "static=true"
+                    Log.i("PlayerScreen", "音频直链补 static=true: $path")
+                }
             }
 
             videoUrl = if (path != null) "${serverUrl}/emby$path" else null
