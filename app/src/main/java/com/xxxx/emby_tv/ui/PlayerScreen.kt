@@ -96,6 +96,10 @@ import com.xxxx.emby_tv.ui.components.IntroSheet
 import com.xxxx.emby_tv.ui.components.EpisodeListSheet
 import com.xxxx.emby_tv.ui.components.CastListSheet
 import com.xxxx.emby_tv.ui.components.BufferPresetSheet
+import com.xxxx.emby_tv.ui.components.SheetRow
+import com.xxxx.emby_tv.ui.components.qualityLabel
+import com.xxxx.emby_tv.ui.components.playModeName
+import com.xxxx.emby_tv.ui.components.correctionName
 import com.xxxx.emby_tv.ui.components.playMethodLabel
 import com.xxxx.emby_tv.ui.components.techLineOf
 import com.xxxx.emby_tv.ui.components.ResumePlaybackButtons
@@ -246,6 +250,7 @@ fun PlayerScreen(
     var activeItem by remember { mutableStateOf<PlayerMenuItem?>(null) }
     var inMoreMenu by remember { mutableStateOf(false) }
     var maxStreamingBitrate by remember { mutableIntStateOf(QUALITY_ORIGINAL) }
+    var interactionTick by remember { mutableIntStateOf(0) }
     val sheetFirstFocus = remember { FocusRequester() }
     var showStats by remember { mutableStateOf(false) }
 
@@ -1488,6 +1493,7 @@ fun PlayerScreen(
                     }
 
                     if (event.type == KeyEventType.KeyDown) {
+                        interactionTick++ // 还在操作,重置自动收起的计时
                         // Menu 键:开关面板
                         if (event.key == Key.Menu) {
                             if (activeItem != null) {
@@ -1650,8 +1656,8 @@ fun PlayerScreen(
                     duration = duration,
                     buffered = buffered,
                     isPlaying = isPlaying,
-                    menuItems = if (inMoreMenu) PLAYER_MORE_MENU else mainMenu,
-                    activeItem = activeItem,
+                    menuItems = mainMenu,
+                    activeItem = if (inMoreMenu) PlayerMenuItem.MORE else activeItem,
                     onMenuSelect = { item ->
                         when (item) {
                             PlayerMenuItem.MORE -> {
@@ -1671,6 +1677,37 @@ fun PlayerScreen(
                     onSeekForward = { player.seekForward() },
                     onPlayPause = { if (isPlaying) player.pause() else player.play() }
                 )
+                }
+
+                // 「更多」:从更多按钮上方长出一竖列;选中某项后本列消失,换成该项的新列
+                if (inMoreMenu) {
+                    SheetShell(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 444.dp, bottom = 84.dp),
+                        title = "",
+                        contentWidth = 380.dp
+                    ) {
+                        PLAYER_MORE_MENU.forEachIndexed { index, item ->
+                            val label = when (item) {
+                                PlayerMenuItem.QUALITY -> "视频质量：" + qualityLabel(maxStreamingBitrate)
+                                PlayerMenuItem.PLAY_MODE -> "播放模式：" + playModeName(playMode)
+                                PlayerMenuItem.CORRECTION -> "播放校正：" + correctionName(playbackCorrection)
+                                PlayerMenuItem.BUFFER -> "缓冲设置"
+                                else -> item.label
+                            }
+                            SheetRow(
+                                label = label,
+                                selected = false,
+                                onClick = {
+                                    inMoreMenu = false
+                                    activeItem = if (item == PlayerMenuItem.BACK) null else item
+                                },
+                                firstFocus = if (index == 0) sheetFirstFocus else null,
+                                showArrow = item != PlayerMenuItem.BACK
+                            )
+                        }
+                    }
                 }
 
                 if (activeItem != null) {
@@ -1827,11 +1864,12 @@ fun PlayerScreen(
                     }
                 }
 
-                // 播放中 8 秒无按键自动收起(二级菜单打开或暂停时不收)
-                LaunchedEffect(showPanel, activeItem, isPlaying) {
-                    if (activeItem == null && isPlaying) {
+                // 停止操作 8 秒后自动收起(每按一次键都重新计时;暂停时不收)
+                LaunchedEffect(showPanel, activeItem, inMoreMenu, isPlaying, interactionTick) {
+                    if (isPlaying) {
                         kotlinx.coroutines.delay(8000)
                         showPanel = false
+                        activeItem = null
                         inMoreMenu = false
                     }
                 }

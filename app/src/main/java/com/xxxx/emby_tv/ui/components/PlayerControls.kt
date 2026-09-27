@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.HighQuality
@@ -385,7 +386,7 @@ fun SheetShell(
     }
 }
 
-/** 二级菜单通用行(firstFocus 传非空时,该行会请求焦点) */
+/** 二级菜单通用行(firstFocus 传非空时,该行会请求焦点;showArrow 显示"还有下一层"的箭头) */
 @Composable
 fun SheetRow(
     label: String,
@@ -393,6 +394,7 @@ fun SheetRow(
     onClick: () -> Unit,
     firstFocus: FocusRequester? = null,
     trailing: String? = null,
+    showArrow: Boolean = false,
 ) {
     LaunchedEffect(firstFocus) {
         if (firstFocus != null) {
@@ -429,7 +431,14 @@ fun SheetRow(
                     Text(text = trailing, fontSize = 15.sp, color = Color(0xFFBDBDBD))
                     Spacer(modifier = Modifier.width(10.dp))
                 }
-                if (selected) {
+                if (showArrow) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.75f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else if (selected) {
                     Icon(
                         imageVector = Icons.Default.CheckBox,
                         contentDescription = null,
@@ -460,8 +469,19 @@ fun InfoSheet(
     modifier: Modifier = Modifier,
     firstFocus: FocusRequester,
 ) {
-    val posterUrl = remember(mediaInfo.id, serverUrl) {
-        if (serverUrl.isEmpty()) "" else Utils.getImageUrl(serverUrl, mediaInfo, false)
+    val posterUrl = remember(mediaInfo.id, mediaInfo.seriesId, serverUrl) {
+        if (serverUrl.isEmpty()) {
+            ""
+        } else {
+            val seriesId = mediaInfo.seriesId
+            val seriesTag = mediaInfo.seriesPrimaryImageTag
+            // 剧集用剧的海报,不要用当前这一集的剧照
+            if (!seriesId.isNullOrEmpty() && !seriesTag.isNullOrEmpty()) {
+                "$serverUrl/emby/Items/$seriesId/Images/Primary?maxHeight=400&tag=$seriesTag&quality=80"
+            } else {
+                Utils.getImageUrl(serverUrl, mediaInfo, false)
+            }
+        }
     }
     val title = mediaInfo.seriesName ?: mediaInfo.name ?: ""
     val metaLine = buildString {
@@ -483,7 +503,10 @@ fun InfoSheet(
             focusedContainerColor = Color.Transparent,
             focusedContentColor = Color.White
         ),
-        modifier = modifier.focusRequester(firstFocus)
+        modifier = modifier
+            .background(Color(0xCC000000), RoundedCornerShape(14.dp))
+            .padding(20.dp)
+            .focusRequester(firstFocus)
     ) {
         Row {
             if (posterUrl.isNotEmpty()) {
@@ -609,7 +632,9 @@ fun CastListSheet(
     firstFocus: FocusRequester,
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .background(Color(0xCC000000), RoundedCornerShape(14.dp))
+            .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
@@ -910,3 +935,21 @@ fun techLineOf(source: MediaSourceInfoDto?, videoLabel: String): String {
     source?.bitrate?.takeIf { it > 0 }?.let { parts.add("${it / 1_000_000} Mbps") }
     return parts.joinToString(" · ")
 }
+
+/** 视频质量档位显示名 */
+fun qualityLabel(bitrate: Int): String = when (bitrate) {
+    QUALITY_ORIGINAL -> "原画"
+    10_000_000 -> "1080p 10 兆"
+    5_000_000 -> "1080p 5 兆"
+    else -> "1080p 1 兆"
+}
+
+/** 播放模式显示名 */
+fun playModeName(mode: Int): String = when (mode) {
+    0 -> "列表循环"
+    1 -> "单集循环"
+    else -> "播完停止"
+}
+
+/** 播放校正显示名 */
+fun correctionName(value: Int): String = if (value == 1) "服务端转码" else "关闭"
