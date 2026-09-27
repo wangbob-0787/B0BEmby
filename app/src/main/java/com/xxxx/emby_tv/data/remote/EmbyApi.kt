@@ -206,13 +206,11 @@ object EmbyApi {
         apiKey: String,
         deviceId: String,
         userId: String,
-        parentId: String,
-        // 音乐库默认返回的是「专辑」，而我们的专辑没有封面（封面图是跟歌曲同名的 .jpg）；
-        // 传 Audio 直接取歌曲条目，歌曲是有封面的（2026-09-27 实测 597 首全有 Primary 图）
-        includeItemTypes: String? = null
+        parentId: String
     ): List<BaseItemDto> {
-        val typesParam = if (includeItemTypes.isNullOrEmpty()) "" else "&IncludeItemTypes=$includeItemTypes"
-        val url = "/Users/$userId/Items/Latest?Limit=20&ParentId=$parentId$typesParam" +
+        // 注意：本端点不支持 IncludeItemTypes（2026-09-27 实测传了也照样返回专辑），
+        // 音乐库要取歌曲得走 getLibraryList 那条 /Users/{uid}/Items 的路径。
+        val url = "/Users/$userId/Items/Latest?Limit=20&ParentId=$parentId" +
                 "&Fields=PrimaryImageAspectRatio,ProductionYear&X-Emby-Token=$apiKey"
         return httpAsBaseItemDtoListDirect(context, serverUrl, apiKey, deviceId, url)
     }
@@ -240,8 +238,18 @@ object EmbyApi {
             .map { view ->
                 val id = view.id ?: ""
                 if (id.isNotEmpty()) {
-                    val types = if (view.collectionType.equals("music", ignoreCase = true)) "Audio" else null
-                    val items = getLatestItemsByViews(context, serverUrl, apiKey, deviceId, userId, id, types)
+                    // 音乐库：/Items/Latest 只给「专辑」，而专辑没有封面 → 首页一排灰块。
+                    // 改取歌曲(Audio)——597 首全有封面图（2026-09-27 实测）。
+                    val items = if (view.collectionType.equals("music", ignoreCase = true)) {
+                        getLibraryList(
+                            context, serverUrl, apiKey, deviceId, userId,
+                            parentId = id, type = "Audio",
+                            startIndex = 0, limit = 20,
+                            sortBy = "DateCreated", sortOrder = "Descending"
+                        ).first
+                    } else {
+                        getLatestItemsByViews(context, serverUrl, apiKey, deviceId, userId, id)
+                    }
                     view.copy(latestItems = items)
                 } else {
                     view
