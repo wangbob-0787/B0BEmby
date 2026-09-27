@@ -22,14 +22,9 @@ fun BuildGradientBackground(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    0.0f to themeColor.primaryDark,
-                    1.0f to themeColor.secondaryLight,
-                    start = Offset.Zero,
-                    end = Offset.Infinite
-                )
-            )
+            // 实验（2026-09-27 电视端卡顿排查）：整屏线性渐变每帧都要重绘 1920x1080 的渐变着色器，
+            // 低端电视 GPU 单帧 20ms+；先换纯色验证收益，再决定渐变的替代方案（缓存成位图 / 只局部用）。
+            .background(themeColor.primaryDark)
     ) {
         content()
     }
