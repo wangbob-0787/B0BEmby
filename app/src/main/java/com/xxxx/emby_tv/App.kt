@@ -9,6 +9,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.xxxx.emby_tv.data.remote.HttpClient
+import okio.Path.Companion.toOkioPath
 
 class App : Application() {
     override fun onCreate() {
@@ -50,7 +51,8 @@ class App : Application() {
                 }
                 .diskCache {
                     coil3.disk.DiskCache.Builder()
-                        .directory(context.cacheDir.resolve("image_cache"))
+                        // Coil 3 要 okio.Path，不是 java.io.File
+                        .directory(context.cacheDir.resolve("image_cache").toOkioPath())
                         .maxSizeBytes(256L * 1024 * 1024)
                         .build()
                 }
