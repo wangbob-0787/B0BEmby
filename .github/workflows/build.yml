@@ -34,21 +34,22 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: 编译 debug APK
+      - name: 编译 debug + release APK
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
 
       - name: 收集 APK
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/debug/*.apk out/ || true
+          cp app/build/outputs/apk/debug/*.apk out/ 2>/dev/null || true
+          cp app/build/outputs/apk/release/*.apk out/ 2>/dev/null || true
           ls -la out/
 
       - name: 上传 APK
         uses: actions/upload-artifact@v4
         with:
-          name: openemby-debug-apk
+          name: openemby-apk
           path: out/*.apk
           retention-days: 14
 
