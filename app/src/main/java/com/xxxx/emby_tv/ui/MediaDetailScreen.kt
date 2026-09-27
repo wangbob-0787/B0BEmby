@@ -655,7 +655,7 @@ private fun SongRow(
         onClick = onPlay,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = BorderStroke(2.dp, Color.White)
+            focusedBorder = Border(BorderStroke(2.dp, Color.White))
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
         colors = ClickableSurfaceDefaults.colors(
