@@ -387,9 +387,15 @@ object EmbyApi {
                     (selectedSubtitleIndex?.let { "&SubtitleStreamIndex=$it" } ?: "")
 
             val result = httpAsJsonObject(context, serverUrl, apiKey, deviceId, url, "POST", body)
-            gson.fromJson(result, MediaDto::class.java)
+            val dto = gson.fromJson(result, MediaDto::class.java)
+            com.xxxx.emby_tv.util.DiagLog.w(context, "playbackInfo",
+                "id=$targetId sources=${dto.mediaSources?.size ?: 0} " +
+                "first=${dto.mediaSources?.firstOrNull()?.let { it.directStreamUrl ?: it.transcodingUrl }}")
+            dto
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get playback info: ${e.message}")
+            com.xxxx.emby_tv.util.DiagLog.w(context, "playbackInfo失败",
+                "id=$targetId ${e.javaClass.simpleName}: ${e.message}")
             MediaDto()
         }
     }

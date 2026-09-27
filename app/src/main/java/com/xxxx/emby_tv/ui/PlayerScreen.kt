@@ -762,6 +762,7 @@ fun PlayerScreen(
                     media.playSessionId
                 )
             }
+            DiagLog.w(context, "playerStart", "mediaId=$mediaId position=$position")
             val mediaResult = repository.getPlaybackInfo(
                 mediaId,
                 if (position > 0) position * 10000 else playbackPositionTicks,
@@ -773,6 +774,7 @@ fun PlayerScreen(
             )
 
             if (mediaResult.mediaSources.isNullOrEmpty()) {
+                DiagLog.w(context, "playerNoSources", "mediaId=$mediaId PlaybackInfo 无 MediaSources")
                 withContext(kotlinx.coroutines.Dispatchers.Main) {
                     android.widget.Toast.makeText(
                         context,
