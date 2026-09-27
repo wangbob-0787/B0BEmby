@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import com.xxxx.emby_tv.data.model.BaseItemDto
 import com.xxxx.emby_tv.data.model.PersonInfo
 import androidx.compose.ui.res.stringResource
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +34,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -232,9 +238,16 @@ fun MediaDetailScreen(
                             if (!type.isNullOrEmpty()) MetaPill(type)
                         }
 
-                        // Play Button
-                        Button(
-                            onClick = {
+                        // 动作按钮组（官方形态：圆角方块图标 + 下方小字标签）
+                        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                            ActionTile(
+                                icon = Icons.Default.PlayArrow,
+                                label = if (resume != null || ((mediaInfo.userData?.playbackPositionTicks
+                                        ?: 0L) > 0)
+                                ) stringResource(R.string.resume) else stringResource(R.string.play),
+                                primary = true,
+                                focusRequester = playButtonFocusRequester
+                            ) {
                                 if (mediaInfo.isSeries) {
                                     val currentResume = resume
                                     if (currentResume != null) {
@@ -243,50 +256,23 @@ fun MediaDetailScreen(
                                         onNavigateToPlayer(episodes!!.first())
                                     }
                                 } else if (mediaInfo.type.equals("MusicAlbum", ignoreCase = true)) {
-                                    // 专辑本身不可播（服务端 500），播第一首
                                     episodes?.firstOrNull()?.let { onNavigateToPlayer(it) }
                                 } else {
                                     onNavigateToPlayer(mediaInfo)
                                 }
-                            },
-                            modifier = Modifier
-                                .focusRequester(playButtonFocusRequester)
-                                .padding(top = 8.dp),
-                            colors = ButtonDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                                focusedContentColor = MaterialTheme.colorScheme.onSecondary
-                            )
-                        ) {
-                            val isResume =
-                                resume != null || ((mediaInfo.userData?.playbackPositionTicks
-                                    ?: 0L) > 0)
-
-                            Text(
-                                text = if (isResume) stringResource(R.string.resume) else stringResource(
-                                    R.string.play
-                                ),
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-                        }
-                        // P2：官方详情页有"全部播放/随机播放"，这里补上
-                        if (mediaInfo.isSeries && !episodes.isNullOrEmpty()) {
-                            Button(
-                                onClick = { episodes!!.firstOrNull()?.let { onNavigateToPlayer(it) } },
-                                colors = ButtonDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
-                                )
-                            ) { Text(stringResource(R.string.play_all)) }
-
-                            Button(
-                                onClick = { episodes!!.randomOrNull()?.let { onNavigateToPlayer(it) } },
-                                colors = ButtonDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
-                                )
-                            ) { Text(stringResource(R.string.shuffle)) }
+                            }
+                            if (mediaInfo.isSeries && !episodes.isNullOrEmpty()) {
+                                ActionTile(
+                                    icon = Icons.Default.PlaylistPlay,
+                                    label = stringResource(R.string.play_all),
+                                    primary = false
+                                ) { episodes!!.firstOrNull()?.let { onNavigateToPlayer(it) } }
+                                ActionTile(
+                                    icon = Icons.Default.Shuffle,
+                                    label = stringResource(R.string.shuffle),
+                                    primary = false
+                                ) { episodes!!.randomOrNull()?.let { onNavigateToPlayer(it) } }
+                            }
                         }
                         if (resume != null) Box(
                             modifier = Modifier
@@ -341,35 +327,71 @@ fun MediaDetailScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // 季/集区（P2 视觉对齐 2026-09-27）：改成官方那样的**竖向富信息列表**
-                // 每集 = 缩略图 + 序号标题 + S/E·时长·CC + 单集简介（原来是横向海报卡）
+                // People List (Below Episodes)
+                mediaInfo.people?.takeIf { it.isNotEmpty() }?.let { people ->
+
+                // 季选择器 + 只渲染当前季的集（2026-09-27 按官方形态重做）
+                // 原实现把所有季一次铺开：想看第 5 季要从第 1 季第 1 集一路按 ↓（上百次）
                 if (mediaInfo.isSeries && !seasons.isNullOrEmpty()) {
+                    val seasonList = seasons ?: emptyList()
+                    var selectedSeasonIndex by remember(seasonList.size) { mutableIntStateOf(0) }
+                    val seasonFocusers = remember(seasonList.size) {
+                        List(seasonList.size) { FocusRequester() }
+                    }
+                    val firstEpisodeFocus = remember { FocusRequester() }
                     val noEpisodesText = stringResource(R.string.no_episodes_found)
-                    seasons?.forEach { season ->
-                        val seasonName = season.name ?: ""
-                        val seasonEpisodes = episodes?.filter { it.seasonName == seasonName } ?: emptyList()
 
-                        Text(
-                            text = seasonName,
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            ),
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        if (seasonEpisodes.isNotEmpty()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                seasonEpisodes.forEachIndexed { idx, ep ->
-                                    EpisodeRow(index = idx + 1, episode = ep, serverUrl = serverUrl) {
-                                        onNavigateToPlayer(ep)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 12.dp)
+                    ) {
+                        itemsIndexed(seasonList) { index, season ->
+                            val selected = index == selectedSeasonIndex
+                            Surface(
+                                onClick = { selectedSeasonIndex = index },
+                                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+                                colors = ClickableSurfaceDefaults.colors(
+                                    containerColor = if (selected) MaterialTheme.colorScheme.secondary.copy(
+                                        alpha = 0.45f
+                                    ) else Color.Transparent,
+                                    contentColor = Color.White,
+                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                                ),
+                                modifier = Modifier
+                                    .focusRequester(seasonFocusers[index])
+                                    .focusProperties {
+                                        // 焦点在"当前选中的那一季"上时，下键直接进集列表第一集
+                                        if (index == selectedSeasonIndex) down = firstEpisodeFocus
                                     }
+                            ) {
+                                Text(
+                                    text = season.name ?: "",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    val currentSeasonName = seasonList.getOrNull(selectedSeasonIndex)?.name ?: ""
+                    val seasonEpisodes =
+                        episodes?.filter { it.seasonName == currentSeasonName } ?: emptyList()
+                    if (seasonEpisodes.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            seasonEpisodes.forEachIndexed { idx, ep ->
+                                EpisodeRow(
+                                    index = idx + 1,
+                                    episode = ep,
+                                    serverUrl = serverUrl,
+                                    focusRequester = if (idx == 0) firstEpisodeFocus else null
+                                ) {
+                                    onNavigateToPlayer(ep)
                                 }
                             }
-                        } else {
-                            Text(text = noEpisodesText, color = Color.Gray)
                         }
-                        Spacer(modifier = Modifier.height(24.dp))
+                    } else {
+                        Text(text = noEpisodesText, color = Color.Gray)
                     }
                     Spacer(modifier = Modifier.height(32.dp))
                 }
@@ -390,8 +412,6 @@ fun MediaDetailScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
 
-                // People List (Below Episodes)
-                mediaInfo.people?.takeIf { it.isNotEmpty() }?.let { people ->
                     if (people.isNotEmpty()) {
                         Text(
                             text = stringResource(R.string.cast),
@@ -685,12 +705,56 @@ private fun SongRow(
     }
 }
 
+/** 详情页动作按钮:圆角方块图标 + 下方小字标签(官方详情页形态,遥控器上点击区域大) */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ActionTile(
+    icon: ImageVector,
+    label: String,
+    primary: Boolean,
+    focusRequester: FocusRequester? = null,
+    onClick: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            onClick = onClick,
+            shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = if (primary) MaterialTheme.colorScheme.secondary else Color.White.copy(
+                    alpha = 0.16f
+                ),
+                contentColor = Color.White,
+                focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                focusedContentColor = MaterialTheme.colorScheme.onSecondary
+            ),
+            modifier = Modifier.then(
+                if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
+            )
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier
+                    .padding(14.dp)
+                    .size(26.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White
+        )
+    }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun EpisodeRow(
     index: Int,
     episode: BaseItemDto,
     serverUrl: String,
+    focusRequester: FocusRequester? = null,
     onPlay: () -> Unit,
 ) {
     val thumb = Utils.getImageUrl(serverUrl, episode, true)
@@ -713,7 +777,11 @@ private fun EpisodeRow(
             containerColor = Color.White.copy(alpha = 0.05f),
             focusedContainerColor = Color.White.copy(alpha = 0.12f)
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
+            )
     ) {
         Row(
             modifier = Modifier

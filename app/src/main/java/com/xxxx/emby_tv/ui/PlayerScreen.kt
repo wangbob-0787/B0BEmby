@@ -1441,6 +1441,9 @@ fun PlayerScreen(
                         return@onKeyEvent false
                     }
 
+                    // 任何按键(含左右键)都重置自动收起的计时
+                    if (event.type == KeyEventType.KeyDown) interactionTick++
+
                     if (event.key == Key.Back || event.key == Key.Escape) {
                         if (activeItem != null) {
                             activeItem = null
@@ -1493,7 +1496,6 @@ fun PlayerScreen(
                     }
 
                     if (event.type == KeyEventType.KeyDown) {
-                        interactionTick++ // 还在操作,重置自动收起的计时
                         // Menu 键:开关面板
                         if (event.key == Key.Menu) {
                             if (activeItem != null) {
@@ -1741,9 +1743,16 @@ fun PlayerScreen(
                         }
                     } else {
                     SheetShell(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 44.dp, bottom = 84.dp),
+                        modifier = if (item == PlayerMenuItem.SUBTITLE) {
+                            // 字幕菜单放画面左侧中部:官方就是这样做的,避免挡住画面底部的字幕
+                            Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(start = 56.dp)
+                        } else {
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 44.dp, bottom = 84.dp)
+                        },
                         title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
                         contentWidth = when (item) {
                             PlayerMenuItem.BUFFER -> 270.dp
@@ -1864,13 +1873,12 @@ fun PlayerScreen(
                     }
                 }
 
-                // 停止操作 8 秒后自动收起(每按一次键都重新计时;暂停时不收)
+                // 停止操作 8 秒后自动收起;二级菜单/更多列开着时不收(暂停时也不收)
                 LaunchedEffect(showPanel, activeItem, inMoreMenu, isPlaying, interactionTick) {
+                    if (activeItem != null || inMoreMenu) return@LaunchedEffect
                     if (isPlaying) {
                         kotlinx.coroutines.delay(8000)
                         showPanel = false
-                        activeItem = null
-                        inMoreMenu = false
                     }
                 }
             }

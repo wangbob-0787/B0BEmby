@@ -3,8 +3,11 @@ package com.xxxx.emby_tv.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -36,6 +39,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.onFocusChanged
@@ -46,6 +50,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,6 +66,7 @@ import com.xxxx.emby_tv.data.model.MediaStreamDto
 import com.xxxx.emby_tv.data.model.PersonInfo
 import com.xxxx.emby_tv.ui.PersonCard
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** 播放控制面板上的一级菜单项 */
 enum class PlayerMenuItem(val label: String) {
@@ -156,13 +162,28 @@ fun PlayerControlPanel(
     onSeekForward: () -> Unit,
     onPlayPause: () -> Unit,
 ) {
-    val playFocus = remember { FocusRequester() }
+    val playKeyFocus = remember { List(3) { FocusRequester() } } // 0 后退 / 1 播放暂停 / 2 前进
     val itemFocus = remember { List(PLAYER_MAIN_MENU.size) { FocusRequester() } }
+    var lastIconIndex by remember { mutableIntStateOf(0) }
+    var sheetWasOpen by remember { mutableStateOf(false) }
 
     // 面板出现时焦点落在播放暂停
     LaunchedEffect(Unit) {
         delay(60)
-        runCatching { playFocus.requestFocus() }
+        runCatching { playKeyFocus[1].requestFocus() }
+    }
+
+    // 二级菜单关掉后,焦点回到刚才点开它的那个图标
+    LaunchedEffect(activeItem) {
+        if (activeItem != null) {
+            sheetWasOpen = true
+        } else if (sheetWasOpen) {
+            sheetWasOpen = false
+            delay(60)
+            runCatching {
+                itemFocus[lastIconIndex.coerceAtMost(itemFocus.lastIndex)].requestFocus()
+            }
+        }
     }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomStart) {
@@ -179,7 +200,10 @@ fun PlayerControlPanel(
                     color = Color.White,
                     fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
-                    style = OverlayTextStyle
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = OverlayTextStyle,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 if (playMethodLabel.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(12.dp))
@@ -216,29 +240,47 @@ fun PlayerControlPanel(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // 进度条
-            Box(
+            // 进度条(加粗 + 当前位置圆点,3 米外也能看出播到哪)
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
-                    .background(Color.White.copy(alpha = 0.30f))
+                    .height(14.dp)
             ) {
+                val barWidth = maxWidth
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .align(Alignment.CenterStart)
+                        .background(Color.White.copy(alpha = 0.30f))
+                ) {
+                    if (duration > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(
+                                    (buffered.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                                )
+                                .background(Color.White.copy(alpha = 0.45f))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(
+                                    (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                                )
+                                .background(Color.White)
+                        )
+                    }
+                }
                 if (duration > 0) {
+                    val fraction = (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(
-                                (buffered.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                            )
-                            .background(Color.White.copy(alpha = 0.45f))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(
-                                (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                            )
-                            .background(Color.White)
+                            .align(Alignment.CenterStart)
+                            .offset(x = (barWidth * fraction) - 6.dp)
+                            .size(12.dp)
+                            .background(Color.White, CircleShape)
                     )
                 }
             }
@@ -250,21 +292,22 @@ fun PlayerControlPanel(
                 PanelIcon(
                     icon = Icons.Default.Replay10,
                     description = "后退10秒",
-                    focusRequester = itemFocus[0],
+                    focusRequester = playKeyFocus[0],
                     onClick = onSeekBack
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 PanelIcon(
                     icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     description = "播放暂停",
-                    focusRequester = playFocus,
-                    onClick = onPlayPause
+                    focusRequester = playKeyFocus[1],
+                    onClick = onPlayPause,
+                    downFocus = itemFocus[0]
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 PanelIcon(
                     icon = Icons.Default.Forward10,
                     description = "前进10秒",
-                    focusRequester = itemFocus[1],
+                    focusRequester = playKeyFocus[2],
                     onClick = onSeekForward
                 )
             }
@@ -286,12 +329,15 @@ fun PlayerControlPanel(
                 menuItems.forEachIndexed { index, item ->
                     val selected = activeItem == item
                     Surface(
-                        onClick = { onMenuSelect(item) },
+                        onClick = {
+                            lastIconIndex = index
+                            onMenuSelect(item)
+                        },
                         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (selected) Color.White.copy(alpha = 0.22f) else Color.Transparent,
+                            containerColor = if (selected) EmbyGreen.copy(alpha = 0.45f) else Color.Transparent,
                             contentColor = Color.White,
-                            focusedContainerColor = Color.White.copy(alpha = 0.32f),
+                            focusedContainerColor = EmbyGreen.copy(alpha = 0.55f),
                             focusedContentColor = Color.White
                         ),
                         modifier = Modifier
@@ -321,6 +367,7 @@ private fun PanelIcon(
     description: String,
     focusRequester: FocusRequester,
     onClick: () -> Unit,
+    downFocus: FocusRequester? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -328,10 +375,18 @@ private fun PanelIcon(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = Color.White.copy(alpha = 0.26f),
+            focusedContainerColor = Color.White.copy(alpha = 0.30f),
             focusedContentColor = Color.White
         ),
-        modifier = Modifier.focusRequester(focusRequester)
+        modifier = Modifier
+            .focusRequester(focusRequester)
+            .then(
+                if (downFocus != null) {
+                    Modifier.focusProperties { down = downFocus }
+                } else {
+                    Modifier
+                }
+            )
     ) {
         Icon(
             imageVector = icon,
@@ -402,6 +457,8 @@ fun SheetRow(
             runCatching { firstFocus.requestFocus() }
         }
     }
+    val scope = rememberCoroutineScope()
+    val bringIntoView = remember { BringIntoViewRequester() }
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -414,6 +471,10 @@ fun SheetRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
+            .bringIntoViewRequester(bringIntoView)
+            .onFocusChanged {
+                if (it.isFocused) scope.launch { bringIntoView.bringIntoView() }
+            }
             .then(
                 if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier
             )
@@ -425,7 +486,13 @@ fun SheetRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = label, fontSize = 13.sp)
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!selected && !trailing.isNullOrEmpty()) {
                     Text(text = trailing, fontSize = 11.sp, color = Color(0xFFBDBDBD))
@@ -544,6 +611,8 @@ fun InfoSheet(
                     fontSize = 12.sp,
                     lineHeight = 17.sp,
                     color = Color(0xFFEDEDED),
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis,
                     style = OverlayTextStyleSoft
                 )
                 if (techLine.isNotEmpty()) {
@@ -762,6 +831,15 @@ fun AudioSheet(
     firstFocus: FocusRequester,
 ) {
     Column {
+        if (tracks.isEmpty()) {
+            Text(
+                text = "暂无可切换音轨",
+                color = Color(0xFFBDBDBD),
+                fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 10.dp)
+            )
+            return@Column
+        }
         tracks.forEachIndexed { i, track ->
             val index = track.index ?: -1
             SheetRow(
