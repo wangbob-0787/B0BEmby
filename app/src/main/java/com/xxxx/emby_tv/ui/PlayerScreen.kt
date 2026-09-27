@@ -1642,6 +1642,7 @@ fun PlayerScreen(
                         onOpenSettings = { tab ->
                             menuInitialTab = tab
                             showMenu = true
+                            showControls = false
                         }
                     )
                 }

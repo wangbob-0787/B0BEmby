@@ -139,7 +139,7 @@ fun PlayerControlsBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.Black.copy(alpha = 0.88f))
+            .background(Color.Black)
             .padding(horizontal = 44.dp, vertical = 14.dp)
     ) {
         // 标题行
@@ -269,7 +269,7 @@ private fun SheetShell(
         modifier = modifier
             .width(520.dp)
             .heightIn(max = 430.dp)
-            .background(Color(0xF2141414), RoundedCornerShape(14.dp))
+            .background(Color(0xFF0E0E0E), RoundedCornerShape(14.dp))
             .padding(horizontal = 18.dp, vertical = 14.dp)
     ) {
         Text(text = title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)

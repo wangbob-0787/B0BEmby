@@ -136,18 +136,19 @@ fun PlayerMenu(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize(),
-            contentAlignment = Alignment.BottomCenter,
+                .fillMaxSize()
+                .padding(end = 44.dp, bottom = 250.dp),
+            contentAlignment = Alignment.BottomEnd,
 
             ) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.65f),
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))),
+                    .width(900.dp)
+                    .height(470.dp),
+                shape = RoundedCornerShape(14.dp),
+                border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
                 colors = SurfaceDefaults.colors(
-                    containerColor = Color(0xFF161616).copy(alpha = 0.5f),
+                    containerColor = Color(0xFF0E0E0E),
                     contentColor = Color.White
                 )
 
@@ -688,7 +689,7 @@ fun SubtitlesTab(
     timeOffsetMs: Long,
     onTimeOffsetChange: (Long) -> Unit
 ) {
-    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 24.dp)) {
         item {
             SubtitleOffsetRow(bottomPadding, onBottomPaddingChange)
         }
@@ -783,7 +784,7 @@ fun SubtitlesTab(
 
 @Composable
 fun AudioTab(tracks: List<MediaStreamDto>, selectedIndex: Int, onSelect: (Int) -> Unit) {
-    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 24.dp)) {
 
         items(tracks) { track ->
             val index = (track.index) ?: -1
@@ -832,7 +833,7 @@ fun AudioTab(tracks: List<MediaStreamDto>, selectedIndex: Int, onSelect: (Int) -
 fun SpeedTab(currentSpeed: Float, onChange: (Float) -> Unit) {
     val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 3.0f, 4.0f)
     val normalLabel = stringResource(R.string.speed_normal)
-    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 24.dp)) {
         items(speeds) { speed ->
             val isSelected = currentSpeed == speed
             val label = if (speed == 1.0f) "1.0x ($normalLabel)" else "${speed}x"
@@ -943,7 +944,7 @@ fun DanmakuTab(
         1.3f to "大",
         1.6f to "特大"
     )
-    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 24.dp)) {
         item {
             MenuRow(
                 label = if (enabled) "显示弹幕:开" else "显示弹幕:关",
@@ -967,7 +968,7 @@ fun PlaybackCorrectionTab(current: Int, onChange: (Int) -> Unit) {
         0 to stringResource(R.string.off_default),
         1 to stringResource(R.string.playback_correction_server)
     )
-    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 24.dp)) {
         items(options) { (value, label) ->
             val isSelected = current == value
             Surface(
@@ -1014,7 +1015,7 @@ fun PlayModeTab(current: Int, onChange: (Int) -> Unit) {
         stringResource(R.string.loop_single),
         stringResource(R.string.loop_off)
     )
-    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 24.dp)) {
         itemsIndexed(modes) { index, title ->
             val isSelected = current == index
             Surface(
@@ -1063,7 +1064,7 @@ fun IntroSkipTab(
         false to stringResource(R.string.manual_skip_intro),
         true to stringResource(R.string.auto_skip_intro)
     )
-    LazyColumn(contentPadding = PaddingValues(horizontal = 150.dp)) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 24.dp)) {
         items(options) { (value, label) ->
             val isSelected = autoSkipIntro == value
             Surface(
