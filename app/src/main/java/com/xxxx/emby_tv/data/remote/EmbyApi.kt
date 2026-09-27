@@ -341,11 +341,12 @@ object EmbyApi {
         startTimeTicks: Long,
         selectedAudioIndex: Int? = null,
         selectedSubtitleIndex: Int? = null,
-        disableHevc: Boolean = false
+        disableHevc: Boolean = false,
+        maxStreamingBitrate: Int = 200_000_000
     ): MediaDto = withContext(Dispatchers.IO) {
         var targetId = mediaId
         try {
-            val body = buildPlaybackInfoBody(context, disableHevc)
+            val body = buildPlaybackInfoBody(context, disableHevc, maxStreamingBitrate)
 
             // 专辑/艺人本身不可播放：Emby 对 MusicAlbum 的 PlaybackInfo 直接 500
             // （"Unable to cast object of type 'MusicAlbum' to type 'IHasMediaSources'"，2026-09-27 实测）。
@@ -376,7 +377,7 @@ object EmbyApi {
                     "&StartTimeTicks=$startTimeTicks" +
                     "&IsPlayback=true" +
                     "&AutoOpenLiveStream=true" +
-                    "&MaxStreamingBitrate=200000000" +
+                    "&MaxStreamingBitrate=$maxStreamingBitrate" +
                     // 禁止直连原始文件:直连(拉网盘原始 mp4/mkv)时播放器拿不到 HDR 色彩信息,
                     // 屏幕收到的是无色彩标记的画面 → 发灰。改由服务端转封装成 HLS/TS 后再播。
                     "&EnableDirectPlay=false" +

@@ -78,14 +78,26 @@ import com.xxxx.emby_tv.data.model.BaseItemDto
 import com.xxxx.emby_tv.data.model.MediaDto
 import com.xxxx.emby_tv.data.model.MediaStreamDto
 import com.xxxx.emby_tv.data.model.SessionDto
-import com.xxxx.emby_tv.ui.components.PlayerMenu
-import com.xxxx.emby_tv.ui.components.PlayerOverlay
-import com.xxxx.emby_tv.ui.components.PlayerControlsBar
-import com.xxxx.emby_tv.ui.components.PlayerSheet
+import com.xxxx.emby_tv.ui.components.PlayerControlPanel
+import com.xxxx.emby_tv.ui.components.PlayerMenuItem
+import com.xxxx.emby_tv.ui.components.PLAYER_MAIN_MENU
+import com.xxxx.emby_tv.ui.components.PLAYER_MORE_MENU
+import com.xxxx.emby_tv.ui.components.QUALITY_ORIGINAL
+import com.xxxx.emby_tv.ui.components.SheetShell
+import com.xxxx.emby_tv.ui.components.InfoSheet
 import com.xxxx.emby_tv.ui.components.SubtitleSheet
 import com.xxxx.emby_tv.ui.components.AudioSheet
 import com.xxxx.emby_tv.ui.components.DanmakuSheet
-import com.xxxx.emby_tv.ui.components.getStreamModeLine
+import com.xxxx.emby_tv.ui.components.SpeedSheet
+import com.xxxx.emby_tv.ui.components.QualitySheet
+import com.xxxx.emby_tv.ui.components.PlayModeSheet
+import com.xxxx.emby_tv.ui.components.CorrectionSheet
+import com.xxxx.emby_tv.ui.components.IntroSheet
+import com.xxxx.emby_tv.ui.components.EpisodeListSheet
+import com.xxxx.emby_tv.ui.components.CastListSheet
+import com.xxxx.emby_tv.ui.components.BufferPresetSheet
+import com.xxxx.emby_tv.ui.components.playMethodLabel
+import com.xxxx.emby_tv.ui.components.techLineOf
 import com.xxxx.emby_tv.ui.components.ResumePlaybackButtons
 import com.xxxx.emby_tv.ui.components.SkipIntroButton
 import com.xxxx.emby_tv.ui.components.getAudioTrack
@@ -229,12 +241,12 @@ fun PlayerScreen(
     var playbackCorrection by remember { mutableStateOf(0) } // 0: off, 1: server transcode
     var playMode by remember { mutableStateOf(0) } // 0: list loop, 1: single loop, 2: no loop
     var endedHandled by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
-    var menuInitialTab by remember { mutableStateOf<String?>(null) }
-    // 底部控制条(按 ↓ 唤出) + 小浮层
-    var showControls by remember { mutableStateOf(false) }
-    var controlZone by remember { mutableIntStateOf(0) }
-    var sheet by remember { mutableStateOf(PlayerSheet.NONE) }
+    // 播放控制面板(按 ↓ 唤出):一级菜单 + 二级菜单
+    var showPanel by remember { mutableStateOf(false) }
+    var activeItem by remember { mutableStateOf<PlayerMenuItem?>(null) }
+    var inMoreMenu by remember { mutableStateOf(false) }
+    var maxStreamingBitrate by remember { mutableIntStateOf(QUALITY_ORIGINAL) }
+    val sheetFirstFocus = remember { FocusRequester() }
     var showStats by remember { mutableStateOf(false) }
 
     // 继续播放/从头开始 按钮状态
@@ -680,7 +692,8 @@ fun PlayerScreen(
                     if (position > 0) position * 10000 else playbackPositionTicks,
                     requestAudioIndex,
                     requestSubtitleIndex,
-                    true
+                    true,
+                    maxStreamingBitrate
                 )
 
                 if (mediaResult.mediaSources.isNullOrEmpty()) {
@@ -761,8 +774,22 @@ fun PlayerScreen(
         ) playbackTrigger++ // 只有手动修改时，才递增触发器，重启协程
     }
 
+    // 控制面板标题:剧名 + S/E(电影用片名)
+    fun panelTitle(): String {
+        val series = mediaInfo.seriesName
+        val season = mediaInfo.parentIndexNumber
+        val episode = mediaInfo.indexNumber
+        val name = mediaInfo.name
+        return when {
+            !series.isNullOrEmpty() && season != null && episode != null -> "$series S$season:E$episode"
+            !series.isNullOrEmpty() -> series
+            !name.isNullOrEmpty() -> name
+            else -> ""
+        }
+    }
+
     // 数据加载逻辑
-    LaunchedEffect(mediaId, playbackCorrection, playbackTrigger) {
+    LaunchedEffect(mediaId, playbackCorrection, playbackTrigger, maxStreamingBitrate) {
         //  这里的逻辑只会运行一次（初始化时）或者在手动递增 trigger 时运行
         val requestAudioIndex = if (selectedAudioIndex <= -1) null else selectedAudioIndex
         val requestSubtitleIndex = if (selectedSubtitleIndex <= -1) null else selectedSubtitleIndex
@@ -781,7 +808,8 @@ fun PlayerScreen(
                 requestSubtitleIndex,
                 // 首次播放不要因为"以前某次失败过"就降级成 h264(会把 4K/HDR 一起丢掉);
                 // 只有用户显式设置(playbackCorrection==1)才降级,失败后的回退仍走下面的专用分支
-                playbackCorrection == 1
+                playbackCorrection == 1,
+                maxStreamingBitrate
             )
 
             if (mediaResult.mediaSources.isNullOrEmpty()) {
@@ -1409,19 +1437,23 @@ fun PlayerScreen(
                     }
 
                     if (event.key == Key.Back || event.key == Key.Escape) {
-                        if (sheet != PlayerSheet.NONE) {
-                            sheet = PlayerSheet.NONE
+                        if (activeItem != null) {
+                            activeItem = null
                             return@onKeyEvent true
                         }
-                        if (showControls) {
-                            showControls = false
+                        if (showPanel) {
+                            if (inMoreMenu) {
+                                inMoreMenu = false
+                            } else {
+                                showPanel = false
+                            }
                             return@onKeyEvent true
                         }
                         return@onKeyEvent false
                     }
-                    // 控制条/浮层显示时,左右键交给焦点系统在条内移动
+                    // 面板显示时,左右键交给焦点系统在面板内移动
                     if (event.key == Key.DirectionLeft) {
-                        if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
+                        if (showPanel) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             if (leftKeyDownTime == 0L) {
                                 leftKeyDownTime = System.currentTimeMillis()
@@ -1438,7 +1470,7 @@ fun PlayerScreen(
                         return@onKeyEvent true
                     }
                     if (event.key == Key.DirectionRight) {
-                        if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
+                        if (showPanel) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             if (rightKeyDownTime == 0L) {
                                 rightKeyDownTime = System.currentTimeMillis()
@@ -1456,39 +1488,30 @@ fun PlayerScreen(
                     }
 
                     if (event.type == KeyEventType.KeyDown) {
-                        // Menu 键:开关控制条
+                        // Menu 键:开关面板
                         if (event.key == Key.Menu) {
-                            if (sheet != PlayerSheet.NONE) {
-                                sheet = PlayerSheet.NONE
+                            if (activeItem != null) {
+                                activeItem = null
+                            } else if (showPanel) {
+                                showPanel = false
+                                inMoreMenu = false
                             } else {
-                                showControls = !showControls
+                                showPanel = true
                             }
                             return@onKeyEvent true
                         }
-                        if (event.key == Key.DirectionDown) {
-                            if (sheet != PlayerSheet.NONE) {
-                                sheet = PlayerSheet.NONE
-                                return@onKeyEvent true
+                        // 面板显示时,上下键全部交给焦点系统(二级菜单里才能移动焦点)
+                        if (event.key == Key.DirectionDown || event.key == Key.DirectionUp) {
+                            if (showPanel) return@onKeyEvent false
+                            if (event.key == Key.DirectionDown) {
+                                showPanel = true
+                                inMoreMenu = false
+                                activeItem = null
                             }
-                            if (!showControls) {
-                                showControls = true
-                                controlZone = 0
-                                return@onKeyEvent true
-                            }
-                            // 图标区按 ↓:交给焦点系统下移到文字入口行
-                            if (controlZone == 0) return@onKeyEvent false
-                            showControls = false
-                            return@onKeyEvent true
-                        }
-                        if (event.key == Key.DirectionUp) {
-                            if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
-                            showControls = true
-                            controlZone = 0
                             return@onKeyEvent true
                         }
                         if (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) {
-                            if (showMenu) return@onKeyEvent false
-                            if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
+                            if (showPanel) return@onKeyEvent false
                             if (isPlaying) {
                                 player.pause()
                                 isShowInfo = true
@@ -1498,7 +1521,7 @@ fun PlayerScreen(
                             }
                             return@onKeyEvent true
                         }
-                        if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent true
+                        if (showPanel) return@onKeyEvent true
                         // Show info on any key
                         isShowInfo = true
                         // Hide info after delay?
@@ -1608,100 +1631,191 @@ fun PlayerScreen(
             }
 
 
-            // 2. Full Info Overlay Layer (only when isShowInfo)
-            // 2. 底部播放控制条(按 ↓ 唤出,不压黑画面)
-            if (showControls) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    PlayerControlsBar(
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                        seriesTitle = mediaInfo.seriesName ?: mediaInfo.name ?: "",
-                        episodeLabel = run {
-                            val season = mediaInfo.parentIndexNumber
-                            val episode = mediaInfo.indexNumber
-                            val epName = mediaInfo.name
-                            val head = if (season != null && episode != null) "S$season:E$episode" else ""
-                            when {
-                                head.isNotEmpty() && !epName.isNullOrEmpty() -> "$head · $epName"
-                                head.isNotEmpty() -> head
-                                else -> epName
-                            }
-                        },
-                        statusLine = getStreamModeLine(session, media.mediaSources?.firstOrNull()),
-                        position = position,
-                        duration = duration,
-                        buffered = buffered,
-                        isPlaying = isPlaying,
-                        onZoneChange = { controlZone = it },
-                        onSeekBack = { player.seekBack() },
-                        onSeekForward = { player.seekForward() },
-                        onPlayPause = { if (isPlaying) player.pause() else player.play() },
-                        onOpenSheet = { sheet = it },
-                        onOpenSettings = { tab ->
-                            menuInitialTab = tab
-                            showMenu = true
-                            showControls = false
-                        }
-                    )
-                }
-
-                // 8 秒无操作自动收起(浮层打开时不收,暂停时不收)
-                LaunchedEffect(showControls, sheet, isPlaying) {
-                    if (sheet == PlayerSheet.NONE && isPlaying) {
-                        kotlinx.coroutines.delay(8000)
-                        showControls = false
+            // 2. 播放控制面板(按 ↓ 唤出):整块无底色,二级菜单浮在上方
+            if (showPanel) {
+                val mainMenu = PLAYER_MAIN_MENU.filter { item ->
+                    when (item) {
+                        PlayerMenuItem.EPISODES -> mediaInfo.seriesId != null
+                        PlayerMenuItem.CAST -> !mediaInfo.people.isNullOrEmpty()
+                        else -> true
                     }
                 }
-            }
 
-            // 2.5 小浮层:字幕/音轨/弹幕(右下角,不占整屏)
-            if (sheet != PlayerSheet.NONE) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(end = 44.dp, bottom = 250.dp),
-                    contentAlignment = Alignment.BottomEnd
-                ) {
-                    when (sheet) {
-                        PlayerSheet.SUBTITLE -> SubtitleSheet(
-                            modifier = Modifier.align(Alignment.BottomEnd),
-                            tracks = subtitleTracks,
-                            selectedIndex = selectedSubtitleIndex,
-                            timeOffsetMs = subtitleTimeOffsetMs,
-                            onSelect = { index ->
-                                changeTrack(selectedAudioIndex, index)
-                                sheet = PlayerSheet.NONE
-                            },
-                            onTimeOffsetChange = { subtitleTimeOffsetMs = it }
-                        )
-
-                        PlayerSheet.AUDIO -> AudioSheet(
-                            modifier = Modifier.align(Alignment.BottomEnd),
-                            tracks = audioTracks,
-                            selectedIndex = selectedAudioIndex,
-                            onSelect = { index ->
-                                changeTrack(index, selectedSubtitleIndex)
-                                sheet = PlayerSheet.NONE
+                PlayerControlPanel(
+                    title = panelTitle(),
+                    playMethodLabel = playMethodLabel(session),
+                    position = position,
+                    duration = duration,
+                    buffered = buffered,
+                    isPlaying = isPlaying,
+                    menuItems = if (inMoreMenu) PLAYER_MORE_MENU else mainMenu,
+                    activeItem = activeItem,
+                    onMenuSelect = { item ->
+                        when (item) {
+                            PlayerMenuItem.MORE -> {
+                                inMoreMenu = true
+                                activeItem = null
                             }
-                        )
 
-                        PlayerSheet.DANMAKU -> DanmakuSheet(
-                            modifier = Modifier.align(Alignment.BottomEnd),
-                            enabled = danmakuEnabled,
-                            onEnabledChange = {
-                                danmakuEnabled = it
-                                danmakuPrefs.edit().putBoolean("danmaku_enabled", it).apply()
-                            },
-                            scale = danmakuScale,
-                            onScaleChange = {
-                                danmakuScale = it
-                                danmakuPrefs.edit().putFloat("danmaku_scale", it).apply()
+                            PlayerMenuItem.BACK -> {
+                                inMoreMenu = false
+                                activeItem = null
                             }
-                        )
 
-                        else -> {}
+                            else -> activeItem = if (activeItem == item) null else item
+                        }
+                    },
+                    onSeekBack = { player.seekBack() },
+                    onSeekForward = { player.seekForward() },
+                    onPlayPause = { if (isPlaying) player.pause() else player.play() }
+                )
+
+                if (activeItem != null) {
+                    val item = activeItem!!
+                    SheetShell(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 44.dp, bottom = 236.dp),
+                        title = item.label,
+                        contentWidth = when (item) {
+                            PlayerMenuItem.INFO -> 620.dp
+                            PlayerMenuItem.BUFFER -> 540.dp
+                            else -> 420.dp
+                        }
+                    ) {
+                        when (item) {
+                            PlayerMenuItem.INFO -> InfoSheet(
+                                overview = mediaInfo.overview,
+                                techLine = techLineOf(
+                                    media.mediaSources?.firstOrNull(),
+                                    getVideoTrack(media)?.displayTitle ?: ""
+                                ),
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.EPISODES -> EpisodeListSheet(
+                                seriesId = mediaInfo.seriesId,
+                                currentId = mediaInfo.id,
+                                repository = repository,
+                                onPlay = { episode ->
+                                    activeItem = null
+                                    showPanel = false
+                                    onNavigateToPlayer(episode)
+                                },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.CAST -> CastListSheet(
+                                people = mediaInfo.people ?: emptyList(),
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.SUBTITLE -> SubtitleSheet(
+                                tracks = subtitleTracks,
+                                selectedIndex = selectedSubtitleIndex,
+                                timeOffsetMs = subtitleTimeOffsetMs,
+                                onSelect = { index ->
+                                    changeTrack(selectedAudioIndex, index)
+                                    activeItem = null
+                                },
+                                onTimeOffsetChange = { subtitleTimeOffsetMs = it },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.AUDIO -> AudioSheet(
+                                tracks = audioTracks,
+                                selectedIndex = selectedAudioIndex,
+                                onSelect = { index ->
+                                    changeTrack(index, selectedSubtitleIndex)
+                                    activeItem = null
+                                },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.DANMAKU -> DanmakuSheet(
+                                enabled = danmakuEnabled,
+                                onEnabledChange = {
+                                    danmakuEnabled = it
+                                    danmakuPrefs.edit().putBoolean("danmaku_enabled", it).apply()
+                                },
+                                scale = danmakuScale,
+                                onScaleChange = {
+                                    danmakuScale = it
+                                    danmakuPrefs.edit().putFloat("danmaku_scale", it).apply()
+                                },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.SPEED -> SpeedSheet(
+                                current = playbackSpeed,
+                                onChange = {
+                                    playbackSpeed = it
+                                    preferencesManager.playbackSpeed = it
+                                },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.INTRO -> IntroSheet(
+                                enabled = autoSkipIntro,
+                                hasIntro = introEndMs != null,
+                                onEnabledChange = {
+                                    autoSkipIntro = it
+                                    preferencesManager.autoSkipIntro = it
+                                },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.QUALITY -> QualitySheet(
+                                current = maxStreamingBitrate,
+                                onChange = { maxStreamingBitrate = it },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.PLAY_MODE -> PlayModeSheet(
+                                current = playMode,
+                                onChange = { value ->
+                                    playMode = value
+                                    context.getSharedPreferences("emby_tv_prefs", Context.MODE_PRIVATE)
+                                        .edit().putInt("play_mode", value).apply()
+                                },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.CORRECTION -> CorrectionSheet(
+                                current = playbackCorrection,
+                                onChange = { playbackCorrection = it },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            PlayerMenuItem.BUFFER -> BufferPresetSheet(
+                                currentMinBufferMs = minBufferMs,
+                                onApplyPreset = { value ->
+                                    minBufferMs = value
+                                    preferencesManager.minBufferMs = value
+                                },
+                                onResetDefaults = {
+                                    val defaults = preferencesManager.getBufferDefaults()
+                                    minBufferMs = defaults.minBufferMs
+                                    maxBufferMs = defaults.maxBufferMs
+                                    playbackBufferMs = defaults.playbackBufferMs
+                                    rebufferMs = defaults.rebufferMs
+                                    bufferSizeBytes = defaults.bufferSizeBytes
+                                    preferencesManager.resetBufferDefaults()
+                                },
+                                firstFocus = sheetFirstFocus
+                            )
+
+                            else -> {}
+                        }
+                    }
+                }
+
+                // 播放中 8 秒无按键自动收起(二级菜单打开或暂停时不收)
+                LaunchedEffect(showPanel, activeItem, isPlaying) {
+                    if (activeItem == null && isPlaying) {
+                        kotlinx.coroutines.delay(8000)
+                        showPanel = false
+                        inMoreMenu = false
                     }
                 }
             }
@@ -1803,157 +1917,6 @@ fun PlayerScreen(
                 )
             }
 
-            // 5. Menu Dialog
-            if (showMenu) {
-                PlayerMenu(
-                    onDismiss = {
-                        showMenu = false
-                        menuInitialTab = null
-                    },
-                    initialTab = menuInitialTab,
-                    media = media,
-                    mediaInfo = mediaInfo,
-                    subtitleTracks = subtitleTracks,
-                    selectedSubtitleIndex = selectedSubtitleIndex,
-                    onSubtitleSelect = { index ->
-                        changeTrack(selectedAudioIndex, index)
-                    },
-                    audioTracks = audioTracks,
-                    selectedAudioIndex = selectedAudioIndex,
-                    onAudioSelect = { index -> changeTrack(index, selectedSubtitleIndex) },
-                    danmakuEnabled = danmakuEnabled,
-                    onDanmakuEnabledChange = {
-                        danmakuEnabled = it
-                        danmakuPrefs.edit().putBoolean("danmaku_enabled", it).apply()
-                    },
-                    danmakuScale = danmakuScale,
-                    onDanmakuScaleChange = {
-                        danmakuScale = it
-                        danmakuPrefs.edit().putFloat("danmaku_scale", it).apply()
-                    },
-                    playbackCorrection = playbackCorrection,
-                    onPlaybackCorrectionChange = {
-                        // 只对当前播放视频生效，不持久化保存
-                        playbackCorrection = it
-                    },
-                    playMode = playMode,
-                    onPlayModeChange = {
-                        playMode = it
-                        val prefs =
-                            context.getSharedPreferences("emby_tv_prefs", Context.MODE_PRIVATE)
-                        prefs.edit().putInt("play_mode", it).apply()
-                    },
-                    autoSkipIntro = autoSkipIntro,
-                    onAutoSkipIntroChange = {
-                        autoSkipIntro = it
-                        preferencesManager.autoSkipIntro = it
-                    },
-                    minBufferMs = minBufferMs,
-                    onMinBufferMsChange = {
-                        minBufferMs = it
-                        if (it < rebufferMs) {
-                            rebufferMs = it
-                            preferencesManager.rebufferMs = it
-                            if (it < playbackBufferMs) {
-                                playbackBufferMs = it
-                                preferencesManager.playbackBufferMs = it
-                            }
-                        }
-                        preferencesManager.minBufferMs = it
-                    },
-                    maxBufferMs = maxBufferMs,
-                    onMaxBufferMsChange = {
-                        maxBufferMs = it
-                        if (it < minBufferMs) {
-                            minBufferMs = it
-                            preferencesManager.minBufferMs = it
-                        }
-                        preferencesManager.maxBufferMs = it
-                    },
-                    playbackBufferMs = playbackBufferMs,
-                    onPlaybackBufferMsChange = {
-                        playbackBufferMs = it
-                        if (it > rebufferMs) {
-                            rebufferMs = it
-                            preferencesManager.rebufferMs = it
-                            if (it > minBufferMs) {
-                                minBufferMs = it
-                                preferencesManager.minBufferMs = it
-                                if (it > maxBufferMs) {
-                                    maxBufferMs = it
-                                    preferencesManager.maxBufferMs = it
-                                }
-                            }
-                        }
-                        preferencesManager.playbackBufferMs = it
-                    },
-                    rebufferMs = rebufferMs,
-                    onRebufferMsChange = {
-                        rebufferMs = it
-                        if (it < playbackBufferMs) {
-                            playbackBufferMs = it
-                            preferencesManager.playbackBufferMs = it
-                        }
-                        if (it > minBufferMs) {
-                            minBufferMs = it
-                            preferencesManager.minBufferMs = it
-                            if (it > maxBufferMs) {
-                                maxBufferMs = it
-                                preferencesManager.maxBufferMs = it
-                            }
-                        }
-                        preferencesManager.rebufferMs = it
-                    },
-                    bufferSizeBytes = bufferSizeBytes,
-                    onBufferSizeBytesChange = {
-                        bufferSizeBytes = it
-                        preferencesManager.bufferSizeBytes = it
-                    },
-                    onResetBufferDefaults = {
-                        val defaults = preferencesManager.getBufferDefaults()
-                        minBufferMs = defaults.minBufferMs
-                        maxBufferMs = defaults.maxBufferMs
-                        playbackBufferMs = defaults.playbackBufferMs
-                        rebufferMs = defaults.rebufferMs
-                        bufferSizeBytes = defaults.bufferSizeBytes
-                        preferencesManager.resetBufferDefaults()
-                    },
-                    playbackSpeed = playbackSpeed,
-                    onPlaybackSpeedChange = {
-                        playbackSpeed = it
-                        preferencesManager.playbackSpeed = it
-                    },
-                    subtitleBottomPadding = subtitleBottomPadding,
-                    onSubtitleBottomPaddingChange = {
-                        subtitleBottomPadding = it
-                        preferencesManager.subtitleBottomPadding = it
-                    },
-                    subtitleTimeOffsetMs = subtitleTimeOffsetMs,
-                    onSubtitleTimeOffsetChange = { subtitleTimeOffsetMs = it },
-                    isFavorite = isFavorite,
-                    onToggleFavorite = {
-                        isFavorite = !isFavorite
-                        if (mediaInfo.id != null) {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    if (isFavorite) {
-                                        repository.addToFavorites(mediaInfo.id!!)
-                                    } else {
-                                        repository.removeFromFavorites(mediaInfo.id!!)
-                                    }
-                                } catch (e: Exception) {
-                                    ErrorHandler.logError("PlayerScreen", "操作失败", e)
-                                }
-                            }
-                        }
-                    },
-                    serverUrl = serverUrl,
-                    repository = repository,
-                    position = position,
-                    onNavigateToPlayer = onNavigateToPlayer,
-                    onRePlayer = onRePlayer
-                )
-            }
 
             LaunchedEffect(Unit) {
                 focusRequester.requestFocus()
