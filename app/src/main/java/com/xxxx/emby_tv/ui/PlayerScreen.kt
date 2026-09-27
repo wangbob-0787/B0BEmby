@@ -80,6 +80,12 @@ import com.xxxx.emby_tv.data.model.MediaStreamDto
 import com.xxxx.emby_tv.data.model.SessionDto
 import com.xxxx.emby_tv.ui.components.PlayerMenu
 import com.xxxx.emby_tv.ui.components.PlayerOverlay
+import com.xxxx.emby_tv.ui.components.PlayerControlsBar
+import com.xxxx.emby_tv.ui.components.PlayerSheet
+import com.xxxx.emby_tv.ui.components.SubtitleSheet
+import com.xxxx.emby_tv.ui.components.AudioSheet
+import com.xxxx.emby_tv.ui.components.DanmakuSheet
+import com.xxxx.emby_tv.ui.components.getStreamModeLine
 import com.xxxx.emby_tv.ui.components.ResumePlaybackButtons
 import com.xxxx.emby_tv.ui.components.SkipIntroButton
 import com.xxxx.emby_tv.ui.components.getAudioTrack
@@ -224,6 +230,11 @@ fun PlayerScreen(
     var playMode by remember { mutableStateOf(0) } // 0: list loop, 1: single loop, 2: no loop
     var endedHandled by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var menuInitialTab by remember { mutableStateOf<String?>(null) }
+    // 底部控制条(按 ↓ 唤出) + 小浮层
+    var showControls by remember { mutableStateOf(false) }
+    var controlZone by remember { mutableIntStateOf(0) }
+    var sheet by remember { mutableStateOf(PlayerSheet.NONE) }
     var showStats by remember { mutableStateOf(false) }
 
     // 继续播放/从头开始 按钮状态
@@ -1397,7 +1408,20 @@ fun PlayerScreen(
                         return@onKeyEvent false
                     }
 
+                    if (event.key == Key.Back || event.key == Key.Escape) {
+                        if (sheet != PlayerSheet.NONE) {
+                            sheet = PlayerSheet.NONE
+                            return@onKeyEvent true
+                        }
+                        if (showControls) {
+                            showControls = false
+                            return@onKeyEvent true
+                        }
+                        return@onKeyEvent false
+                    }
+                    // 控制条/浮层显示时,左右键交给焦点系统在条内移动
                     if (event.key == Key.DirectionLeft) {
+                        if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             if (leftKeyDownTime == 0L) {
                                 leftKeyDownTime = System.currentTimeMillis()
@@ -1414,6 +1438,7 @@ fun PlayerScreen(
                         return@onKeyEvent true
                     }
                     if (event.key == Key.DirectionRight) {
+                        if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             if (rightKeyDownTime == 0L) {
                                 rightKeyDownTime = System.currentTimeMillis()
@@ -1431,12 +1456,39 @@ fun PlayerScreen(
                     }
 
                     if (event.type == KeyEventType.KeyDown) {
-                        if (event.key == Key.DirectionDown || event.key == Key.Menu) {
-                            showMenu = true
+                        // Menu 键:开关控制条
+                        if (event.key == Key.Menu) {
+                            if (sheet != PlayerSheet.NONE) {
+                                sheet = PlayerSheet.NONE
+                            } else {
+                                showControls = !showControls
+                            }
+                            return@onKeyEvent true
+                        }
+                        if (event.key == Key.DirectionDown) {
+                            if (sheet != PlayerSheet.NONE) {
+                                sheet = PlayerSheet.NONE
+                                return@onKeyEvent true
+                            }
+                            if (!showControls) {
+                                showControls = true
+                                controlZone = 0
+                                return@onKeyEvent true
+                            }
+                            // 图标区按 ↓:交给焦点系统下移到文字入口行
+                            if (controlZone == 0) return@onKeyEvent false
+                            showControls = false
+                            return@onKeyEvent true
+                        }
+                        if (event.key == Key.DirectionUp) {
+                            if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
+                            showControls = true
+                            controlZone = 0
                             return@onKeyEvent true
                         }
                         if (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) {
                             if (showMenu) return@onKeyEvent false
+                            if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent false
                             if (isPlaying) {
                                 player.pause()
                                 isShowInfo = true
@@ -1446,6 +1498,7 @@ fun PlayerScreen(
                             }
                             return@onKeyEvent true
                         }
+                        if (showControls || sheet != PlayerSheet.NONE) return@onKeyEvent true
                         // Show info on any key
                         isShowInfo = true
                         // Hide info after delay?
@@ -1556,30 +1609,104 @@ fun PlayerScreen(
 
 
             // 2. Full Info Overlay Layer (only when isShowInfo)
-            if (isShowInfo && !isPlaying) {
-                PlayerOverlay(
-                    isTunnelingSafe = isTunnelingSafe,
-                    mediaInfo = mediaInfo,
-                    mediaSource = media.mediaSources?.firstOrNull(),
-                    session = session,
-                    videoStream = getVideoTrack(media),
-                    audioStream = getAudioTrack(media, selectedAudioIndex),
-                    position = position,
-                    duration = duration,
-                    buffered = buffered,
-                    isPlaying = isPlaying,
-                    player = player,
-                    isBuffering = isBuffering,
-                    downloadSpeed = downloadSpeed,
-                    supportedDvProfiles = supportedDvProfiles,
-                    currentVideoDecoderName = currentVideoDecoderName,
-                    playbackSpeed = playbackSpeed
-                )
+            // 2. 底部播放控制条(按 ↓ 唤出,不压黑画面)
+            if (showControls) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    PlayerControlsBar(
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        seriesTitle = mediaInfo.seriesName ?: mediaInfo.name ?: "",
+                        episodeLabel = run {
+                            val season = mediaInfo.parentIndexNumber
+                            val episode = mediaInfo.indexNumber
+                            val epName = mediaInfo.name
+                            val head = if (season != null && episode != null) "S$season:E$episode" else ""
+                            when {
+                                head.isNotEmpty() && !epName.isNullOrEmpty() -> "$head · $epName"
+                                head.isNotEmpty() -> head
+                                else -> epName
+                            }
+                        },
+                        statusLine = getStreamModeLine(session, media.mediaSources?.firstOrNull()),
+                        position = position,
+                        duration = duration,
+                        buffered = buffered,
+                        isPlaying = isPlaying,
+                        onZoneChange = { controlZone = it },
+                        onSeekBack = { player.seekBack() },
+                        onSeekForward = { player.seekForward() },
+                        onPlayPause = { if (isPlaying) player.pause() else player.play() },
+                        onOpenSheet = { sheet = it },
+                        onOpenSettings = { tab ->
+                            menuInitialTab = tab
+                            showMenu = true
+                        }
+                    )
+                }
 
+                // 8 秒无操作自动收起(浮层打开时不收,暂停时不收)
+                LaunchedEffect(showControls, sheet, isPlaying) {
+                    if (sheet == PlayerSheet.NONE && isPlaying) {
+                        kotlinx.coroutines.delay(8000)
+                        showControls = false
+                    }
+                }
             }
 
-            // 3. Simple Pause/Loading Overlay (no info)
-            if ((!isPlaying || isBuffering) && !isShowInfo) {
+            // 2.5 小浮层:字幕/音轨/弹幕(右下角,不占整屏)
+            if (sheet != PlayerSheet.NONE) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(end = 44.dp, bottom = 250.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    when (sheet) {
+                        PlayerSheet.SUBTITLE -> SubtitleSheet(
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                            tracks = subtitleTracks,
+                            selectedIndex = selectedSubtitleIndex,
+                            timeOffsetMs = subtitleTimeOffsetMs,
+                            onSelect = { index ->
+                                changeTrack(selectedAudioIndex, index)
+                                sheet = PlayerSheet.NONE
+                            },
+                            onTimeOffsetChange = { subtitleTimeOffsetMs = it }
+                        )
+
+                        PlayerSheet.AUDIO -> AudioSheet(
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                            tracks = audioTracks,
+                            selectedIndex = selectedAudioIndex,
+                            onSelect = { index ->
+                                changeTrack(index, selectedSubtitleIndex)
+                                sheet = PlayerSheet.NONE
+                            }
+                        )
+
+                        PlayerSheet.DANMAKU -> DanmakuSheet(
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                            enabled = danmakuEnabled,
+                            onEnabledChange = {
+                                danmakuEnabled = it
+                                danmakuPrefs.edit().putBoolean("danmaku_enabled", it).apply()
+                            },
+                            scale = danmakuScale,
+                            onScaleChange = {
+                                danmakuScale = it
+                                danmakuPrefs.edit().putFloat("danmaku_scale", it).apply()
+                            }
+                        )
+
+                        else -> {}
+                    }
+                }
+            }
+
+            // 3. Simple Pause/Loading Overlay
+            if (!isPlaying || isBuffering) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -1678,7 +1805,11 @@ fun PlayerScreen(
             // 5. Menu Dialog
             if (showMenu) {
                 PlayerMenu(
-                    onDismiss = { showMenu = false },
+                    onDismiss = {
+                        showMenu = false
+                        menuInitialTab = null
+                    },
+                    initialTab = menuInitialTab,
                     media = media,
                     mediaInfo = mediaInfo,
                     subtitleTracks = subtitleTracks,

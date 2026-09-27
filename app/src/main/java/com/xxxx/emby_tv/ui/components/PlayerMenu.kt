@@ -39,6 +39,8 @@ import com.xxxx.emby_tv.data.repository.EmbyRepository
 import com.xxxx.emby_tv.data.model.BaseItemDto
 import com.xxxx.emby_tv.data.model.MediaDto
 import com.xxxx.emby_tv.data.model.MediaStreamDto
+import com.xxxx.emby_tv.data.model.PersonInfo
+import com.xxxx.emby_tv.ui.PersonCard
 import com.xxxx.emby_tv.util.ErrorHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,7 +92,8 @@ fun PlayerMenu(
     danmakuEnabled: Boolean = true,
     onDanmakuEnabledChange: (Boolean) -> Unit = {},
     danmakuScale: Float = 1.0f,
-    onDanmakuScaleChange: (Float) -> Unit = {}
+    onDanmakuScaleChange: (Float) -> Unit = {},
+    initialTab: String? = null
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -109,8 +112,15 @@ fun PlayerMenu(
         if (isSeries) list.add("Mode")
         list.add("Correction") // ...
         list.add("IntroSkip") // Intro Skip settings
+        if (!mediaInfo.people.isNullOrEmpty()) list.add("People") // 演职人员
         list.add("Buffer") // Buffer settings
         list
+    }
+
+    // 从控制条的文字入口进来时，直接定位到对应标签
+    LaunchedEffect(initialTab, tabs) {
+        val index = tabs.indexOf(initialTab ?: return@LaunchedEffect)
+        if (index > 0) selectedTab = index
     }
 
     // Helper to map UI index to content type
@@ -162,6 +172,7 @@ fun PlayerMenu(
                                 "Danmaku" -> "弹幕"
                                 "Correction" -> stringResource(R.string.playback_correction)
                                 "IntroSkip" -> stringResource(R.string.skip_intro)
+                                "People" -> "演职人员"
                                 "Buffer" -> stringResource(R.string.buffer_settings)
                                 else -> title
                             }
@@ -222,6 +233,7 @@ fun PlayerMenu(
                             )
 
                             "Audio" -> AudioTab(audioTracks, selectedAudioIndex, onAudioSelect)
+                            "People" -> PeopleTab(mediaInfo.people ?: emptyList(), serverUrl)
                             "Speed" -> SpeedTab(playbackSpeed, onPlaybackSpeedChange)
                             "Mode" -> PlayModeTab(playMode, onPlayModeChange)
                             "Danmaku" -> DanmakuTab(
@@ -857,6 +869,31 @@ fun SpeedTab(currentSpeed: Float, onChange: (Float) -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+/** 演职人员标签:横向头像列表 */
+@Composable
+fun PeopleTab(people: List<PersonInfo>, serverUrl: String) {
+    if (people.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = "暂无演职人员信息", color = Color.White)
+        }
+        return
+    }
+    LazyRow(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 60.dp, vertical = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        items(people, key = { it.id ?: it.hashCode() }) { person ->
+            PersonCard(
+                person = person,
+                imgWidth = 140.dp,
+                aspectRatio = 0.66f,
+                serverUrl = serverUrl
+            )
         }
     }
 }
