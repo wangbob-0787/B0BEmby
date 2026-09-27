@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -70,16 +71,24 @@ fun MediaDetailScreen(
         seasons = null
         episodes = null
         resume = null
-        if (mediaInfo != null && mediaInfo.isSeries&&!isLoadingSeriesData) {
+        val isAlbumHere = mediaInfo?.type.equals("MusicAlbum", ignoreCase = true) == true
+        if (mediaInfo != null && (mediaInfo.isSeries || isAlbumHere) && !isLoadingSeriesData) {
             isLoadingSeriesData = true
             try {
-                val seasonsList = detailViewModel.getSeasonList(seriesId)
-                val episodesList = detailViewModel.getSeriesList(seriesId)
-                val x = detailViewModel.getResumeItem(seriesId)
+                if (isAlbumHere) {
+                    // 音乐专辑：把专辑下的歌曲取出来（原来这里什么都不做 → 详情页看不到歌，无法选歌）
+                    episodes = detailViewModel.getSeriesList(seriesId)
+                    seasons = null
+                    resume = null
+                } else {
+                    val seasonsList = detailViewModel.getSeasonList(seriesId)
+                    val episodesList = detailViewModel.getSeriesList(seriesId)
+                    val x = detailViewModel.getResumeItem(seriesId)
 
-                seasons = seasonsList
-                episodes = episodesList
-                resume = x
+                    seasons = seasonsList
+                    episodes = episodesList
+                    resume = x
+                }
             } catch (e: Exception) {
                 ErrorHandler.logError("MediaDetailScreen", "加载数据失败", e)
             } finally {
@@ -233,6 +242,9 @@ fun MediaDetailScreen(
                                     } else if (!seasons.isNullOrEmpty() && !episodes.isNullOrEmpty()) {
                                         onNavigateToPlayer(episodes!!.first())
                                     }
+                                } else if (mediaInfo.type.equals("MusicAlbum", ignoreCase = true)) {
+                                    // 专辑本身不可播（服务端 500），播第一首
+                                    episodes?.firstOrNull()?.let { onNavigateToPlayer(it) }
                                 } else {
                                     onNavigateToPlayer(mediaInfo)
                                 }
@@ -361,6 +373,22 @@ fun MediaDetailScreen(
                             } else {
                                 Text(text = noEpisodesText, color = Color.Gray)
                             }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+
+                // 专辑曲目：音乐库专辑详情里列出歌曲，可逐首选择播放
+                if (mediaInfo.type.equals("MusicAlbum", ignoreCase = true) && !episodes.isNullOrEmpty()) {
+                    Text(
+                        text = stringResource(R.string.tracks),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        episodes!!.forEachIndexed { idx, song ->
+                            SongRow(index = idx + 1, song = song) { onNavigateToPlayer(song) }
                         }
                     }
                     Spacer(modifier = Modifier.height(32.dp))
@@ -611,6 +639,52 @@ fun PersonCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp)
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SongRow(
+    index: Int,
+    song: BaseItemDto,
+    onPlay: () -> Unit,
+) {
+    val duration = song.runTimeTicks?.let { Utils.formatRuntimeFromTicks(it) } ?: ""
+    Surface(
+        onClick = onPlay,
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = BorderStroke(2.dp, Color.White)
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.White.copy(alpha = 0.06f),
+            focusedContainerColor = Color.White.copy(alpha = 0.20f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = index.toString().padStart(2, '0'),
+                color = Color.Gray,
+                fontSize = 14.sp
+            )
+            Text(
+                text = song.name ?: "",
+                color = Color.White,
+                fontSize = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Text(text = duration, color = Color.Gray, fontSize = 14.sp)
         }
     }
 }

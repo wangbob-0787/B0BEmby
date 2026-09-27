@@ -262,4 +262,5 @@
     <string name="filter_watched">Watched</string>
     <string name="filter_unwatched">Unwatched</string>
     <string name="filter_favorite">Favorite</string>
+    <string name="tracks">Tracks</string>
 </resources>
