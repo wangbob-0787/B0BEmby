@@ -679,8 +679,13 @@ fun PlayerScreen(
                 // 直接访问mediaSources属性
                 val source = mediaResult.mediaSources.firstOrNull()
 
-                // 获取转码URL - 优先使用直链
-                val path = source?.directStreamUrl ?: source?.transcodingUrl
+                // 获取转码URL - 优先使用直链（音频两类 URL 可能都为 null，回退拼静态直链）
+                var path = source?.directStreamUrl ?: source?.transcodingUrl
+                val audioOnly = source?.mediaStreams?.none { it.type.equals("Video", ignoreCase = true) } != false
+                if (path == null && audioOnly) {
+                    val ext = source?.container?.takeIf { it.isNotBlank() } ?: "mp3"
+                    path = "/Audio/$mediaId/stream.$ext?static=true&api_key=$apiKey"
+                }
 
                 if (path != null) {
                     val newVideoUrl = "${serverUrl}/emby$path"
@@ -822,6 +827,15 @@ fun PlayerScreen(
                 }
             }
 
+            // 音频条目：Emby 的 PlaybackInfo 对 Audio 两类 URL 都可能不返回（实测 2026-09-27：
+            // 网易云音乐与本地音乐的 DirectStreamUrl / TranscodingUrl 全是 null），
+            // 客户端原来拿到 null 就不 setMediaItem → 一直转圈。这里自己拼直链：
+            // /Audio/{id}/stream.{容器}?static=true&api_key=...（实测 206 + audio/flac）
+            if (path == null && mediaInfoResult.type.equals("Audio", ignoreCase = true)) {
+                val ext = source?.container?.takeIf { it.isNotBlank() } ?: "mp3"
+                path = "/Audio/$mediaId/stream.$ext?static=true&api_key=$apiKey"
+                Log.i("PlayerScreen", "音频直链回退: $path")
+            }
 
             videoUrl = if (path != null) "${serverUrl}/emby$path" else null
             hasReportedPlaying = false
