@@ -263,4 +263,6 @@
     <string name="filter_unwatched">未观看</string>
     <string name="filter_favorite">收藏</string>
     <string name="tracks">曲目</string>
+    <string name="play_all">全部播放</string>
+    <string name="shuffle">随机播放</string>
 </resources>

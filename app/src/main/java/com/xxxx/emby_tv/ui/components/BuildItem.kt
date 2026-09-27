@@ -75,11 +75,12 @@ fun BuildItem(
     Surface(
         onClick = onItemClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        // P1 视觉对齐（2026-09-27）：焦点态改官方 Emby 的绿色描边（原来是白色描边 + 白底反色）
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
                 BorderStroke(
-                    2.dp,
-                    MaterialTheme.colorScheme.onSurface
+                    3.dp,
+                    Color(0xFF52B54B)
                 )
             )
         ),
@@ -87,7 +88,7 @@ fun BuildItem(
             .scale(focusedScale = 1.1f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Black.copy(alpha = 0.2f),
-            focusedContainerColor = MaterialTheme.colorScheme.onSurface,
+            focusedContainerColor = Color.Black.copy(alpha = 0.35f),
             contentColor = MaterialTheme.colorScheme.onSurface,
             pressedContentColor = MaterialTheme.colorScheme.secondary,
             focusedContentColor = MaterialTheme.colorScheme.secondary
@@ -261,7 +262,9 @@ fun BuildItem(
                     } else if (item.type == "Actor") {
                         item.role ?: ""
                     } else {
-                        item.productionYear?.toString() ?: "--"
+                        // 官方卡片在标题下显示"分级 + 年份"，这里对齐
+                        listOfNotNull(item.officialRating, item.productionYear?.toString())
+                            .joinToString("  ").ifEmpty { "--" }
                     }
                     Text(
                         text = subTitle,

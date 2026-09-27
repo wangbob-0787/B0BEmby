@@ -235,11 +235,12 @@ private fun MediaSection(
     onMenuPressed: () -> Unit,
 ) {
     val maxLength = when {
-        isMyLibrary -> 194.dp
+        isMyLibrary -> 260.dp   // P1：库入口按官方做成宽银幕大图块
         else -> 214.dp
     }
 
-    val maxAspectRatio = items.mapNotNull {
+    // P1：库入口固定 16:9（官方"我的媒体"就是宽银幕图块），内容行才按海报比例
+    val maxAspectRatio = if (isMyLibrary) 1.7778f else items.mapNotNull {
         val ratio = it.primaryImageAspectRatio?.toFloat()
         if (ratio == null || ratio == 1.0f) null else ratio
     }.maxOrNull() ?: 0.666f

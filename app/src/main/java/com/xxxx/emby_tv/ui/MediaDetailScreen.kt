@@ -270,6 +270,24 @@ fun MediaDetailScreen(
                                 )
                             )
                         }
+                        // P2：官方详情页有"全部播放/随机播放"，这里补上
+                        if (mediaInfo.isSeries && !episodes.isNullOrEmpty()) {
+                            Button(
+                                onClick = { episodes!!.firstOrNull()?.let { onNavigateToPlayer(it) } },
+                                colors = ButtonDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                                )
+                            ) { Text(stringResource(R.string.play_all)) }
+
+                            Button(
+                                onClick = { episodes!!.randomOrNull()?.let { onNavigateToPlayer(it) } },
+                                colors = ButtonDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                                )
+                            ) { Text(stringResource(R.string.shuffle)) }
+                        }
                         if (resume != null) Box(
                             modifier = Modifier
                                 .width(150.dp)
@@ -323,57 +341,35 @@ fun MediaDetailScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Seasons & Episodes Section
+                // 季/集区（P2 视觉对齐 2026-09-27）：改成官方那样的**竖向富信息列表**
+                // 每集 = 缩略图 + 序号标题 + S/E·时长·CC + 单集简介（原来是横向海报卡）
                 if (mediaInfo.isSeries && !seasons.isNullOrEmpty()) {
                     val noEpisodesText = stringResource(R.string.no_episodes_found)
-                    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                        seasons?.forEach { season ->
-                            val seasonName = season.name ?: ""
-                            val seasonEpisodes = episodes?.filter { it.seasonName == seasonName } ?: emptyList()
+                    seasons?.forEach { season ->
+                        val seasonName = season.name ?: ""
+                        val seasonEpisodes = episodes?.filter { it.seasonName == seasonName } ?: emptyList()
 
-                            // Season 标题 (普通 Text)
-                            Text(
-                                text = seasonName,
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            )
+                        Text(
+                            text = seasonName,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            ),
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
 
-                            // 该季的剧集 LazyRow
-                            if (seasonEpisodes.isNotEmpty()) {
-                                val maxLength = 220.dp
-                                val aspectRatios =
-                                    seasonEpisodes.mapNotNull { it.primaryImageAspectRatio?.toFloat() }
-                                val maxAspectRatio = aspectRatios.maxOrNull() ?: 1.77f
-
-                                val imgWidth = if (maxAspectRatio >= 1f) {
-                                    maxLength
-                                } else {
-                                    (maxLength.value * maxAspectRatio).dp
-                                }
-
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    contentPadding = PaddingValues(horizontal = 32.dp)
-                                ) {
-                                    items(seasonEpisodes, key = { it.id ?: it.hashCode() }) { episode ->
-                                        BuildItem(
-                                            item = episode,
-                                            imgWidth = imgWidth,
-                                            aspectRatio = maxAspectRatio,
-                                            modifier = Modifier,
-                                            isMyLibrary = false,
-                                            isShowOverview = true,
-                                            serverUrl = serverUrl,
-                                            onItemClick = { onNavigateToPlayer(episode) }
-                                        )
+                        if (seasonEpisodes.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                seasonEpisodes.forEachIndexed { idx, ep ->
+                                    EpisodeRow(index = idx + 1, episode = ep, serverUrl = serverUrl) {
+                                        onNavigateToPlayer(ep)
                                     }
                                 }
-                            } else {
-                                Text(text = noEpisodesText, color = Color.Gray)
                             }
+                        } else {
+                            Text(text = noEpisodesText, color = Color.Gray)
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                     Spacer(modifier = Modifier.height(32.dp))
                 }
@@ -685,6 +681,87 @@ private fun SongRow(
                 modifier = Modifier.weight(1f)
             )
             Text(text = duration, color = Color.Gray, fontSize = 14.sp)
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun EpisodeRow(
+    index: Int,
+    episode: BaseItemDto,
+    serverUrl: String,
+    onPlay: () -> Unit,
+) {
+    val thumb = Utils.getImageUrl(serverUrl, episode, true)
+    val duration = episode.runTimeTicks?.let { Utils.formatRuntimeFromTicks(it) } ?: ""
+    val hasSub = episode.mediaStreams?.any { it.type == "Subtitle" } == true
+    val meta = buildString {
+        append("S${episode.parentIndexNumber ?: 1} E${episode.indexNumber ?: index}")
+        if (duration.isNotEmpty()) append("   ·   $duration")
+        if (hasSub) append("   ·   CC")
+    }
+
+    Surface(
+        onClick = onPlay,
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, Color(0xFF52B54B)))
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.White.copy(alpha = 0.05f),
+            focusedContainerColor = Color.White.copy(alpha = 0.12f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(200.dp)
+                    .aspectRatio(1.7778f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFF2D2D2D))
+            ) {
+                if (thumb.isNotEmpty()) {
+                    AsyncImage(
+                        model = thumb,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "$index. ${episode.name ?: ""}",
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(text = meta, color = Color.Gray, fontSize = 13.sp, maxLines = 1)
+                val overview = episode.overview
+                if (!overview.isNullOrBlank()) {
+                    Text(
+                        text = overview,
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }

@@ -263,4 +263,6 @@
     <string name="filter_unwatched">Unwatched</string>
     <string name="filter_favorite">Favorite</string>
     <string name="tracks">Tracks</string>
+    <string name="play_all">Play all</string>
+    <string name="shuffle">Shuffle</string>
 </resources>
