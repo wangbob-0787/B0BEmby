@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
@@ -47,6 +48,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -713,9 +719,11 @@ fun InfoSheet(
             Spacer(modifier = Modifier.width(20.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
+            // 第一行文字比海报顶低两行(照官方:海报更高,文字块底部对齐)
+            Spacer(modifier = Modifier.height(46.dp))
             Text(
                 text = title,
-                fontSize = 30.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 maxLines = 1,
@@ -727,7 +735,7 @@ fun InfoSheet(
                 Text(
                     text = metaLine,
                     color = Color(0xFFE0E0E0),
-                    fontSize = 17.sp,
+                    fontSize = 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = OverlayTextStyleSoft
@@ -738,7 +746,7 @@ fun InfoSheet(
                 Text(
                     text = techLine,
                     color = Color(0xFFBDBDBD),
-                    fontSize = 15.sp,
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = OverlayTextStyleSoft
@@ -747,8 +755,8 @@ fun InfoSheet(
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = overview,
-                fontSize = 17.sp,
-                lineHeight = 25.sp,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
                 color = Color(0xFFEDEDED),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
@@ -849,17 +857,33 @@ fun CastListSheet(
             return@Column
         }
         val rowFocus = remember { FocusRequester() }
+        val listState = rememberLazyListState()
+        val scope = rememberCoroutineScope()
         LaunchedEffect(Unit) {
             delay(80)
             runCatching { rowFocus.requestFocus() }
         }
         LazyRow(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(250.dp)
                 .focusRequester(rowFocus)
                 .focusGroup()
-                .focusable(),
+                .focusable()
+                // 自己接左右键滚动:tv-material 的 Surface 焦点移动在这条横排里不带动滚动,
+                // 父亲实测"按左右键不动",所以显式滚到下一/上一张卡片
+                .onPreviewKeyEvent { e ->
+                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    if (e.key != Key.DirectionLeft && e.key != Key.DirectionRight) {
+                        return@onPreviewKeyEvent false
+                    }
+                    val step = if (e.key == Key.DirectionRight) 1 else -1
+                    val target = (listState.firstVisibleItemIndex + step)
+                        .coerceIn(0, (people.size - 1).coerceAtLeast(0))
+                    scope.launch { listState.animateScrollToItem(target) }
+                    true
+                },
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(people, key = { it.id ?: it.hashCode() }) { person ->

@@ -1526,29 +1526,25 @@ fun PlayerScreen(
                     if (event.type == KeyEventType.KeyDown) interactionTick++
 
                     if (event.key == Key.Back || event.key == Key.Escape) {
-                        // 只在按下时处理:松开也会进这里,不拦就会一次按键退两层
-                        // (KeyDown 关二级菜单 + KeyUp 又把控制条收起 = 看着像"直接退出菜单")
+                        // 没有层级可收时必须放行给系统(KeyDown 与 KeyUp 都要放行):
+                        // 连 KeyUp 也吃掉的话系统收不到返回,播放页就退不回上一页了
+                        if (activeItem == null && !inMoreMenu && !showPanel) return@onKeyEvent false
+                        // 有层级时:只在按下时处理,松开消费掉但不重复处理(否则一次按键退两层)
                         if (event.type == KeyEventType.KeyUp) return@onKeyEvent true
-                        // 长按/连按返回会连发 KeyDown:300ms 内的第二下忽略,
-                        // 避免一次操作把"二级菜单→一级菜单→收起控制条"全退光
-                        if (event.type == KeyEventType.KeyDown) {
-                            val now = System.currentTimeMillis()
-                            if (now - lastBackAt < 300) return@onKeyEvent true
-                            lastBackAt = now
-                        }
+                        // 长按/连按返回会连发 KeyDown:300ms 内的第二下忽略
+                        val now = System.currentTimeMillis()
+                        if (now - lastBackAt < 300) return@onKeyEvent true
+                        lastBackAt = now
                         if (activeItem != null) {
                             activeItem = null
                             return@onKeyEvent true
                         }
-                        if (showPanel) {
-                            if (inMoreMenu) {
-                                inMoreMenu = false
-                            } else {
-                                showPanel = false
-                            }
+                        if (inMoreMenu) {
+                            inMoreMenu = false
                             return@onKeyEvent true
                         }
-                        return@onKeyEvent false
+                        showPanel = false
+                        return@onKeyEvent true
                     }
                     // 左右键:控制条未展开时快退/快进,并唤出进度条(seekHud);
                     // 一级控制条展开时交给焦点系统在条内移动焦点(二级菜单已被 Preview 拦掉)
@@ -2004,14 +2000,16 @@ fun PlayerScreen(
                     }
                 }
 
-                // 左右键唤出的进度条:最后一次快进/快退后 5 秒收起
-                // (只认左右键自己的时间戳,别的按键不给它续命,免得看着"不消失")
-                LaunchedEffect(seekHudAt) {
-                    if (seekHudAt == 0L) return@LaunchedEffect
-                    kotlinx.coroutines.delay(5000)
-                    seekHud = false
-                    seekHudAt = 0L
-                }
+            }
+
+            // 左右键唤出的进度条:最后一次快进/快退后 5 秒收起。
+            // 必须放在控制条之外 —— 原先写在 if (showPanel) 里面,控制条没展开时这段根本不在组合里,
+            // 于是进度条永远不会自己消失(父亲两次实测"5 秒消失未生效")。
+            LaunchedEffect(seekHudAt) {
+                if (seekHudAt == 0L) return@LaunchedEffect
+                kotlinx.coroutines.delay(5000)
+                seekHud = false
+                seekHudAt = 0L
             }
 
             // 3. Simple Pause/Loading Overlay
