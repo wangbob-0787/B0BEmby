@@ -343,13 +343,13 @@ object EmbyApi {
         selectedSubtitleIndex: Int? = null,
         disableHevc: Boolean = false
     ): MediaDto = withContext(Dispatchers.IO) {
+        var targetId = mediaId
         try {
             val body = buildPlaybackInfoBody(context, disableHevc)
 
             // 专辑/艺人本身不可播放：Emby 对 MusicAlbum 的 PlaybackInfo 直接 500
             // （"Unable to cast object of type 'MusicAlbum' to type 'IHasMediaSources'"，2026-09-27 实测）。
             // 首页音乐行现在给的是歌曲，但库里点开一张专辑仍会走到这里 —— 先把容器解析成它的第一首歌。
-            var targetId = mediaId
             try {
                 val item = httpAsBaseItemDto(
                     context, serverUrl, apiKey, deviceId,
