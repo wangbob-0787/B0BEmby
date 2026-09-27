@@ -37,7 +37,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
-import coil3.compose.SubcomposeAsyncImage
 import com.xxxx.emby_tv.data.repository.EmbyRepository
 import com.xxxx.emby_tv.ui.viewmodel.DetailViewModel
 import com.xxxx.emby_tv.util.ErrorHandler
@@ -125,9 +124,10 @@ fun MediaDetailScreen(
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            // 1. Backdrop Layer
+            // 1. Backdrop Layer（用 AsyncImage 而非 SubcomposeAsyncImage：这里没有自定义
+            // loading/error 槽，子组合纯属白付开销；低端电视上每次都多一次子组合）
             if (finalBackdropUrl.isNotEmpty()) {
-                SubcomposeAsyncImage(
+                AsyncImage(
                     model = finalBackdropUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),

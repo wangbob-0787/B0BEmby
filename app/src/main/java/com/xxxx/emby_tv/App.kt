@@ -41,6 +41,19 @@ class App : Application() {
                 .components {
                     add(OkHttpNetworkFetcherFactory(callFactory = { HttpClient.getClient(context) }))
                 }
+                // 缓存上限写死：电视端内存吃紧（小米电视 3.8G RAM 常年只剩 100 多 M），
+                // Coil 默认按可用堆的 25% 做内存缓存，导致 GC 反复擦洗 → 掉帧（2026-09-27）
+                .memoryCache {
+                    coil3.memory.MemoryCache.Builder()
+                        .maxSizeBytes(32L * 1024 * 1024)
+                        .build()
+                }
+                .diskCache {
+                    coil3.disk.DiskCache.Builder()
+                        .directory(context.cacheDir.resolve("image_cache"))
+                        .maxSizeBytes(256L * 1024 * 1024)
+                        .build()
+                }
                 .build()
         }
     }

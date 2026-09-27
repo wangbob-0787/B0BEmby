@@ -27,14 +27,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -128,27 +125,22 @@ fun BuildItem(
                 contentAlignment = Alignment.Center
             ) {
 
-                // 使用 Coil 加载图片
-                SubcomposeAsyncImage(
+                // 静态占位图标垫在底层（图片加载完会盖住它）——
+                // 不再用 SubcomposeAsyncImage + 转圈动画：海报墙里每张卡片一次子组合 +
+                // 一个持续动画，在低端电视上把帧时间拖到 90~150ms（2026-09-27 电视端卡顿主因）
+                Icon(
+                    imageVector = Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = Color.Gray.copy(alpha = 0.35f),
+                    modifier = Modifier.size(40.dp)
+                )
+
+                // 使用 Coil 加载图片（无子组合版本）
+                AsyncImage(
                     model = imageUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = primaryColor, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
-                        }
-                    },
-                    error = {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Movie,
-                                contentDescription = null,
-                                tint = Color.Gray.copy(alpha = 0.5f),
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
-                    }
+                    contentScale = ContentScale.Crop
                 )
 
                 // 账号名称显示
