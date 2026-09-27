@@ -290,7 +290,7 @@ private fun SheetShell(
 @Composable
 private fun SheetRow(
     label: String,
-    selected: Boolean,
+    selected: Boolean = false,
     onClick: () -> Unit,
 ) {
     Surface(
