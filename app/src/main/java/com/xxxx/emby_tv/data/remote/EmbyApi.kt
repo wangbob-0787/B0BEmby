@@ -346,7 +346,33 @@ object EmbyApi {
         try {
             val body = buildPlaybackInfoBody(context, disableHevc)
 
-            val url = "/Items/$mediaId/PlaybackInfo?UserId=$userId" +
+            // 专辑/艺人本身不可播放：Emby 对 MusicAlbum 的 PlaybackInfo 直接 500
+            // （"Unable to cast object of type 'MusicAlbum' to type 'IHasMediaSources'"，2026-09-27 实测）。
+            // 首页音乐行现在给的是歌曲，但库里点开一张专辑仍会走到这里 —— 先把容器解析成它的第一首歌。
+            var targetId = mediaId
+            try {
+                val item = httpAsBaseItemDto(
+                    context, serverUrl, apiKey, deviceId,
+                    "/Users/$userId/Items/$mediaId?X-Emby-Token=$apiKey"
+                )
+                val t = item.type
+                if (t.equals("MusicAlbum", true) || t.equals("MusicArtist", true)) {
+                    val songs = getLibraryList(
+                        context, serverUrl, apiKey, deviceId, userId,
+                        parentId = mediaId, type = "Audio",
+                        startIndex = 0, limit = 1,
+                        sortBy = "SortName", sortOrder = "Ascending"
+                    ).first
+                    songs.firstOrNull()?.id?.let {
+                        targetId = it
+                        Log.i(TAG, "音频容器 $mediaId($t) → 改播第一首 $it")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "解析音频容器失败，按原 id 播放: ${e.message}")
+            }
+
+            val url = "/Items/$targetId/PlaybackInfo?UserId=$userId" +
                     "&StartTimeTicks=$startTimeTicks" +
                     "&IsPlayback=true" +
                     "&AutoOpenLiveStream=true" +
