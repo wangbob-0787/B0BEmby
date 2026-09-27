@@ -713,7 +713,7 @@ fun InfoSheet(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(112.dp)
+                    .width(152.dp)
                     .background(Color(0xFF2A2A2A), RoundedCornerShape(6.dp))
             )
             Spacer(modifier = Modifier.width(20.dp))

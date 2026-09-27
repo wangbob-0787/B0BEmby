@@ -495,19 +495,31 @@ fun PlayerScreen(
         val memoryClass = activityManager.memoryClass
         val largeHeap = context.applicationInfo.flags and ApplicationInfo.FLAG_LARGE_HEAP != 0
 
+        // 直接读配置(权威值):改完缓冲设置立刻重建播放器时,Compose 状态变量这一帧可能还没刷新,
+        // 读状态会拿到旧值 → 表现为"缓冲设置不生效"
+        val minMs = preferencesManager.minBufferMs
+        val maxMs = preferencesManager.maxBufferMs
+        val playMs = preferencesManager.playbackBufferMs
+        val reBufMs = preferencesManager.rebufferMs
+        val sizeBytes = preferencesManager.bufferSizeBytes
+
         val targetBytes = when {
-            largeHeap || memoryClass >= 512 -> bufferSizeBytes.coerceAtLeast(256 * 1024 * 1024)
-            memoryClass >= 256 -> bufferSizeBytes.coerceAtLeast(128 * 1024 * 1024)
-            memoryClass >= 128 -> bufferSizeBytes.coerceAtLeast(64 * 1024 * 1024)
-            else -> bufferSizeBytes.coerceAtLeast(32 * 1024 * 1024)
+            largeHeap || memoryClass >= 512 -> sizeBytes.coerceAtLeast(256 * 1024 * 1024)
+            memoryClass >= 256 -> sizeBytes.coerceAtLeast(128 * 1024 * 1024)
+            memoryClass >= 128 -> sizeBytes.coerceAtLeast(64 * 1024 * 1024)
+            else -> sizeBytes.coerceAtLeast(32 * 1024 * 1024)
         }
+        Log.i(
+            "B0BEmbyPlayer",
+            "LoadControl min=${minMs} max=${maxMs} play=${playMs} rebuf=${reBufMs} targetBytes=$targetBytes"
+        )
 
         return DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                minBufferMs,
-                maxBufferMs,
-                playbackBufferMs,
-                rebufferMs
+                minMs,
+                maxMs,
+                playMs,
+                reBufMs
             )
             .setTargetBufferBytes(targetBytes)
             .setPrioritizeTimeOverSizeThresholds(true)
@@ -556,6 +568,26 @@ fun PlayerScreen(
     }
 
     var player by remember { mutableStateOf(buildPlayer()) }
+
+    // 缓冲参数只能在建播放器时注入(LoadControl 不可运行时替换),
+    // 所以改完缓冲设置必须重建播放器 —— 保留当前位置、媒体项、轨道与播放状态
+    fun rebuildPlayerKeepingPosition() {
+        val oldPlayer = player
+        val resumePositionMs = oldPlayer.currentPosition
+        val currentMediaItem = oldPlayer.currentMediaItem
+        val trackParameters = oldPlayer.trackSelectionParameters
+        val wasPlaying = oldPlayer.isPlaying
+        oldPlayer.stop()
+        val newPlayer = buildPlayer()
+        if (currentMediaItem != null) {
+            newPlayer.setMediaItem(currentMediaItem, resumePositionMs)
+        }
+        newPlayer.trackSelectionParameters = trackParameters
+        newPlayer.prepare()
+        newPlayer.playWhenReady = wasPlaying
+        player = newPlayer
+        Log.i("B0BEmbyPlayer", "已按新缓冲参数重建播放器(position=${resumePositionMs}ms)")
+    }
 
     // ===== 音频故障自动恢复（全程自动，无用户交互）=====
     // 0: 正常；1: 已用立体声安全模式重建过播放器；2: 已降级为无声播放
@@ -621,6 +653,7 @@ fun PlayerScreen(
     // 应用倍速（player 重建后也需重新应用）
     LaunchedEffect(player, playbackSpeed) {
         player.setPlaybackSpeed(playbackSpeed)
+        Log.i("B0BEmbyPlayer", "应用倍速 ${playbackSpeed}x player=${player.hashCode()}")
     }
 
     // 字幕时间偏移：接管字幕渲染（内置 subtitleView 已隐藏，由 overlay SubtitleView 显示）
@@ -1710,7 +1743,8 @@ fun PlayerScreen(
             AndroidView(
                 factory = { ctx ->
                     DanmakuView(ctx).apply {
-                        setPositionProvider { player.currentPosition }
+                        // 弹幕跟随字幕的"提前/延后"偏移(字幕时间轴一动,弹幕一起动)
+                        setPositionProvider { player.currentPosition - subtitleTimeOffsetMs }
                         danmakuViewRef.value = this
                         start()
                     }
@@ -1931,6 +1965,9 @@ fun PlayerScreen(
                                 onChange = {
                                     playbackSpeed = it
                                     preferencesManager.playbackSpeed = it
+                                    // 双保险:状态驱动之外直接下发一次,避免面板打开期间不生效
+                                    player.setPlaybackSpeed(it)
+                                    Log.i("B0BEmbyPlayer", "用户选择倍速 ${it}x")
                                 },
                                 firstFocus = sheetFirstFocus
                             )
@@ -1972,6 +2009,7 @@ fun PlayerScreen(
                                 onApplyPreset = { value ->
                                     minBufferMs = value
                                     preferencesManager.minBufferMs = value
+                                    rebuildPlayerKeepingPosition()
                                 },
                                 onResetDefaults = {
                                     val defaults = preferencesManager.getBufferDefaults()
@@ -1981,6 +2019,7 @@ fun PlayerScreen(
                                     rebufferMs = defaults.rebufferMs
                                     bufferSizeBytes = defaults.bufferSizeBytes
                                     preferencesManager.resetBufferDefaults()
+                                    rebuildPlayerKeepingPosition()
                                 },
                                 firstFocus = sheetFirstFocus
                             )
