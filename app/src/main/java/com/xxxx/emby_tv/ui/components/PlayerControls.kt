@@ -356,7 +356,7 @@ fun SheetShell(
 ) {
     Column(
         modifier = modifier
-            .background(Color(0xE6101010), RoundedCornerShape(10.dp))
+            .background(Color(0xE6757575), RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .focusGroup()
     ) {
@@ -449,7 +449,7 @@ fun SheetRow(
                     Icon(
                         imageVector = Icons.Default.CheckBoxOutlineBlank,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.45f),
+                        tint = Color.White.copy(alpha = 0.65f),
                         modifier = Modifier.size(14.dp)
                     )
                 }
@@ -504,7 +504,7 @@ fun InfoSheet(
             focusedContentColor = Color.White
         ),
         modifier = modifier
-            .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+            .background(Color(0xCC757575), RoundedCornerShape(10.dp))
             .padding(10.dp)
             .focusRequester(firstFocus)
     ) {
@@ -633,7 +633,7 @@ fun CastListSheet(
 ) {
     Column(
         modifier = modifier
-            .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+            .background(Color(0xCC757575), RoundedCornerShape(10.dp))
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
