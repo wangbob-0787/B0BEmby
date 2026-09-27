@@ -356,23 +356,23 @@ fun SheetShell(
 ) {
     Column(
         modifier = modifier
-            .background(Color(0xE6101010), RoundedCornerShape(14.dp))
-            .padding(horizontal = 22.dp, vertical = 18.dp)
+            .background(Color(0xE6101010), RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp)
             .focusGroup()
     ) {
         if (title.isNotEmpty()) {
             Text(
                 text = title,
                 color = Color.White,
-                fontSize = 22.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
         }
         val boxModifier = if (contentHeight != null) {
             Modifier.width(contentWidth).height(contentHeight)
         } else {
-            Modifier.width(contentWidth).heightIn(max = 420.dp)
+            Modifier.width(contentWidth).heightIn(max = 240.dp)
         }
         if (scrollable) {
             Column(modifier = boxModifier.verticalScroll(rememberScrollState())) {
@@ -420,37 +420,37 @@ fun SheetRow(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 9.dp, vertical = 7.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = label, fontSize = 18.sp)
+            Text(text = label, fontSize = 13.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!selected && !trailing.isNullOrEmpty()) {
-                    Text(text = trailing, fontSize = 15.sp, color = Color(0xFFBDBDBD))
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = trailing, fontSize = 11.sp, color = Color(0xFFBDBDBD))
+                    Spacer(modifier = Modifier.width(6.dp))
                 }
                 if (showArrow) {
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
                         tint = Color.White.copy(alpha = 0.75f),
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 } else if (selected) {
                     Icon(
                         imageVector = Icons.Default.CheckBox,
                         contentDescription = null,
                         tint = EmbyGreen,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.CheckBoxOutlineBlank,
                         contentDescription = null,
                         tint = Color.White.copy(alpha = 0.45f),
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
@@ -504,8 +504,8 @@ fun InfoSheet(
             focusedContentColor = Color.White
         ),
         modifier = modifier
-            .background(Color(0xCC000000), RoundedCornerShape(14.dp))
-            .padding(20.dp)
+            .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+            .padding(10.dp)
             .focusRequester(firstFocus)
     ) {
         Row {
@@ -515,43 +515,43 @@ fun InfoSheet(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .width(160.dp)
-                        .height(240.dp)
-                        .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
+                        .width(80.dp)
+                        .height(120.dp)
+                        .background(Color(0xFF2A2A2A), RoundedCornerShape(6.dp))
                 )
-                Spacer(modifier = Modifier.width(22.dp))
+                Spacer(modifier = Modifier.width(11.dp))
             }
-            Column(modifier = Modifier.width(620.dp)) {
+            Column(modifier = Modifier.width(310.dp)) {
                 Text(
                     text = title,
-                    fontSize = 32.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     style = OverlayTextStyle
                 )
                 if (metaLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
                     Text(
                         text = metaLine,
                         color = Color(0xFFE0E0E0),
-                        fontSize = 16.sp,
+                        fontSize = 12.sp,
                         style = OverlayTextStyleSoft
                     )
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(7.dp))
                 Text(
                     text = mediaInfo.overview?.takeIf { it.isNotBlank() } ?: "暂无剧情简介",
-                    fontSize = 17.sp,
-                    lineHeight = 26.sp,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
                     color = Color(0xFFEDEDED),
                     style = OverlayTextStyleSoft
                 )
                 if (techLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = techLine,
                         color = Color(0xFFBDBDBD),
-                        fontSize = 13.sp,
+                        fontSize = 10.sp,
                         style = OverlayTextStyleSoft
                     )
                 }
@@ -633,13 +633,13 @@ fun CastListSheet(
 ) {
     Column(
         modifier = modifier
-            .background(Color(0xCC000000), RoundedCornerShape(14.dp))
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         Text(
             text = "演职人员",
-            fontSize = 32.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             style = OverlayTextStyle
@@ -648,7 +648,7 @@ fun CastListSheet(
             Text(
                 text = "暂无演职人员信息",
                 color = Color(0xFFBDBDBD),
-                fontSize = 16.sp,
+                fontSize = 12.sp,
                 style = OverlayTextStyleSoft
             )
             return@Column
@@ -661,16 +661,16 @@ fun CastListSheet(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
+                .height(160.dp)
                 .focusRequester(rowFocus)
                 .focusGroup()
                 .focusable(),
-            horizontalArrangement = Arrangement.spacedBy(18.dp)
+            horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             items(people, key = { it.id ?: it.hashCode() }) { person ->
                 PersonCard(
                     person = person,
-                    imgWidth = 150.dp,
+                    imgWidth = 75.dp,
                     aspectRatio = 0.66f,
                     serverUrl = serverUrl
                 )

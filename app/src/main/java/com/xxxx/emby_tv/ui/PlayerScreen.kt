@@ -1686,7 +1686,7 @@ fun PlayerScreen(
                             .align(Alignment.BottomStart)
                             .padding(start = 444.dp, bottom = 84.dp),
                         title = "",
-                        contentWidth = 380.dp
+                        contentWidth = 190.dp
                     ) {
                         PLAYER_MORE_MENU.forEachIndexed { index, item ->
                             val label = when (item) {
@@ -1746,8 +1746,8 @@ fun PlayerScreen(
                             .padding(start = 44.dp, bottom = 84.dp),
                         title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
                         contentWidth = when (item) {
-                            PlayerMenuItem.BUFFER -> 540.dp
-                            else -> 420.dp
+                            PlayerMenuItem.BUFFER -> 270.dp
+                            else -> 210.dp
                         }
                     ) {
                         when (item) {
