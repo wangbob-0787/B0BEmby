@@ -68,6 +68,9 @@ import com.xxxx.emby_tv.data.model.PersonInfo
 import com.xxxx.emby_tv.ui.PersonCard
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /** 播放控制面板上的一级菜单项 */
 enum class PlayerMenuItem(val label: String) {
@@ -143,8 +146,15 @@ val OverlayTextStyleSoft = TextStyle(
     shadow = Shadow(color = Color.Black, offset = Offset(1.5f, 1.5f), blurRadius = 5f)
 )
 
+/** 播放结束时刻(当前钟点 + 剩余时长),进度条右侧显示用 */
+fun formatEndClock(remainingMs: Long): String {
+    val end = System.currentTimeMillis() + remainingMs.coerceAtLeast(0L)
+    return SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(end))
+}
+
 /**
- * 左右键快进快退时唤出的进度条:只有时间与进度条,不展开控制条、不抢焦点。
+ * 左右键快进快退时唤出的进度条:一行 = 已播时间 + 进度条 + (剩余时间 / 结束时刻),
+ * 不展开控制条、不抢焦点。
  * 用途:播放中未按 ↓、直接按左右键时,给一个"快进/快退到哪了"的可视反馈。
  */
 @Composable
@@ -155,36 +165,25 @@ fun SeekHud(
     forward: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    val remaining = (duration - position).coerceAtLeast(0L)
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 58.dp)
+            .padding(horizontal = 58.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Text(
-                text = formatDuration(position) + " / " + formatDuration(duration),
-                color = Color.White,
-                fontSize = 20.sp,
-                style = OverlayTextStyleSoft
-            )
-            Text(
-                text = if (forward) "快进" else "快退",
-                color = Color.White,
-                fontSize = 18.sp,
-                style = OverlayTextStyleSoft
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = (if (forward) "快进 " else "快退 ") + formatDuration(position),
+            color = Color.White,
+            fontSize = 18.sp,
+            style = OverlayTextStyleSoft
+        )
+        Spacer(modifier = Modifier.width(14.dp))
 
         // 与控制条内同款进度条(白条 + 当前位置圆点)
         BoxWithConstraints(
             modifier = Modifier
-                .fillMaxWidth()
+                .weight(1f)
                 .height(14.dp)
         ) {
             val barWidth = maxWidth
@@ -225,6 +224,14 @@ fun SeekHud(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(
+            text = "-" + formatDuration(remaining) + " / " + formatEndClock(remaining),
+            color = Color(0xFFD0D0D0),
+            fontSize = 18.sp,
+            style = OverlayTextStyleSoft
+        )
     }
 }
 
@@ -236,6 +243,7 @@ fun SeekHud(
 fun PlayerControlPanel(
     modifier: Modifier = Modifier,
     title: String,
+    subtitle: String,
     playMethodLabel: String,
     position: Long,
     duration: Long,
@@ -279,35 +287,40 @@ fun PlayerControlPanel(
                 .padding(horizontal = 58.dp)
                 .padding(bottom = 26.dp)
         ) {
-            // 标题:片名(大) + (播放方式)
-            Row(verticalAlignment = Alignment.Bottom) {
+            // 第一行:剧名
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = OverlayTextStyle
+            )
+
+            // 第二行:集名 + 播放方式(灰色,字号与进度条上的数字一致)
+            val subLine = listOf(
+                subtitle,
+                if (playMethodLabel.isNotEmpty()) "（$playMethodLabel）" else ""
+            ).filter { it.isNotEmpty() }.joinToString("  ")
+            if (subLine.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = subLine,
+                    color = Color(0xFFBDBDBD),
+                    fontSize = 18.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = OverlayTextStyle,
-                    modifier = Modifier.weight(1f, fill = false)
+                    style = OverlayTextStyleSoft
                 )
-                if (playMethodLabel.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "（$playMethodLabel）",
-                        color = Color(0xFFE0E0E0),
-                        fontSize = 22.sp,
-                        style = OverlayTextStyle
-                    )
-                }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 时间
+            // 第三行:已播时间 + 进度条 + (剩余时间 / 结束时刻),三者同一行
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = formatDuration(position),
@@ -315,23 +328,13 @@ fun PlayerControlPanel(
                     fontSize = 18.sp,
                     style = OverlayTextStyleSoft
                 )
-                Text(
-                    text = "-" + formatDuration((duration - position).coerceAtLeast(0L)) +
-                            " / " + formatDuration(duration),
-                    color = Color(0xFFD0D0D0),
-                    fontSize = 16.sp,
-                    style = OverlayTextStyleSoft
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // 进度条(加粗 + 当前位置圆点,3 米外也能看出播到哪)
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-            ) {
+                Spacer(modifier = Modifier.width(14.dp))
+                // 进度条(加粗 + 当前位置圆点,3 米外也能看出播到哪)
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(14.dp)
+                ) {
                 val barWidth = maxWidth
                 Box(
                     modifier = Modifier
@@ -370,37 +373,19 @@ fun PlayerControlPanel(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 播放三键
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PanelIcon(
-                    icon = Icons.Default.Replay10,
-                    description = "后退10秒",
-                    focusRequester = playKeyFocus[0],
-                    onClick = onSeekBack
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                PanelIcon(
-                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    description = "播放暂停",
-                    focusRequester = playKeyFocus[1],
-                    onClick = onPlayPause,
-                    downFocus = itemFocus[0]
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                PanelIcon(
-                    icon = Icons.Default.Forward10,
-                    description = "前进10秒",
-                    focusRequester = playKeyFocus[2],
-                    onClick = onSeekForward
+                Spacer(modifier = Modifier.width(14.dp))
+                Text(
+                    text = "-" + formatDuration((duration - position).coerceAtLeast(0L)) +
+                            " / " + formatEndClock((duration - position).coerceAtLeast(0L)),
+                    color = Color(0xFFD0D0D0),
+                    fontSize = 18.sp,
+                    style = OverlayTextStyleSoft
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 一级菜单(图标行;焦点项名称显示在行上方)
+            // 第四行:播放三键 + 一级菜单同一行(焦点移到哪个图标,名称显示在这一行上方)
             var focusedLabel by remember { mutableStateOf("") }
             if (focusedLabel.isNotEmpty()) {
                 Text(
@@ -412,6 +397,30 @@ fun PlayerControlPanel(
                 Spacer(modifier = Modifier.height(4.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                PanelIcon(
+                    icon = Icons.Default.Replay10,
+                    description = "后退10秒",
+                    focusRequester = playKeyFocus[0],
+                    onClick = onSeekBack
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                PanelIcon(
+                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    description = "播放暂停",
+                    focusRequester = playKeyFocus[1],
+                    onClick = onPlayPause,
+                    downFocus = itemFocus[0]
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                PanelIcon(
+                    icon = Icons.Default.Forward10,
+                    description = "前进10秒",
+                    focusRequester = playKeyFocus[2],
+                    onClick = onSeekForward
+                )
+
+                Spacer(modifier = Modifier.width(26.dp))
+
                 menuItems.forEachIndexed { index, item ->
                     val selected = activeItem == item
                     Column(

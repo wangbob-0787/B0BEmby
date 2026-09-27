@@ -785,17 +785,29 @@ fun PlayerScreen(
     }
 
     // 控制面板标题:剧名 + S/E(电影用片名)
+    // 第一行标题:剧集显示剧名,电影显示片名
     fun panelTitle(): String {
         val series = mediaInfo.seriesName
-        val season = mediaInfo.parentIndexNumber
-        val episode = mediaInfo.indexNumber
         val name = mediaInfo.name
         return when {
-            !series.isNullOrEmpty() && season != null && episode != null -> "$series S$season:E$episode"
             !series.isNullOrEmpty() -> series
             !name.isNullOrEmpty() -> name
             else -> ""
         }
+    }
+
+    // 第二行副标题:剧集为 "S季:E集  集名",电影为空
+    fun panelSubtitle(): String {
+        if (mediaInfo.seriesName.isNullOrEmpty()) return ""
+        val season = mediaInfo.parentIndexNumber
+        val episode = mediaInfo.indexNumber
+        val name = mediaInfo.name ?: ""
+        val ep = when {
+            season != null && episode != null -> "S$season:E$episode"
+            episode != null -> "第 $episode 集"
+            else -> ""
+        }
+        return listOf(ep, name).filter { it.isNotEmpty() }.joinToString("  ")
     }
 
     // 数据加载逻辑
@@ -1735,6 +1747,7 @@ fun PlayerScreen(
                 if (activeItem != PlayerMenuItem.INFO && activeItem != PlayerMenuItem.CAST) {
                 PlayerControlPanel(
                     title = panelTitle(),
+                    subtitle = panelSubtitle(),
                     playMethodLabel = playMethodLabel(session),
                     position = position,
                     duration = duration,
@@ -1964,10 +1977,10 @@ fun PlayerScreen(
                     }
                 }
 
-                // 左右键唤出的进度条:8 秒无操作后收起(暂停时也收,它只是快进快退的即时反馈)
+                // 左右键唤出的进度条:5 秒无操作后收起(暂停时也收,它只是快进快退的即时反馈)
                 LaunchedEffect(seekHud, interactionTick) {
                     if (!seekHud) return@LaunchedEffect
-                    kotlinx.coroutines.delay(8000)
+                    kotlinx.coroutines.delay(5000)
                     seekHud = false
                 }
             }
