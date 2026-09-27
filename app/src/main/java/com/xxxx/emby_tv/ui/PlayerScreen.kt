@@ -1641,8 +1641,8 @@ fun PlayerScreen(
                     }
                 }
 
-                // 信息打开时整排控制收起,整屏只留信息(照官方信息页)
-                if (activeItem != PlayerMenuItem.INFO) {
+                // 信息/演职人员打开时整排控制收起,整屏只留内容(照官方排版)
+                if (activeItem != PlayerMenuItem.INFO && activeItem != PlayerMenuItem.CAST) {
                 PlayerControlPanel(
                     title = panelTitle(),
                     playMethodLabel = playMethodLabel(session),
@@ -1675,33 +1675,43 @@ fun PlayerScreen(
 
                 if (activeItem != null) {
                     val item = activeItem!!
-                    if (item == PlayerMenuItem.INFO) {
-                        // 信息:无框,海报+文字直接叠在画面左下(照官方排版)
-                        InfoSheet(
-                            mediaInfo = mediaInfo,
-                            serverUrl = serverUrl,
-                            techLine = techLineOf(
-                                media.mediaSources?.firstOrNull(),
-                                getVideoTrack(media)?.displayTitle ?: ""
-                            ),
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(start = 56.dp, bottom = 56.dp),
-                            firstFocus = sheetFirstFocus
-                        )
+                    if (item == PlayerMenuItem.INFO || item == PlayerMenuItem.CAST) {
+                        if (item == PlayerMenuItem.INFO) {
+                            // 信息:无框,海报+文字直接叠在画面左下(照官方排版)
+                            InfoSheet(
+                                mediaInfo = mediaInfo,
+                                serverUrl = serverUrl,
+                                techLine = techLineOf(
+                                    media.mediaSources?.firstOrNull(),
+                                    getVideoTrack(media)?.displayTitle ?: ""
+                                ),
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(start = 56.dp, bottom = 56.dp),
+                                firstFocus = sheetFirstFocus
+                            )
+                        } else {
+                            // 演职人员:与信息同一风格,无框,标题+头像卡片
+                            CastListSheet(
+                                people = mediaInfo.people ?: emptyList(),
+                                serverUrl = serverUrl,
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .width(1500.dp)
+                                    .padding(start = 56.dp, bottom = 56.dp),
+                                firstFocus = sheetFirstFocus
+                            )
+                        }
                     } else {
                     SheetShell(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(start = 44.dp, bottom = 262.dp),
-                        title = item.label,
+                            .padding(start = 44.dp, bottom = 84.dp),
+                        title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
                         contentWidth = when (item) {
-                            PlayerMenuItem.CAST -> 940.dp
                             PlayerMenuItem.BUFFER -> 540.dp
                             else -> 420.dp
-                        },
-                        contentHeight = if (item == PlayerMenuItem.CAST) 300.dp else null,
-                        scrollable = item != PlayerMenuItem.CAST
+                        }
                     ) {
                         when (item) {
                             PlayerMenuItem.EPISODES -> EpisodeListSheet(
@@ -1713,12 +1723,6 @@ fun PlayerScreen(
                                     showPanel = false
                                     onNavigateToPlayer(episode)
                                 },
-                                firstFocus = sheetFirstFocus
-                            )
-
-                            PlayerMenuItem.CAST -> CastListSheet(
-                                people = mediaInfo.people ?: emptyList(),
-                                serverUrl = serverUrl,
                                 firstFocus = sheetFirstFocus
                             )
 

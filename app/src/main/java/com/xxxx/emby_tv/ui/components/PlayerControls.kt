@@ -128,6 +128,9 @@ val OverlayTextStyle = TextStyle(
     shadow = Shadow(color = Color.Black, offset = Offset(2f, 2f), blurRadius = 6f)
 )
 
+/** 官方主题绿(与详情页焦点色一致) */
+val EmbyGreen = Color(0xFF52B54B)
+
 val OverlayTextStyleSoft = TextStyle(
     shadow = Shadow(color = Color.Black, offset = Offset(1.5f, 1.5f), blurRadius = 5f)
 )
@@ -352,17 +355,19 @@ fun SheetShell(
 ) {
     Column(
         modifier = modifier
-            .background(Color(0xD9101010), RoundedCornerShape(14.dp))
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .background(Color(0xE6101010), RoundedCornerShape(14.dp))
+            .padding(horizontal = 22.dp, vertical = 18.dp)
             .focusGroup()
     ) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 19.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(10.dp))
+        if (title.isNotEmpty()) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
         val boxModifier = if (contentHeight != null) {
             Modifier.width(contentWidth).height(contentHeight)
         } else {
@@ -413,12 +418,12 @@ fun SheetRow(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 11.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = label, fontSize = 17.sp)
+            Text(text = label, fontSize = 18.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!selected && !trailing.isNullOrEmpty()) {
                     Text(text = trailing, fontSize = 15.sp, color = Color(0xFFBDBDBD))
@@ -428,15 +433,15 @@ fun SheetRow(
                     Icon(
                         imageVector = Icons.Default.CheckBox,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                        tint = EmbyGreen,
+                        modifier = Modifier.size(24.dp)
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.CheckBoxOutlineBlank,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.55f),
-                        modifier = Modifier.size(22.dp)
+                        tint = Color.White.copy(alpha = 0.45f),
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -595,42 +600,56 @@ fun EpisodeListSheet(
     }
 }
 
-/** 演职人员:横向头像卡片 */
+/** 演职人员:标题 + 横向头像卡片,直接叠在画面上(与信息页同一风格) */
 @Composable
 fun CastListSheet(
     people: List<PersonInfo>,
     serverUrl: String,
+    modifier: Modifier = Modifier,
     firstFocus: FocusRequester,
 ) {
-    if (people.isEmpty()) {
-        Text(
-            text = "暂无演职人员信息",
-            color = Color(0xFFAFAFAF),
-            fontSize = 15.sp,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-        )
-        return
-    }
-    val rowFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        delay(80)
-        runCatching { rowFocus.requestFocus() }
-    }
-    LazyRow(
-        modifier = Modifier
-            .fillMaxSize()
-            .focusRequester(rowFocus)
-            .focusGroup()
-            .focusable(),
-        horizontalArrangement = Arrangement.spacedBy(18.dp)
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        items(people, key = { it.id ?: it.hashCode() }) { person ->
-            PersonCard(
-                person = person,
-                imgWidth = 130.dp,
-                aspectRatio = 0.66f,
-                serverUrl = serverUrl
+        Text(
+            text = "演职人员",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            style = OverlayTextStyle
+        )
+        if (people.isEmpty()) {
+            Text(
+                text = "暂无演职人员信息",
+                color = Color(0xFFBDBDBD),
+                fontSize = 16.sp,
+                style = OverlayTextStyleSoft
             )
+            return@Column
+        }
+        val rowFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) {
+            delay(80)
+            runCatching { rowFocus.requestFocus() }
+        }
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(320.dp)
+                .focusRequester(rowFocus)
+                .focusGroup()
+                .focusable(),
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            items(people, key = { it.id ?: it.hashCode() }) { person ->
+                PersonCard(
+                    person = person,
+                    imgWidth = 150.dp,
+                    aspectRatio = 0.66f,
+                    serverUrl = serverUrl
+                )
+            }
         }
     }
 }
