@@ -1,21 +1,49 @@
-# 🎬 OpenEmby TV
+# 🎬 B0BEmby
 
 <div align="center">
 
 ![Logo](./img-show/show1.png)
 
-**开源 Emby TV 客户端 | Open-source Emby Client for TV/Box**
+**基于 OpenEmby TV 的个人自用改造版 | Personal fork of OpenEmby TV**
 
 [![Android](https://img.shields.io/badge/Android-6.0+-3DDC84?logo=android&style=flat-square)](https://www.android.com)
-[![Downloads](https://img.shields.io/github/downloads/shareven/openemby_tv/total?style=flat-square)](https://github.com/shareven/openemby_tv/releases/)
+[![Downloads](https://img.shields.io/github/downloads/wangbob-0787/B0BEmby/total?style=flat-square)](https://github.com/wangbob-0787/B0BEmby/releases/)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-e85d4f?style=flat-square)](https://creativecommons.org/licenses/by-nc/4.0/)
-[![Version](https://img.shields.io/github/v/release/shareven/openemby_tv?style=flat-square)](https://github.com/shareven/openemby_tv/releases/latest)
+[![Version](https://img.shields.io/github/v/release/wangbob-0787/B0BEmby?style=flat-square)](https://github.com/wangbob-0787/B0BEmby/releases/latest)
 
 [简体中文](#简介--introduction) · [English](#introduction)
 
 ---
 
 </div>
+
+## 📌 关于本仓库 / About This Repository
+
+**本仓库是 [shareven/OpenEmby TV](https://github.com/shareven/openemby_tv) 的个人自用改造版，仅供本人及家庭内部使用，不作商业用途，也不对外提供任何形式的服务或技术支持。**
+
+- **上游来源 / Upstream**：基于 [shareven/openemby_tv](https://github.com/shareven/openemby_tv)（快照版本 v2.0.20）改造，原作者为 **shareven**，本项目沿用其 **CC BY-NC 4.0** 许可。
+- **用途声明 / Usage**：个人与家庭自用（自建 Emby 服务器 + 电视 / 投影设备），非面向公众分发的项目。
+- **改动说明 / Changes**：见下方「本仓库的改动」。
+
+> This repository is a **personal fork** of [shareven/OpenEmby TV](https://github.com/shareven/openemby_tv), for private home use only. **No commercial use.** All credit for the original project goes to its author **shareven**; this fork is licensed under the same **CC BY-NC 4.0** and all modifications are listed below.
+
+### 🔧 本仓库的改动 / Changes in This Fork
+
+| 模块 | 改动 |
+|:----|:----|
+| 弹幕 | 自写弹幕层：解析 ASS 字幕的 `\move` 逐帧绘制（Media3 原生不支持） |
+| 详情页 | 新增详情页 |
+| 主题 | 新增暗色主题 |
+| 首屏 | 首屏缓存，减少冷启动等待 |
+| 播放 | 只换封装，保住 4K / HDR 原画直通，避免落到服务端转码 |
+| 播放页 | 按键语义、菜单层级、缓冲策略、选集焦点按遥控器实际手感重做 |
+| 倍速 | 1.0 倍速以外绕开音频直通与隧道模式，改走 PCM + Sonic，修复「显示已变速但音画不动」 |
+| 日志 | 埋点改走 app 内置文件日志（投影设备不提供 logcat） |
+| 文档 | 新增 `SDR_HDR_GUIDE.md`（SDR / HDR 播放说明） |
+
+> 上游的核心播放流程与 Emby API 集成逻辑未作改动。
+
+---
 
 ## ✨ 简介 / Introduction
 
@@ -33,11 +61,11 @@
 
 ## 📥 下载 / Download
 
-> 最新版本 / Newest release: v2.0.20
+> 构建产物见本仓库 [Releases](https://github.com/wangbob-0787/B0BEmby/releases)，每次推送后由 GitHub Actions 云端编译生成，标签形如 `build-NN`。
 
 | 最低 Android 版本 | 下载地址 |
 |:------------------:|:--------:|
-| Android 6.0+ | [GitHub Releases](https://github.com/shareven/openemby_tv/releases/) |
+| Android 6.0+ | [本仓库 Releases](https://github.com/wangbob-0787/B0BEmby/releases) |
 
 ---
 
@@ -142,10 +170,8 @@ Track switching, progress control, keep screen on
 
 ## 🤝 贡献与交流 / Contributing
 
-欢迎通过 Issues 或 PR 交流问题与改进想法！
-Feel free to open Issues or PRs to discuss problems or suggest improvements!
-
-> Please open Issues or PRs for bugs or improvements. This project is primarily for learning and technical exchange.
+本项目为个人自用改造版，不接收 PR，问题与想法请提给上游项目 [shareven/openemby_tv](https://github.com/shareven/openemby_tv)。
+This is a personal fork; pull requests are not accepted. Please report issues and suggestions to the upstream project.
 
 ---
 
@@ -164,7 +190,7 @@ This project is licensed under a **non-commercial** license:
 | ✅ 改编和改造 / Adapt and remix | |
 | ✅ 注明作者和来源 / Attribution required | |
 
-**简要说明**：允许复制、分发和改编，但禁止用于商业用途，使用时需注明作者并链接到许可协议。
+**简要说明**：允许复制、分发和改编，但禁止用于商业用途，使用时需注明作者并链接到许可协议。本项目为上游项目的改造版，原作者署名与许可声明一并保留。
 **Summary**: You are free to copy, distribute, and adapt the work, but you cannot use it for commercial purposes. You must attribute the author and include a link to the license.
 
 > You are free to copy, distribute, and adapt the work, as long as you don't use it for commercial purposes. You must attribute the work and include a link to the license.
@@ -178,9 +204,9 @@ https://creativecommons.org/licenses/by-nc/4.0/legalcode
 
 <div align="center">
 
-**如果这个项目对你有帮助，欢迎 ⭐ Star**
-**If this project is helpful to you, please ⭐ Star**
+**个人自用项目，仅供学习参考，不提供技术支持**
+**Personal use only — no support provided**
 
-*Made with ❤️ for the Emby community*
+*Based on [shareven/openemby_tv](https://github.com/shareven/openemby_tv) · CC BY-NC 4.0*
 
 </div>
