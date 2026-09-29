@@ -51,11 +51,11 @@
 
 本项目主要用于学习 Android 在 TV/遥控交互、焦点管理、流式播放集成（Emby API）以及多语言本地化等方面的实践。
 
-**🛡️ 隐私安全**：App 不收集任何个人信息。只主动访问了 [GitHub Releases API](https://api.github.com/repos/shareven/openemby_tv/releases/latest) 用于下载更新，其他数据接口为用户自己填的服务器地址。
+**🛡️ 隐私安全**：App 不收集任何个人信息。应用内更新检查已**关闭**（本仓库为私有个人自用版，不再访问任何 GitHub 接口），除用户自己填写的服务器地址外，App 不主动访问其他外部接口。
 
 > An open-source Emby client aimed at learning and exchanging technical knowledge. This project demonstrates Android usage for TV/remote UI, focus handling, streaming integration with Emby API, and localization.
 
-**🛡️ Privacy & Security**: The app does not collect any personal information. It only accesses the GitHub releases API to download updates. All other data connections are user-configured server addresses.
+**🛡️ Privacy & Security**: The app does not collect any personal information. In-app update checking is **disabled** in this private personal fork, so the app does not access any GitHub API. All other data connections are user-configured server addresses.
 
 ---
 
@@ -164,7 +164,7 @@ Track switching, progress control, keep screen on
 
 | 接口 / API | 用途 / Purpose |
 |:----|:----|
-| `GET https://api.github.com/repos/shareven/openemby_tv/releases/latest` | 获取最新版本信息 / Get latest version info |
+| 无 / None | 应用内更新检查已关闭，App 不访问任何外部服务 / In-app update check is disabled; no external service is accessed |
 
 ---
 

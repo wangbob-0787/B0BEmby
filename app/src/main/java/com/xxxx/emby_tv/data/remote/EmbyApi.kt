@@ -568,36 +568,18 @@ object EmbyApi {
     /**
      * 获取最新版本信息
      */
+    /**
+     * 获取最新版本信息 —— 【已关闭】应用内更新检查（个人自用改造版，2026-09-29）
+     *
+     * 关闭原因:
+     *   1) 本仓库为私有仓库,未鉴权访问 releases/latest 必然返回 404,留着只会白发请求;
+     *   2) 该功能原本会提示安装上游 release,装上即覆盖本机的弹幕层/直通/播放页改造。
+     *
+     * 如需恢复:在此实现 GET https://api.github.com/repos/wangbob-0787/B0BEmby/releases/latest
+     * (URL 已指向本仓库),并保留请求失败时静默返回空对象的行为。
+     */
     suspend fun getNewVersion(context: Context): JsonObject = withContext(Dispatchers.IO) {
-        val url = "https://api.github.com/repos/wangbob-0787/B0BEmby/releases/latest"
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("Accept", "application/json")
-            .get()
-            .build()
-
-        try {
-            HttpClient.getClient(context).newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext JsonObject()
-                val body = response.body ?: return@withContext JsonObject()
-                val reader = JsonReader(body.charStream())
-                gson.fromJson<JsonObject>(reader, JsonObject::class.java) ?: JsonObject()
-            }
-        } catch (e: Exception) {
-            when {
-                e is ConnectException || e.cause is ConnectException ||
-                e is UnknownHostException || e.cause is UnknownHostException -> {
-                    val prefs = com.xxxx.emby_tv.data.local.PreferencesManager(context)
-                    if (prefs.proxyEnabled) {
-                        Log.e(TAG, "检查更新失败（代理连接失败，请检查代理设置）: ${e.message}")
-                    } else {
-                        Log.e(TAG, "检查更新失败: ${e.message}")
-                    }
-                }
-                else -> Log.e(TAG, "检查更新失败: ${e.message}")
-            }
-            JsonObject()
-        }
+        JsonObject()
     }
 
     // ==================== HTTP 辅助方法 ====================
