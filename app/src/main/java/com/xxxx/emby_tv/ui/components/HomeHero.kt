@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -70,6 +71,8 @@ fun HomeHeroCarousel(
     autoAdvance: Boolean = true,
     // 在大图上按 OK：从上次播放位置续播当前这一部（父亲 2026-09-30 补充）
     onOpenItem: (BaseItemDto) -> Unit = {},
+    // 上报自身焦点：HomeScreen 用它决定"焦点离开大图就暂停轮播"
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
     if (items.isEmpty()) return
     val list = remember(items) { items.take(6) }
@@ -97,6 +100,7 @@ fun HomeHeroCarousel(
         modifier = modifier
             .fillMaxWidth()
             .height(400.dp)          // 参考图实测：大图底边 1340/1800 = 74.4% 屏高
+            .onFocusChanged { onFocusChanged(it.isFocused) }
             .focusRequester(heroFocus)
             .focusable()
             .onPreviewKeyEvent { e ->

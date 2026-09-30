@@ -54,8 +54,8 @@ fun HomeScreen(
     val isLoading = homeViewModel.isLoading
     val errorMessage = homeViewModel.errorMessage
 
-    // 焦点是否在下面的内容区（在下面时暂停顶部大图的自动轮播，父亲 2026-09-30 定）
-    var contentFocused by remember { mutableStateOf(false) }
+    // 焦点是否还在顶部大片头上（离开就暂停自动轮播，父亲 2026-09-30 定）
+    var heroFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
@@ -152,29 +152,29 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 顶部大片头轮播：取「继续观看」前 6 部，5 秒自动切、左右键手动切（父亲 2026-09-30 定）
-        // 这一区只看不点播 —— 首页原有的「继续观看」行保留，播放入口在那一行（父亲明确）
-        if (!resumeItems.isNullOrEmpty()) {
-            HomeHeroCarousel(
-                items = resumeItems ?: emptyList(),
-                serverUrl = serverUrl,
-                autoAdvance = !contentFocused,
-                // 与下面「继续观看」行走同一条播放入口（都是续播）
-                onOpenItem = { item -> goPlay(item) }
-            )
-        }
-
         // 数据未加载完成时显示 Loading 组件
 //        if(isLoading){
 //            Loading()
 //        }
         if (libraryLatestItems != null) {
             LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .onFocusChanged { contentFocused = it.hasFocus },
+                modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(bottom = 40.dp)
             ) {
+                // 顶部大片头：取「继续观看」前 6 部，5 秒自动切、左右键手动切、OK 续播
+                // （父亲 2026-09-30 定：放在滚动区里，往下滚时它跟着上移，下面的内容区才够大）
+                if (!resumeItems.isNullOrEmpty()) {
+                    item {
+                        HomeHeroCarousel(
+                            items = resumeItems ?: emptyList(),
+                            serverUrl = serverUrl,
+                            autoAdvance = heroFocused,   // 焦点在大图上才轮播，移到下面即暂停
+                            onOpenItem = { item -> goPlay(item) },
+                            onFocusChanged = { heroFocused = it }
+                        )
+                    }
+                }
+
                 // 我的媒体库
                 item {
                     MediaSection(
