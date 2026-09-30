@@ -126,7 +126,9 @@ fun HomeHeroCarousel(
         // 切换过渡：整块内容淡入淡出（父亲 2026-09-30 要求）
         Crossfade(
             targetState = index,
-            animationSpec = tween(durationMillis = 500),
+            // 淡出 1s + 淡入 1s（交叉溶解：旧图 alpha 1→0 的同时新图 0→1，各 1 秒）
+            // 父亲 2026-09-30：原先 500ms 太快
+            animationSpec = tween(durationMillis = 1000),
             label = "hero"
         ) { i ->
             val item = list[i.coerceIn(0, list.lastIndex)]
