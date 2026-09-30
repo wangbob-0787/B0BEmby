@@ -158,7 +158,9 @@ fun HomeScreen(
             HomeHeroCarousel(
                 items = resumeItems ?: emptyList(),
                 serverUrl = serverUrl,
-                autoAdvance = !contentFocused
+                autoAdvance = !contentFocused,
+                // 与下面「继续观看」行走同一条播放入口（都是续播）
+                onOpenItem = { item -> goPlay(item) }
             )
         }
 

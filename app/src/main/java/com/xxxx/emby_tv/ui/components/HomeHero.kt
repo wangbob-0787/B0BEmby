@@ -62,6 +62,8 @@ fun HomeHeroCarousel(
     modifier: Modifier = Modifier,
     // 焦点进了下面内容区时由 HomeScreen 传 false → 暂停自动轮播（父亲 2026-09-30 定）
     autoAdvance: Boolean = true,
+    // 在大图上按 OK：从上次播放位置续播当前这一部（父亲 2026-09-30 补充）
+    onOpenItem: (BaseItemDto) -> Unit = {},
 ) {
     if (items.isEmpty()) return
     val list = remember(items) { items.take(6) }
@@ -119,6 +121,11 @@ fun HomeHeroCarousel(
                     }
                     Key.DirectionRight -> {
                         index = (index + 1) % list.size
+                        true
+                    }
+                    // OK / 回车：从上次播放位置续播当前显示的这一部
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                        onOpenItem(current)
                         true
                     }
                     else -> false
