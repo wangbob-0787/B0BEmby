@@ -1643,11 +1643,14 @@ fun PlayerScreen(
                     if (event.key == Key.DirectionLeft) {
                         if (showPanel || activeItem != null || inMoreMenu) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
+                            // 每一次按键(含长按产生的重复 KeyDown)都重置进度条的隐退计时:
+                            // 原先只在 leftKeyDownTime==0 时重置,长按期间不重置 → 用户还在操作,
+                            // 进度条却已到 5 秒自己隐退(父亲 2026-09-30 实测要求"还在操作就不要隐退")
+                            seekHudForward = false
+                            seekHud = true
+                            seekHudAt = System.currentTimeMillis()
                             if (leftKeyDownTime == 0L) {
                                 leftKeyDownTime = System.currentTimeMillis()
-                                seekHudForward = false
-                                seekHud = true
-                                seekHudAt = System.currentTimeMillis()
                             }
                         } else if (event.type == KeyEventType.KeyUp) {
                             if (leftKeyDownTime > 0) {
@@ -1662,11 +1665,12 @@ fun PlayerScreen(
                     if (event.key == Key.DirectionRight) {
                         if (showPanel || activeItem != null || inMoreMenu) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
+                            // 同左键:每次按键都重置隐退计时(父亲 2026-09-30 要求)
+                            seekHudForward = true
+                            seekHud = true
+                            seekHudAt = System.currentTimeMillis()
                             if (rightKeyDownTime == 0L) {
                                 rightKeyDownTime = System.currentTimeMillis()
-                                seekHudForward = true
-                                seekHud = true
-                                seekHudAt = System.currentTimeMillis()
                             }
                         } else if (event.type == KeyEventType.KeyUp) {
                             if (rightKeyDownTime > 0) {
