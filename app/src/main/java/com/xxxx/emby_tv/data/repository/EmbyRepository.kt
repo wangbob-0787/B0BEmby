@@ -96,6 +96,22 @@ class EmbyRepository private constructor(private val context: Context) {
     }
 
     /**
+     * 按 id 批量取条目（首页大片头补剧集级元数据用）
+     */
+    suspend fun getItemsByIds(ids: List<String>): List<BaseItemDto> {
+        if (ids.isEmpty()) return emptyList()
+        requireLoggedIn()
+        return EmbyApi.getItemsByIds(
+            context,
+            session.serverUrl!!,
+            session.apiKey!!,
+            session.deviceId,
+            session.userId!!,
+            ids
+        )
+    }
+
+    /**
      * 获取最新媒体（按视图分组）
      */
     suspend fun getLatestItems(): List<BaseItemDto> {

@@ -26,6 +26,7 @@ import com.xxxx.emby_tv.ui.components.Loading
 import com.xxxx.emby_tv.ui.components.MenuDialog
 import com.xxxx.emby_tv.ui.components.NoData
 import com.xxxx.emby_tv.ui.components.TopStatusBar
+import com.xxxx.emby_tv.util.ErrorHandler
 import com.xxxx.emby_tv.ui.viewmodel.HomeViewModel
 import com.xxxx.emby_tv.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
@@ -56,6 +57,19 @@ fun HomeScreen(
 
     // 焦点是否还在顶部大片头上（离开就暂停自动轮播，父亲 2026-09-30 定）
     var heroFocused by remember { mutableStateOf(false) }
+
+    // 剧集级元数据：单集(Episode)本身没有评分/类型/分级，这些都在所属剧集(Series)上。
+    // 按 ParentBackdropItemId 批量取一次（1 个请求），供大片头显示完整元数据行。
+    var seriesMeta by remember { mutableStateOf<Map<String, BaseItemDto>>(emptyMap()) }
+    LaunchedEffect(resumeItems) {
+        val ids = (resumeItems ?: emptyList())
+            .mapNotNull { it.parentBackdropItemId ?: it.seriesId }
+            .distinct()
+        if (ids.isEmpty()) return@LaunchedEffect
+        runCatching { repository.getItemsByIds(ids) }
+            .onSuccess { list -> seriesMeta = list.associateBy { it.id ?: "" } }
+            .onFailure { ErrorHandler.logError("HomeScreen", "取剧集元数据失败", it) }
+    }
 
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
@@ -170,7 +184,9 @@ fun HomeScreen(
                             serverUrl = serverUrl,
                             autoAdvance = heroFocused,   // 焦点在大图上才轮播，移到下面即暂停
                             onOpenItem = { item -> goPlay(item) },
-                            onFocusChanged = { heroFocused = it }
+                            onFocusChanged = { heroFocused = it },
+                            // 元数据用所属剧集的（单集没有评分/类型/分级）
+                            seriesMeta = seriesMeta
                         )
                     }
                 }
@@ -269,14 +285,9 @@ private fun MediaSection(
     } else {
         (maxLength.value * maxAspectRatio).dp
     }
-    val focusRequester = remember { FocusRequester() }
-
-    // 当继续观看的 items 变化时，重新聚焦到第一个项目
-    LaunchedEffect(Unit) {
-        if (isContinueWatching && items.isNotEmpty()) {
-            focusRequester.requestFocus()
-        }
-    }
+    // 这里原来有一段"「继续观看」行组合时强制 requestFocus 到第一张卡"的老逻辑。
+    // 首页加了顶部大片头之后，两处同时抢焦点 → 上下键焦点顺序错乱（父亲 2026-09-30 实测）。
+    // 现在只由大片头在首次进入时请求一次焦点，其余交给系统的方向键导航。
 
     Column {
         Text(
@@ -299,11 +310,7 @@ private fun MediaSection(
                     key = { _, item -> item.id ?: item.hashCode() }
                 ) { index, item ->
 
-                    val modifier = if ((isContinueWatching) && index == 0) {
-                        Modifier.focusRequester(focusRequester)
-                    } else {
-                        Modifier
-                    }
+                    val modifier = Modifier
 
 
 

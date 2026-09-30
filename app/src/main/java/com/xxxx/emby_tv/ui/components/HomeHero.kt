@@ -3,6 +3,7 @@ package com.xxxx.emby_tv.ui.components
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.xxxx.emby_tv.data.model.BaseItemDto
@@ -48,19 +53,19 @@ import kotlinx.coroutines.delay
 /**
  * 首页顶部"大片头"轮播（父亲 2026-09-30 定）
  *
- * 尺寸全部按父亲给的参考图实测（参考图 2880×1800，宽高比 1.6，按占屏比例换算到 1080p）：
+ * 尺寸按父亲给的参考图实测（参考图 2880×1800、比例 1.6，按占屏比例换算 1080p）：
  *   大图高度 1340/1800 = 74.4% 屏高   → 400dp
- *   左内边距 50/2880 = 1.74% 屏宽     → 17dp
+ *   左内边距 50/2880 = 1.74% 屏宽     → 与下面内容行左对齐
  *   标题字高 70/1800 = 3.89%          → 21sp
  *   元数据字高 33/1800 = 1.83%        → 10sp
  *   简介字高 28/1800 = 1.56%，共 2 行 → 9sp
  *   圆点直径 14px                     → 5dp / 4dp
  *
- * 行为：
- *   - 每 5 秒自动切下一部，切换带淡入淡出过渡
- *   - 焦点在这一区时左右键手动切
- *   - 按 OK 从上次播放位置续播当前这一部
- *   - 焦点移到下面内容区时暂停自动切
+ * 排版（照参考图）：标题一行；元数据一行 = ★金色星标 + 评分 | 年份 | 类型 | [分级(白边框标签)]；
+ *   简介最多 2 行。整块宽度收到屏幕中部（不左右顶满），左边缘与下面内容行对齐。
+ *
+ * 元数据取值：单集(Episode)本身没有评分/类型/分级，这些在所属剧集(Series)上，
+ *   由 HomeScreen 按 ParentBackdropItemId 批量取好后通过 seriesMeta 传进来。
  */
 @Composable
 fun HomeHeroCarousel(
@@ -73,6 +78,8 @@ fun HomeHeroCarousel(
     onOpenItem: (BaseItemDto) -> Unit = {},
     // 上报自身焦点：HomeScreen 用它决定"焦点离开大图就暂停轮播"
     onFocusChanged: (Boolean) -> Unit = {},
+    // 剧集级元数据（key = 剧集 id）：补单集缺失的评分/类型/分级/年份
+    seriesMeta: Map<String, BaseItemDto> = emptyMap(),
 ) {
     if (items.isEmpty()) return
     val list = remember(items) { items.take(6) }
@@ -123,17 +130,15 @@ fun HomeHeroCarousel(
                 }
             }
     ) {
-        // 切换过渡：整块内容淡入淡出（父亲 2026-09-30 要求）
+        // 切换过渡：淡出/淡入各 1 秒（父亲 2026-09-30 定，原先 500ms 太快）
         Crossfade(
             targetState = index,
-            // 淡出 1s + 淡入 1s（交叉溶解：旧图 alpha 1→0 的同时新图 0→1，各 1 秒）
-            // 父亲 2026-09-30：原先 500ms 太快
             animationSpec = tween(durationMillis = 1000),
             label = "hero"
         ) { i ->
             val item = list[i.coerceIn(0, list.lastIndex)]
+            val meta = seriesMeta[item.parentBackdropItemId ?: item.seriesId ?: ""]
             Box(modifier = Modifier.fillMaxSize()) {
-                // 背景横版剧照
                 val backdrop = backdropUrlOf(item, serverUrl)
                 if (backdrop != null) {
                     AsyncImage(
@@ -161,13 +166,14 @@ fun HomeHeroCarousel(
                         )
                 )
 
-                // 左下角信息：标题 / 元数据 / 简介
+                // 左下信息块：宽度收到屏幕中部（父亲：不要左右顶满），左缘与下面内容行对齐
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(start = 17.dp, end = 40.dp, bottom = 0.dp)
+                        .fillMaxWidth(0.55f)
+                        .padding(start = 32.dp)
                 ) {
-                    // 标题只显示剧名（参考图上是"在溪边"这种剧名；单集的全名太长）
+                    // 第一行：剧名
                     Text(
                         text = item.seriesName ?: item.name ?: "",
                         color = Color.White,
@@ -176,32 +182,93 @@ fun HomeHeroCarousel(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    val meta = buildList {
-                        item.communityRating?.let { if (it > 0) add("★ %.1f".format(it)) }
-                        item.productionYear?.let { add(it.toString()) }
-                        // 类型（剧情/科幻…）：参考图的元数据行里有这一项
-                        item.genres?.firstOrNull()?.let { add(it) }
-                        item.officialRating?.let { add(it) }
+
+                    // 第二行：★评分 | 年份 | 类型 | [分级]
+                    val rating = meta?.communityRating ?: item.communityRating
+                    val year = meta?.productionYear ?: item.productionYear
+                    val genre = meta?.genres?.firstOrNull() ?: item.genres?.firstOrNull()
+                    val cert = meta?.officialRating ?: item.officialRating
+                    Row(
+                        modifier = Modifier.padding(top = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        var wrote = false
+                        fun sep() {
+                            Text(
+                                text = "  |  ",
+                                color = Color.White.copy(alpha = 0.55f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (rating != null && rating > 0) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFC107),      // 参考图：金色星标
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "%.1f".format(rating),
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            wrote = true
+                        }
+                        if (year != null && year > 0) {
+                            if (wrote) sep()
+                            Text(
+                                text = year.toString(),
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            wrote = true
+                        }
+                        if (!genre.isNullOrBlank()) {
+                            if (wrote) sep()
+                            Text(
+                                text = genre,
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            wrote = true
+                        }
+                        if (!cert.isNullOrBlank()) {
+                            if (wrote) sep()
+                            // 参考图：分级是带白边框的小标签（如 KR-15）
+                            Box(
+                                modifier = Modifier
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color.White.copy(alpha = 0.85f),
+                                        shape = RoundedCornerShape(3.dp)
+                                    )
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = cert,
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
-                    if (meta.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = meta.joinToString("  |  "),
-                            color = Color(0xFFD5D5D5),
-                            fontSize = 10.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    val overview = item.overview
+
+                    // 第三行起：简介，最多 2 行
+                    val overview = meta?.overview ?: item.overview
                     if (!overview.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = overview,
-                            color = Color(0xFFE2E2E2),
+                            color = Color.White.copy(alpha = 0.92f),
                             fontSize = 9.sp,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 7.dp)
                         )
                     }
                 }

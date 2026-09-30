@@ -203,6 +203,24 @@ object EmbyApi {
     }
 
     /**
+     * 按 id 批量取条目（首页大片头用它补剧集级元数据：单集没有评分/类型/分级）
+     */
+    suspend fun getItemsByIds(
+        context: Context,
+        serverUrl: String,
+        apiKey: String,
+        deviceId: String,
+        userId: String,
+        ids: List<String>
+    ): List<BaseItemDto> {
+        if (ids.isEmpty()) return emptyList()
+        val url = "/Users/$userId/Items?Ids=${ids.joinToString(",")}" +
+                "&Fields=CommunityRating,OfficialRating,Genres,ProductionYear,Overview" +
+                "&X-Emby-Token=$apiKey"
+        return httpAsBaseItemDtoList(context, serverUrl, apiKey, deviceId, url)
+    }
+
+    /**
      * 获取视图下的最新项目
      */
     suspend fun getLatestItemsByViews(
