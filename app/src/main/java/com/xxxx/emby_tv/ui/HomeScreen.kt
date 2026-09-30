@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import com.xxxx.emby_tv.R
 import com.xxxx.emby_tv.data.repository.EmbyRepository
 import com.xxxx.emby_tv.ui.components.BuildItem
+import com.xxxx.emby_tv.ui.components.HomeHeroCarousel
 import com.xxxx.emby_tv.ui.components.Loading
 import com.xxxx.emby_tv.ui.components.MenuDialog
 import com.xxxx.emby_tv.ui.components.NoData
@@ -51,6 +53,9 @@ fun HomeScreen(
     val favoriteItems = homeViewModel.favoriteItems
     val isLoading = homeViewModel.isLoading
     val errorMessage = homeViewModel.errorMessage
+
+    // 焦点是否在下面的内容区（在下面时暂停顶部大图的自动轮播，父亲 2026-09-30 定）
+    var contentFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
@@ -147,13 +152,25 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // 顶部大片头轮播：取「继续观看」前 6 部，5 秒自动切、左右键手动切（父亲 2026-09-30 定）
+        // 这一区只看不点播 —— 首页原有的「继续观看」行保留，播放入口在那一行（父亲明确）
+        if (!resumeItems.isNullOrEmpty()) {
+            HomeHeroCarousel(
+                items = resumeItems ?: emptyList(),
+                serverUrl = serverUrl,
+                autoAdvance = !contentFocused
+            )
+        }
+
         // 数据未加载完成时显示 Loading 组件
 //        if(isLoading){
 //            Loading()
 //        }
         if (libraryLatestItems != null) {
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .onFocusChanged { contentFocused = it.hasFocus },
                 contentPadding = PaddingValues(bottom = 40.dp)
             ) {
                 // 我的媒体库
