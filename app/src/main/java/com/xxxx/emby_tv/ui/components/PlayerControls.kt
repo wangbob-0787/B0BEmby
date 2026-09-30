@@ -344,16 +344,31 @@ fun PlayerControlPanel(
                 .padding(horizontal = 54.dp)
                 .padding(bottom = 21.dp)
         ) {
-            // 第一行:剧名（官方实测字面高 50px @1080p → 约 25sp）
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 25.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = OverlayTextStyle
-            )
+            // 第一行:剧名（官方实测字面高 50px @1080p → 约 25sp）+ 右侧「结束 HH:mm」
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = OverlayTextStyle,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Text(
+                    // 官方在剧名右侧显示「结束 下午8:50」(实测 x1064-1181, y857-890)
+                    text = "结束 " + formatEndClock((duration - position).coerceAtLeast(0L)),
+                    color = SpecClockText,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    style = OverlayTextStyleSoft
+                )
+            }
 
             // 第二行:集名 + 播放方式(灰色,字号与进度条上的数字一致)
             val subLine = listOf(
@@ -413,8 +428,8 @@ fun PlayerControlPanel(
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Text(
-                    text = "-" + formatDuration((duration - position).coerceAtLeast(0L)) +
-                            " / " + formatEndClock((duration - position).coerceAtLeast(0L)),
+                    // 官方右侧只显示剩余时间(如 -17:57),不带结束时刻 —— 2026-09-30 规格
+                    text = "-" + formatDuration((duration - position).coerceAtLeast(0L)),
                     color = Color(0xFFD0D0D0),
                     fontSize = 18.sp,
                     style = OverlayTextStyleSoft
