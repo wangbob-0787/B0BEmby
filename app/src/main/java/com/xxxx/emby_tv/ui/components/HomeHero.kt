@@ -182,7 +182,8 @@ fun HomeHeroCarousel(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth(0.55f)
-                        .padding(start = 32.dp)
+                        // 底部留出空隙，避免文字压住最底部的分页圆点（父亲 2026-09-30）
+                        .padding(start = 32.dp, bottom = 30.dp)
                 ) {
                     // 第一行：剧名
                     Text(
@@ -293,7 +294,7 @@ fun HomeHeroCarousel(
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 7.dp),   // 贴在最底部，与上方信息块分离
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
