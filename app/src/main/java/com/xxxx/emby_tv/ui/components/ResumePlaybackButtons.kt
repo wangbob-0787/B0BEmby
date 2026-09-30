@@ -147,7 +147,9 @@ fun ResumePlaybackButtons(
             }
 
 
-            // 圆环倒计时
+            // 圆环倒计时：只有真的在倒计时时才画（countdownSeconds<=0 时整块不显示）
+            // 之前只停了计时逻辑，圆环和「0s」还在画 —— 父亲看到的就是那个"没取消"的样子
+            if (countdownSeconds > 0) {
             Box(
                 modifier = Modifier.size(48.dp),
                 contentAlignment = Alignment.Center
@@ -179,6 +181,7 @@ fun ResumePlaybackButtons(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
             }
         }
     }
