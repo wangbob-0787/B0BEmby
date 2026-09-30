@@ -376,7 +376,8 @@ fun PlayerControlPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 54.dp)
+                // 官方实测：剧名/时间等文字的左边距 96px(=48dp)、底部 42px(=21dp)
+                .padding(horizontal = 48.dp)
                 .padding(bottom = 21.dp)
         ) {
             // 第一行:剧名（官方实测字面高 50px @1080p → 约 25sp）+ 右侧「结束 HH:mm」
@@ -411,7 +412,7 @@ fun PlayerControlPanel(
                 if (playMethodLabel.isNotEmpty()) "（$playMethodLabel）" else ""
             ).filter { it.isNotEmpty() }.joinToString("  ")
             if (subLine.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(9.dp))   // 官方：剧名底 839 → 副行顶 857 = 18px
                 Text(
                     text = subLine,
                     color = SpecIconIdle,
@@ -422,7 +423,7 @@ fun PlayerControlPanel(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))  // 官方：段间距 39px ≈ 19.5dp
 
             // 第三行:已播时间 + 进度条 + (剩余时间 / 结束时刻),三者同一行
             Row(
@@ -471,7 +472,7 @@ fun PlayerControlPanel(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))  // 官方：段间距 39px ≈ 19.5dp
 
             // 第四行:按钮行 —— 分组由父亲 2026-09-30 定
             //   左组(靠左):字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多

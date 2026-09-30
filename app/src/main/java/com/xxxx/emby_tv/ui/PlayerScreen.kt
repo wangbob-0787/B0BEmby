@@ -2218,7 +2218,8 @@ fun PlayerScreen(
             // 4. Resume Buttons (从头开始 / 继续播放)
             if (showResumeButtons && playbackPositionTicks > 0) {
                 ResumePlaybackButtons(
-                    countdownSeconds = 3,
+                    // 0 = 不自动倒计时：显示两个按钮等用户手动选（父亲 2026-09-30）
+                    countdownSeconds = 0,
                     onPlayFromStart = {
                         showResumeButtons = false
                         resumeButtonsShownOnce = true

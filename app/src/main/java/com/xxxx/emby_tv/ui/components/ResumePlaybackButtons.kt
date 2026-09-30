@@ -48,7 +48,8 @@ fun ResumePlaybackButtons(
     
     // 倒计时动画
     LaunchedEffect(Unit) {
-        if (!hasStarted) {
+        // countdownSeconds <= 0：不自动倒计时（父亲 2026-09-30 要求取消，改为用户手动选）
+        if (!hasStarted && countdownSeconds > 0) {
             hasStarted = true
             // 启动圆环进度动画
             animatedProgress.animateTo(
@@ -61,6 +62,8 @@ fun ResumePlaybackButtons(
     
     // 倒计时数字更新
     LaunchedEffect(Unit) {
+        // 注意：repeat(负数) 会抛异常 —— countdownSeconds=0 时必须直接返回
+        if (countdownSeconds <= 0) return@LaunchedEffect
         currentSeconds = countdownSeconds
         repeat(countdownSeconds - 1) {
             delay(1000)
