@@ -36,7 +36,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.roundToPx
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -2015,10 +2014,10 @@ fun PlayerScreen(
                                 else -> item
                             }
                             val pos = btnPositions[anchor]
-                            val menuWidthPx = with(density) {
-                                (if (item == PlayerMenuItem.BUFFER) 270.dp else 210.dp).roundToPx()
-                            }
-                            val minPx = with(density) { 24.dp.roundToPx() }
+                            val menuWidthDp = if (item == PlayerMenuItem.BUFFER) 270f else 210f
+                            // 用 density 系数直接换算（不用 Dp 的扩展函数，避免依赖不确定性）
+                            val menuWidthPx = (density.density * menuWidthDp).toInt()
+                            val minPx = (density.density * 24f).toInt()
                             val maxPx = (screenWidthPx - menuWidthPx - minPx).coerceAtLeast(minPx)
                             val xPx = if (pos != null) {
                                 (pos.first + pos.second / 2 - menuWidthPx / 2).coerceIn(minPx, maxPx)
