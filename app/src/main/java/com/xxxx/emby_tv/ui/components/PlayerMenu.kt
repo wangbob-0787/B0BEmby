@@ -888,7 +888,10 @@ fun PeopleTab(people: List<PersonInfo>, serverUrl: String) {
         contentPadding = PaddingValues(horizontal = 60.dp, vertical = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        items(people, key = { it.id ?: it.hashCode() }) { person ->
+        itemsIndexed(
+                people,
+                key = { index, person -> "${person.id ?: person.hashCode()}-$index" }
+            ) { _, person ->
             PersonCard(
                 person = person,
                 imgWidth = 140.dp,

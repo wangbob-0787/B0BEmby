@@ -266,7 +266,7 @@ fun LibraryScreen(
                 horizontalArrangement = Arrangement.spacedBy(22.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(items.size, key = { items[it].id ?: it.hashCode() }) { index ->
+                items(items.size, key = { index -> "${items[index].id ?: index}-$index" }) { index ->
                     val item = items[index]
                     val id = item.id ?: ""
                     if (id.isNotEmpty()) {

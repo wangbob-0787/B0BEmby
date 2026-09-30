@@ -435,7 +435,10 @@ fun MediaDetailScreen(
                             contentPadding = PaddingValues(24.dp),
                             horizontalArrangement = Arrangement.spacedBy(22.dp),
                         ) {
-                            items(people, key = { it.id ?: it.hashCode() }) { person ->
+                            itemsIndexed(
+                people,
+                key = { index, person -> "${person.id ?: person.hashCode()}-$index" }
+            ) { _, person ->
                                 PersonCard(
                                     person = person,
                                     imgWidth = castImgWidth,

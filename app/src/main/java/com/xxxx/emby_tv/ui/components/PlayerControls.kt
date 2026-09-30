@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -884,7 +885,12 @@ fun CastListSheet(
                 },
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(people, key = { it.id ?: it.hashCode() }) { person ->
+            // key 必须带下标:同一个人可能在本集担任多个角色(如《金色》徐兵既是导演又是编剧),
+            // 只按 id 做 key 会重复 → Compose 抛 IllegalArgumentException 直接闪退(父亲 2026-09-30 报)
+            itemsIndexed(
+                people,
+                key = { index, person -> "${person.id ?: person.hashCode()}-$index" }
+            ) { _, person ->
                 PersonCard(
                     person = person,
                     imgWidth = 130.dp,
