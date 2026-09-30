@@ -121,10 +121,20 @@ enum class PlayerMenuItem(val label: String) {
 }
 
 /**
- * 按钮行左侧组（父亲 2026-09-30 定）：字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
- * 左侧放"看信息、调轨道"这类项。
+ * 按钮行左组（靠左，播放类）—— 父亲 2026-09-30 定：
+ * 快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
+ * （快退/播放/快进/下一集是动作键，不走菜单项枚举）
  */
-val PLAYER_LEFT_MENU = listOf(
+val PLAYER_PLAY_MENU = listOf(
+    PlayerMenuItem.SPEED,
+    PlayerMenuItem.EPISODES
+)
+
+/**
+ * 按钮行右组（靠右，信息类）—— 父亲 2026-09-30 定：
+ * 字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
+ */
+val PLAYER_INFO_MENU = listOf(
     PlayerMenuItem.SUBTITLE,
     PlayerMenuItem.DANMAKU,
     PlayerMenuItem.AUDIO,
@@ -133,18 +143,8 @@ val PLAYER_LEFT_MENU = listOf(
     PlayerMenuItem.MORE
 )
 
-/**
- * 按钮行右侧组（靠右对齐）：倍速 · 选集。
- * 右侧整组完整顺序：快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
- * （快退/播放/快进/下一集是动作键，不走菜单项枚举）
- */
-val PLAYER_RIGHT_MENU = listOf(
-    PlayerMenuItem.SPEED,
-    PlayerMenuItem.EPISODES
-)
-
 /** 主菜单 = 左组 + 右组（调用方按内容有无过滤） */
-val PLAYER_MAIN_MENU = PLAYER_LEFT_MENU + PLAYER_RIGHT_MENU
+val PLAYER_MAIN_MENU = PLAYER_PLAY_MENU + PLAYER_INFO_MENU
 
 /** 「更多」页（播放校正与视频质量功能重复已去掉；返回靠遥控器返回键；
  *  跳过片头不在按钮行分组里，收到这里） */
@@ -475,30 +475,13 @@ fun PlayerControlPanel(
             Spacer(modifier = Modifier.height(20.dp))  // 官方：段间距 39px ≈ 19.5dp
 
             // 第四行:按钮行 —— 分组由父亲 2026-09-30 定
-            //   左组(靠左):字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
-            //   右组(靠右):快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
+            //   左组(靠左,播放类):快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
+            //   右组(靠右,信息类):字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ── 左组 ──
-                menuItems.filter { it in PLAYER_LEFT_MENU }.forEach { item ->
-                    PanelMenuButton(
-                        item = item,
-                        selected = activeItem == item,
-                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(item).coerceIn(0, itemFocus.lastIndex)],
-                        onClick = {
-                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
-                            onMenuSelect(item)
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
-                // 中间留空,把右组推到最右
-                Spacer(modifier = Modifier.weight(1f))
-
-                // ── 右组 ──
+                // ── 左组:播放类 ──
                 PanelIcon(
                     icon = Icons.Default.Replay10,
                     description = "后退10秒",
@@ -521,16 +504,16 @@ fun PlayerControlPanel(
                     onClick = onSeekForward
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                    PanelMenuButton(
-                        item = PlayerMenuItem.SPEED,
-                        selected = activeItem == PlayerMenuItem.SPEED,
-                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceIn(0, itemFocus.lastIndex)],
-                        onClick = {
-                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceAtLeast(0)
-                            onMenuSelect(PlayerMenuItem.SPEED)
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                PanelMenuButton(
+                    item = PlayerMenuItem.SPEED,
+                    selected = activeItem == PlayerMenuItem.SPEED,
+                    focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceIn(0, itemFocus.lastIndex)],
+                    onClick = {
+                        lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceAtLeast(0)
+                        onMenuSelect(PlayerMenuItem.SPEED)
+                    }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 PanelIcon(
                     icon = Icons.Default.SkipNext,
                     description = "下一集",
@@ -538,16 +521,33 @@ fun PlayerControlPanel(
                     onClick = onNextEpisode
                 )
                 Spacer(modifier = Modifier.width(8.dp))
+                PanelMenuButton(
+                    item = PlayerMenuItem.EPISODES,
+                    selected = activeItem == PlayerMenuItem.EPISODES,
+                    focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceIn(0, itemFocus.lastIndex)],
+                    onClick = {
+                        lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceAtLeast(0)
+                        onMenuSelect(PlayerMenuItem.EPISODES)
+                    }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // 中间留空,把右组推到最右
+                Spacer(modifier = Modifier.weight(1f))
+
+                // ── 右组:信息类 ──
+                menuItems.filter { it in PLAYER_INFO_MENU }.forEach { item ->
                     PanelMenuButton(
-                        item = PlayerMenuItem.EPISODES,
-                        selected = activeItem == PlayerMenuItem.EPISODES,
-                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceIn(0, itemFocus.lastIndex)],
+                        item = item,
+                        selected = activeItem == item,
+                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(item).coerceIn(0, itemFocus.lastIndex)],
                         onClick = {
-                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceAtLeast(0)
-                            onMenuSelect(PlayerMenuItem.EPISODES)
+                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
+                            onMenuSelect(item)
                         }
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                }
             }
         }
 
