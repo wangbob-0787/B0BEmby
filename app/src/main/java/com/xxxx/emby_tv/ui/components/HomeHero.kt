@@ -31,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -150,6 +151,17 @@ fun HomeHeroCarousel(
             val item = list[i.coerceIn(0, list.lastIndex)]
             val meta = seriesMeta[item.parentBackdropItemId ?: item.seriesId ?: ""]
             Box(modifier = Modifier.fillMaxSize()) {
+                // 底层：剧集竖版海报，放大裁剪 + 压暗。有些剧集库里没有横版剧照
+                //（实测《深渊无间》的 /Images/Backdrop 返回 404），没有时至少不是纯黑。
+                AsyncImage(
+                    model = primaryUrlOf(item, serverUrl),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(0.55f)
+                )
+                // 上层：横版剧照（有就盖住底层）
                 val backdrop = backdropUrlOf(item, serverUrl)
                 if (backdrop != null) {
                     AsyncImage(
@@ -158,8 +170,6 @@ fun HomeHeroCarousel(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
-                } else {
-                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF101010)))
                 }
 
                 // 底部渐变：保证左下角文字在亮剧照上也读得清
@@ -318,6 +328,20 @@ fun HomeHeroCarousel(
  *   自己的 Backdrop → 父级(剧集)的 Backdrop → 所属剧集的 Backdrop
  * （单集通常没有 Backdrop：实测 /Items/{epId}/Images 只有 Primary/Thumb）
  */
+/**
+ * 取剧集竖版海报 URL（backdrop 缺失时的兜底背景）
+ */
+private fun primaryUrlOf(item: BaseItemDto, serverUrl: String): String? {
+    if (serverUrl.isEmpty()) return null
+    val sid = item.seriesId ?: item.id ?: return null
+    val tag = item.seriesPrimaryImageTag ?: item.imageTags?.get("Primary")
+    return if (!tag.isNullOrEmpty()) {
+        "$serverUrl/emby/Items/$sid/Images/Primary?maxWidth=1920&tag=$tag&quality=80"
+    } else {
+        "$serverUrl/emby/Items/$sid/Images/Primary?maxWidth=1920&quality=80"
+    }
+}
+
 private fun backdropUrlOf(item: BaseItemDto, serverUrl: String): String? {
     if (serverUrl.isEmpty()) return null
     val id = item.id ?: return null
