@@ -353,8 +353,11 @@ fun PlayerControlPanel(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 54.dp, top = 28.dp)
-                    .height(43.dp)
+                    // 官方实测（F1 截图，1920×1080）：logo 显示 71×120px、距左 235px、距顶 60px
+                    // → 高 60dp、内边距 start 117dp / top 30dp。
+                    // 库里 clearlogo.png 是竖版 911×1504，按高度 120px 等比宽度约 72px，与实测 71px 吻合。
+                    .padding(start = 117.dp, top = 30.dp)
+                    .height(60.dp)
             )
         }
         // 底部渐变遮罩：白色图标/文字直接压在亮画面上会糊成一团（父亲 2026-09-30 实测）。
