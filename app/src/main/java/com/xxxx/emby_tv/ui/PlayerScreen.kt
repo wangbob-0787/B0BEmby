@@ -32,8 +32,10 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -250,6 +252,12 @@ fun PlayerScreen(
     var showPanel by remember { mutableStateOf(false) }
     var activeItem by remember { mutableStateOf<PlayerMenuItem?>(null) }
     var inMoreMenu by remember { mutableStateOf(false) }
+
+    // 一级按钮的屏幕坐标（px：左边缘 + 宽度），由 PlayerControlPanel 上报。
+    // 二级菜单据此锚定在"点它的那个按钮"正上方（父亲 2026-09-30 要求）
+    var btnPositions by remember { mutableStateOf<Map<com.xxxx.emby_tv.ui.components.PlayerMenuItem, Pair<Int, Int>>>(emptyMap()) }
+    val density = LocalDensity.current
+    val screenWidthPx = LocalView.current.width      // 用于把菜单夹在屏幕安全边距内
     var maxStreamingBitrate by remember { mutableIntStateOf(QUALITY_ORIGINAL) }
     var interactionTick by remember { mutableIntStateOf(0) }
     // 最近一次处理返回键的时刻:长按/连按返回只算第一下,避免一口气退光所有层级
@@ -1905,6 +1913,7 @@ fun PlayerScreen(
                     buffered = buffered,
                     isPlaying = isPlaying,
                     menuItems = mainMenu,
+                    onButtonPositions = { btnPositions = it },
                     activeItem = if (inMoreMenu) PlayerMenuItem.MORE else activeItem,
                     onMenuSelect = { item ->
                         // 用 PLAYER_MAIN_MENU 的固定下标：mainMenu 是按内容过滤后的列表，
@@ -1995,27 +2004,28 @@ fun PlayerScreen(
                         }
                     } else {
                     SheetShell(
-                        // 菜单位置跟着按钮走：
-                        //   右组按钮（更多/弹幕 及其子项）→ 靠右出（父亲 2026-09-30：原先跑到左边）
-                        //   字幕/音轨 → 保持左侧（官方实测就是左侧浮层，见 ui-spec 规格）
-                        //   左组按钮（倍速/选集）→ 靠左出
-                        modifier = when {
-                            item == PlayerMenuItem.SUBTITLE || item == PlayerMenuItem.AUDIO ->
-                                Modifier
-                                    .align(Alignment.CenterStart)
-                                    .padding(start = 58.dp)
-                            item == PlayerMenuItem.DANMAKU ||
-                                    item == PlayerMenuItem.QUALITY ||
-                                    item == PlayerMenuItem.PLAY_MODE ||
-                                    item == PlayerMenuItem.BUFFER ||
-                                    item == PlayerMenuItem.INTRO ->
-                                Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(end = 48.dp, bottom = 84.dp)
-                            else ->
-                                Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(start = 58.dp, bottom = 84.dp)
+                        // 菜单锚定在"点它的那个一级按钮"正上方（父亲 2026-09-30）：
+                        // 按钮的屏幕坐标由 PlayerControlPanel 通过 onButtonPositions 上报，
+                        // 菜单左边缘 = 按钮中心 − 菜单宽/2（左右都夹在安全边距内）。
+                        modifier = run {
+                            val anchor = when (item) {
+                                PlayerMenuItem.QUALITY, PlayerMenuItem.PLAY_MODE,
+                                PlayerMenuItem.BUFFER, PlayerMenuItem.INTRO -> PlayerMenuItem.MORE
+                                else -> item
+                            }
+                            val pos = btnPositions[anchor]
+                            val menuWidthPx = with(density) {
+                                (if (item == PlayerMenuItem.BUFFER) 270.dp else 210.dp).roundToPx()
+                            }
+                            val minPx = with(density) { 24.dp.roundToPx() }
+                            val maxPx = (screenWidthPx - menuWidthPx - minPx).coerceAtLeast(minPx)
+                            val xPx = if (pos != null) {
+                                (pos.first + pos.second / 2 - menuWidthPx / 2).coerceIn(minPx, maxPx)
+                            } else minPx
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .offset { IntOffset(xPx, 0) }
+                                .padding(bottom = 84.dp)
                         },
                         title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
                         contentWidth = when (item) {

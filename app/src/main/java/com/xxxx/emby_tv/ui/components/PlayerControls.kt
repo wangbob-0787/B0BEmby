@@ -57,6 +57,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -309,6 +311,8 @@ fun PlayerControlPanel(
     onNextEpisode: () -> Unit = {},
     // 左上角剧集片名 Logo（官方播放界面左上角就是这张 ClearLogo，实测 x231-306, y60-146）
     logoUrl: String? = null,
+    // 上报一级按钮的屏幕坐标（px：左边缘 x 与宽度）——二级菜单要锚定在"按钮正上方"
+    onButtonPositions: (Map<PlayerMenuItem, Pair<Int, Int>>) -> Unit = {},
     // 控制条重新出现时焦点落在哪个一级图标上(-1 = 落在播放暂停);
     // 从信息/演职人员整屏返回时用它把焦点还给刚才那项,而不是跳到暂停
     initialFocusIndex: Int = -1,
@@ -316,6 +320,8 @@ fun PlayerControlPanel(
     val playKeyFocus = remember { List(3) { FocusRequester() } } // 0 后退 / 1 播放暂停 / 2 前进
     val itemFocus = remember { List(PLAYER_MAIN_MENU.size) { FocusRequester() } }
     val nextEpisodeFocus = remember { FocusRequester() }
+    val btnPositions = remember { mutableStateMapOf<PlayerMenuItem, Pair<Int, Int>>() }
+    androidx.compose.runtime.SideEffect { onButtonPositions(btnPositions.toMap()) }
     var lastIconIndex by remember { mutableIntStateOf(initialFocusIndex.coerceAtLeast(0)) }
     var sheetWasOpen by remember { mutableStateOf(false) }
 
@@ -510,7 +516,8 @@ fun PlayerControlPanel(
                     onClick = {
                         lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceAtLeast(0)
                         onMenuSelect(PlayerMenuItem.SPEED)
-                    }
+                    },
+                    onPositioned = { x, w -> btnPositions[PlayerMenuItem.SPEED] = x to w }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 PanelIcon(
@@ -527,7 +534,8 @@ fun PlayerControlPanel(
                     onClick = {
                         lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceAtLeast(0)
                         onMenuSelect(PlayerMenuItem.EPISODES)
-                    }
+                    },
+                    onPositioned = { x, w -> btnPositions[PlayerMenuItem.EPISODES] = x to w }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
 
@@ -543,7 +551,8 @@ fun PlayerControlPanel(
                         onClick = {
                             lastIconIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
                             onMenuSelect(item)
-                        }
+                        },
+                        onPositioned = { x, w -> btnPositions[item] = x to w }
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
@@ -559,6 +568,7 @@ private fun PanelMenuButton(
     selected: Boolean,
     focusRequester: FocusRequester,
     onClick: () -> Unit,
+    onPositioned: ((Int, Int) -> Unit)? = null,
 ) {
     // 与三个播放键同构：同一个 40dp 容器、同一种居中方式、下划线画在容器内部底边
     Surface(
@@ -574,6 +584,13 @@ private fun PanelMenuButton(
         modifier = Modifier
             .size(SpecFocusBox)
             .focusRequester(focusRequester)
+            .then(
+                if (onPositioned != null) {
+                    Modifier.onGloballyPositioned { c ->
+                        onPositioned(c.positionInRoot().x.toInt(), c.size.width)
+                    }
+                } else Modifier
+            )
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Icon(
