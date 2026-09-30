@@ -451,45 +451,47 @@ fun PlayerControlPanel(
 
                 menuItems.forEachIndexed { index, item ->
                     val selected = activeItem == item
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(end = 6.dp)
+                    // 与左侧三个播放键用同一个 40dp 容器、同一种居中方式：
+                    // 下划线画在容器内部底边。原先下划线放在容器外的 Column 里，多出 3dp 高度，
+                    // 导致这一组图标整体比播放键偏高、图标在绿框里也不居中（父亲 2026-09-30 实测）
+                    Surface(
+                        onClick = {
+                            lastIconIndex = index
+                            onMenuSelect(item)
+                        },
+                        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(6.dp)),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = if (selected) SpecFocusGreen.copy(alpha = 0.55f) else Color.Transparent,
+                            contentColor = Color.White,
+                            focusedContainerColor = SpecFocusGreen,
+                            focusedContentColor = Color.White
+                        ),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                        modifier = Modifier
+                            .size(SpecFocusBox)
+                            .focusRequester(itemFocus[index.coerceAtMost(itemFocus.lastIndex)])
                     ) {
-                        Surface(
-                            onClick = {
-                                lastIconIndex = index
-                                onMenuSelect(item)
-                            },
-                            shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(6.dp)),
-                            colors = ClickableSurfaceDefaults.colors(
-                                containerColor = if (selected) SpecFocusGreen.copy(alpha = 0.55f) else Color.Transparent,
-                                contentColor = Color.White,
-                                focusedContainerColor = SpecFocusGreen,
-                                focusedContentColor = Color.White
-                            ),
-                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-                            modifier = Modifier
-                                .size(SpecFocusBox)
-                                .focusRequester(itemFocus[index.coerceAtMost(itemFocus.lastIndex)])
-                        ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = item.label,
                                 tint = Color.White,
-                                modifier = Modifier.size(SpecIconSize)
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .size(SpecIconSize)
                             )
-                        }
-                        // 当前打开的是哪一项,用下划线标出来(官方:不要只靠颜色传达信息)
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 3.dp)
-                                .width(24.dp)
-                                .height(3.dp)
-                                .background(
-                                    if (selected) EmbyGreen else Color.Transparent,
-                                    RoundedCornerShape(2.dp)
+                            // 当前打开的是哪一项：底部下划线（不占额外高度、不影响整行对齐）
+                            if (selected) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 3.dp)
+                                        .width(24.dp)
+                                        .height(3.dp)
+                                        .background(EmbyGreen, RoundedCornerShape(2.dp))
                                 )
-                        )
+                            }
+                        }
                     }
                 }
             }
