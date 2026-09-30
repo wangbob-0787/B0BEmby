@@ -47,6 +47,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.key.Key
@@ -156,10 +157,14 @@ val SpecBarPlayed = Color(0xFF45913D)    // 进度条 · 已播
 val SpecBarRest = Color(0xFF262626)      // 进度条 · 未播
 val SpecPanelBg = Color(0xFF303030)      // 二级菜单面板底色（不透明）
 val SpecClockText = Color(0xFFA6A6A6)    // 顶部时钟/次要文字
-/** 焦点容器边长：官方实测 56px @1080p = 28dp；父亲 2026-09-30 要求图标更醒目，容器放大到 32dp */
-val SpecFocusBox = 32.dp
-/** 按钮图标边长：官方实测 38–46px = 19–23dp；取 20dp（父亲反馈上一版 16dp 偏小） */
-val SpecIconSize = 20.dp
+/** 焦点容器边长：官方实测 56px @1080p = 28dp；父亲要求图标更醒目，容器放大到 40dp */
+val SpecFocusBox = 40.dp
+/**
+ * 按钮图标边长：官方图标可见高度 38–46px（19–23dp）。
+ * 注意 Compose Material 图标自带内边距（24dp viewport 里图形只占约 18dp），
+ * 直接给 20dp 只会画出约 30px —— 父亲实测"还是小"。给 26dp（≈52px viewport、可见约 39px）才对得上官方。
+ */
+val SpecIconSize = 26.dp
 
 val OverlayTextStyleSoft = TextStyle(
     shadow = Shadow(color = Color.Black, offset = Offset(1.5f, 1.5f), blurRadius = 5f)
@@ -309,6 +314,19 @@ fun PlayerControlPanel(
     }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomStart) {
+        // 底部渐变遮罩：白色图标/文字直接压在亮画面上会糊成一团（父亲 2026-09-30 实测）。
+        // 官方在满屏内容时同样靠 scrim 压暗底部；高度 260dp 覆盖到进度条上方。
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp)
+                .align(Alignment.BottomStart)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
+                    )
+                )
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -402,7 +420,7 @@ fun PlayerControlPanel(
                     focusRequester = playKeyFocus[0],
                     onClick = onSeekBack
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 PanelIcon(
                     icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     description = "播放暂停",
@@ -410,7 +428,7 @@ fun PlayerControlPanel(
                     onClick = onPlayPause,
                     downFocus = itemFocus[0]
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 PanelIcon(
                     icon = Icons.Default.Forward10,
                     description = "前进10秒",
@@ -446,6 +464,7 @@ fun PlayerControlPanel(
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = item.label,
+                                tint = Color.White,
                                 modifier = Modifier.size(SpecIconSize)
                             )
                         }
@@ -502,6 +521,7 @@ private fun PanelIcon(
             Icon(
                 imageVector = icon,
                 contentDescription = description,
+                tint = Color.White,
                 modifier = Modifier.size(SpecIconSize)
             )
         }
