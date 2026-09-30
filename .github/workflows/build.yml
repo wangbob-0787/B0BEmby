@@ -19,6 +19,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: 装 Android SDK(platform 36 + build-tools)
         uses: android-actions/setup-android@v3
@@ -34,10 +35,10 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: 编译 debug + release APK
+      - name: 编译 debug APK（只编 debug：投影装机只用它，编 release 会白花近一半时间）
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace --build-cache
 
       - name: 收集 APK
         run: |
