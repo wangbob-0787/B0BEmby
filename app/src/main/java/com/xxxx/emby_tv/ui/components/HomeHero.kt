@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -107,29 +108,39 @@ fun HomeHeroCarousel(
         modifier = modifier
             .fillMaxWidth()
             .height(400.dp)          // 参考图实测：大图底边 1340/1800 = 74.4% 屏高
-            .onFocusChanged { onFocusChanged(it.isFocused) }
-            .focusRequester(heroFocus)
-            .focusable()
-            .onPreviewKeyEvent { e ->
-                if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                when (e.key) {
-                    Key.DirectionLeft -> {
-                        index = (index - 1 + list.size) % list.size
-                        true
-                    }
-                    Key.DirectionRight -> {
-                        index = (index + 1) % list.size
-                        true
-                    }
-                    // OK / 回车：从上次播放位置续播当前显示的这一部
-                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                        onOpenItem(list[index.coerceIn(0, list.lastIndex)])
-                        true
-                    }
-                    else -> false
-                }
-            }
     ) {
+        // 焦点层只覆盖左侧 55%（与信息块同宽）。
+        // 原因：整块全宽可聚焦时，大片头的焦点中心落在屏幕正中，按 ↓ 时系统按"水平最近"
+        // 会落到下面那一行的中间某张卡；收到左侧后焦点中心左移，↓ 才会落到第一张卡。
+        // 父亲 2026-09-30 反馈"首页上下键焦点顺序很奇怪"即源于此。
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth(0.55f)
+                .fillMaxHeight()
+                .onFocusChanged { onFocusChanged(it.isFocused) }
+                .focusRequester(heroFocus)
+                .focusable()
+                .onPreviewKeyEvent { e ->
+                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (e.key) {
+                        Key.DirectionLeft -> {
+                            index = (index - 1 + list.size) % list.size
+                            true
+                        }
+                        Key.DirectionRight -> {
+                            index = (index + 1) % list.size
+                            true
+                        }
+                        // OK / 回车：从上次播放位置续播当前显示的这一部
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                            onOpenItem(list[index.coerceIn(0, list.lastIndex)])
+                            true
+                        }
+                        else -> false
+                    }
+                }
+        )
         // 切换过渡：淡出/淡入各 1 秒（父亲 2026-09-30 定，原先 500ms 太快）
         Crossfade(
             targetState = index,
