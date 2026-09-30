@@ -24,6 +24,9 @@ import com.xxxx.emby_tv.R
 import kotlinx.coroutines.delay
 
 /**
+ * ⚠️ 已弃用（父亲 2026-09-30）：播放页不再弹出「从头开始 / 继续播放」与 3 秒倒计时，
+ * PlayerScreen 已不再引用本组件。保留文件仅为便于日后恢复，不参与任何界面渲染。
+ *
  * 继续播放/从头开始 按钮组件，带圆环倒计时动画
  *
  * @param countdownSeconds 倒计时秒数

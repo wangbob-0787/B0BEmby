@@ -104,7 +104,6 @@ import com.xxxx.emby_tv.ui.components.playModeName
 import com.xxxx.emby_tv.ui.components.correctionName
 import com.xxxx.emby_tv.ui.components.playMethodLabel
 import com.xxxx.emby_tv.ui.components.techLineOf
-import com.xxxx.emby_tv.ui.components.ResumePlaybackButtons
 import com.xxxx.emby_tv.ui.components.SkipIntroButton
 import com.xxxx.emby_tv.ui.components.getAudioTrack
 import com.xxxx.emby_tv.ui.components.getVideoTrack
@@ -266,8 +265,8 @@ fun PlayerScreen(
     var showStats by remember { mutableStateOf(false) }
 
     // 继续播放/从头开始 按钮状态
-    var showResumeButtons by remember { mutableStateOf(playbackPositionTicks > 0) }
-    var resumeButtonsShownOnce by remember { mutableStateOf(false) }
+    // 续播选择界面整体取消（父亲 2026-09-30）：进播放页不再弹「从头开始 / 继续播放」，
+    // 也没有 3 秒倒计时。播放位置仍按 playbackPositionTicks 续播（这是播放器自身行为）。
 
     // 用于跟踪是否已经尝试过转码回退
     var hasTriedTranscodeFallback by remember { mutableStateOf(false) }
@@ -1196,15 +1195,6 @@ fun PlayerScreen(
         }
     }
 
-    // 自动隐藏继续播放按钮（3秒后）
-    LaunchedEffect(showResumeButtons) {
-        if (showResumeButtons && !resumeButtonsShownOnce) {
-            resumeButtonsShownOnce = true
-            delay(3000)
-            showResumeButtons = false
-        }
-    }
-
     // Load session once after reporting playing
     // Load session once after reporting playing (with retry)
     LaunchedEffect(hasReportedPlaying, media.playSessionId) {
@@ -1629,11 +1619,6 @@ fun PlayerScreen(
                     false
                 }
                 .onKeyEvent { event ->
-                    // 如果 Resume 按钮正在显示，让按钮处理焦点，不拦截按键
-                    if (showResumeButtons && playbackPositionTicks > 0) {
-                        return@onKeyEvent false
-                    }
-
                     // 任何按键(含左右键)都重置自动收起的计时
                     if (event.type == KeyEventType.KeyDown) interactionTick++
 
@@ -2237,30 +2222,8 @@ fun PlayerScreen(
                 }
             }
 
-            // 4. Resume Buttons (从头开始 / 继续播放)
-            if (showResumeButtons && playbackPositionTicks > 0) {
-                ResumePlaybackButtons(
-                    // 0 = 不自动倒计时：显示两个按钮等用户手动选（父亲 2026-09-30）
-                    countdownSeconds = 0,
-                    onPlayFromStart = {
-                        showResumeButtons = false
-                        resumeButtonsShownOnce = true
-                        player.seekTo(0)
-                        player.play()
-                    },
-                    onContinue = {
-                        showResumeButtons = false
-                        resumeButtonsShownOnce = true
-                    },
-                    onTimeout = {
-                        showResumeButtons = false
-                        resumeButtonsShownOnce = true
-                    }
-                )
-            }
-
             // 4.5. Skip Intro Button (跳过片头)
-            if (showSkipIntroButton && introEndMs != null && !showResumeButtons) {
+            if (showSkipIntroButton && introEndMs != null) {
                 SkipIntroButton(
                     introEndMs = introEndMs!!,
                     onSkip = {
