@@ -901,11 +901,31 @@ fun PlayerScreen(
         val episode = mediaInfo.indexNumber
         val name = mediaInfo.name ?: ""
         val ep = when {
-            season != null && episode != null -> "S$season:E$episode"
+            season != null && episode != null -> "S$season E$episode"
             episode != null -> "第 $episode 集"
             else -> ""
         }
-        return listOf(ep, name).filter { it.isNotEmpty() }.joinToString("  ")
+        // 官方副行格式（F1 实测）：
+        //   S1 E1  金色 - S01E01 - 集标题  25 8月 2026  46m  CC (Und)
+        // 即：季集(空格分隔,不是冒号) · 剧集-集号-集名 · 首播日期 · 时长 · 字幕标记
+        val dateText = mediaInfo.premiereDate?.let { d ->
+            // 形如 2026-08-24T00:00:00.0000000Z，不依赖日期解析库，直接切字符串
+            runCatching {
+                val y = d.substringBefore('-')
+                val mo = d.substringAfter('-').substringBefore('-')
+                val day = d.substringAfter('-').substringAfter('-').substringBefore('T')
+                if (y.length == 4 && mo.length == 2 && day.length == 2) {
+                    "${day.toInt()} ${mo.toInt()}月 $y"
+                } else ""
+            }.getOrDefault("")
+        } ?: ""
+        val runtimeText = mediaInfo.runTimeTicks?.let { t ->
+            val minutes = t / 10_000_000L / 60L
+            if (minutes > 0) "${minutes}m" else ""
+        } ?: ""
+        return listOf(ep, name, dateText, runtimeText)
+            .filter { it.isNotEmpty() }
+            .joinToString("  ")
     }
 
     // 数据加载逻辑
@@ -1865,7 +1885,8 @@ fun PlayerScreen(
                 PlayerControlPanel(
                     title = panelTitle(),
                     subtitle = panelSubtitle(),
-                    playMethodLabel = playMethodLabel(session),
+                    // 官方副行没有"播放方式"这一项，传空即不显示
+                    playMethodLabel = "",
                     // 下一集：与自动连播同一套取数（剧集列表里找当前集的下一个）
                     onNextEpisode = {
                         scope.launch {

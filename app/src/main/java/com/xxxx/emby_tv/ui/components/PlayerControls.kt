@@ -436,7 +436,7 @@ fun PlayerControlPanel(
                     fontSize = 18.sp,
                     style = OverlayTextStyleSoft
                 )
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(24.dp))  // 官方：左时间右边界 183 → 进度条起点 230 = 47px
                 // 进度条：官方是 4px(=2dp) 细条、无圆点；已播 #45913D、未播 #262626（2026-09-30 规格）
                 BoxWithConstraints(
                     modifier = Modifier
@@ -462,7 +462,7 @@ fun PlayerControlPanel(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(26.dp))  // 官方：进度条终点 1679 → 右时间起点 1734 = 55px
                 Text(
                     // 官方右侧只显示剩余时间(如 -17:57),不带结束时刻 —— 2026-09-30 规格
                     text = "-" + formatDuration((duration - position).coerceAtLeast(0L)),
