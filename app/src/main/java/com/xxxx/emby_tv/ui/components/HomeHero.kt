@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -53,19 +54,18 @@ import kotlinx.coroutines.delay
 /**
  * 首页顶部"大片头"轮播（父亲 2026-09-30 定）
  *
- * 尺寸按父亲给的参考图实测（参考图 2880×1800、比例 1.6，按占屏比例换算 1080p）：
+ * 尺寸按参考图实测（参考图 2880×1800、比例 1.6，按占屏比例换算 1080p）：
  *   大图高度 1340/1800 = 74.4% 屏高   → 400dp
- *   左内边距 50/2880 = 1.74% 屏宽     → 与下面内容行左对齐
  *   标题字高 70/1800 = 3.89%          → 21sp
- *   元数据字高 33/1800 = 1.83%        → 10sp
- *   简介字高 28/1800 = 1.56%，共 2 行 → 9sp
+ *   元数据字高 33/1800 = 1.83%        → 12sp（父亲要求比实测再 +2）
+ *   简介字高 28/1800 = 1.56%，共 2 行 → 11sp（同上 +2）
  *   圆点直径 14px                     → 5dp / 4dp
  *
- * 排版（照参考图）：标题一行；元数据一行 = ★金色星标 + 评分 | 年份 | 类型 | [分级(白边框标签)]；
- *   简介最多 2 行。整块宽度收到屏幕中部（不左右顶满），左边缘与下面内容行对齐。
+ * 排版：标题一行；元数据一行 = ★金色星标 + 评分 | 年份 | 类型 | [分级(白边框标签)]；简介最多 2 行。
+ * 整块宽度收到屏宽 55%（不左右顶满），左缘与下面内容行对齐（32dp）。
  *
  * 元数据取值：单集(Episode)本身没有评分/类型/分级，这些在所属剧集(Series)上，
- *   由 HomeScreen 按 ParentBackdropItemId 批量取好后通过 seriesMeta 传进来。
+ *   由 HomeScreen 按 ParentBackdropItemId 批量取好后经 seriesMeta 传进来。
  */
 @Composable
 fun HomeHeroCarousel(
@@ -166,7 +166,7 @@ fun HomeHeroCarousel(
                         )
                 )
 
-                // 左下信息块：宽度收到屏幕中部（父亲：不要左右顶满），左缘与下面内容行对齐
+                // 左下信息块：宽度收到屏宽 55%（不左右顶满），左缘与下面内容行对齐
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -192,53 +192,55 @@ fun HomeHeroCarousel(
                         modifier = Modifier.padding(top = 5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        var wrote = false
-                        fun sep() {
-                            Text(
-                                text = "  |  ",
-                                color = Color.White.copy(alpha = 0.55f),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                         if (rating != null && rating > 0) {
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = null,
                                 tint = Color(0xFFFFC107),      // 参考图：金色星标
-                                modifier = Modifier.size(11.dp)
+                                modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
                                 text = "%.1f".format(rating),
                                 color = Color.White,
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            wrote = true
+                            Text(
+                                text = "  |  ",
+                                color = Color.White.copy(alpha = 0.55f),
+                                fontSize = 12.sp
+                            )
                         }
                         if (year != null && year > 0) {
-                            if (wrote) sep()
                             Text(
                                 text = year.toString(),
                                 color = Color.White,
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            wrote = true
+                            Text(
+                                text = "  |  ",
+                                color = Color.White.copy(alpha = 0.55f),
+                                fontSize = 12.sp
+                            )
                         }
                         if (!genre.isNullOrBlank()) {
-                            if (wrote) sep()
                             Text(
                                 text = genre,
                                 color = Color.White,
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            wrote = true
+                            if (!cert.isNullOrBlank()) {
+                                Text(
+                                    text = "  |  ",
+                                    color = Color.White.copy(alpha = 0.55f),
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
                         if (!cert.isNullOrBlank()) {
-                            if (wrote) sep()
                             // 参考图：分级是带白边框的小标签（如 KR-15）
                             Box(
                                 modifier = Modifier
@@ -252,7 +254,7 @@ fun HomeHeroCarousel(
                                 Text(
                                     text = cert,
                                     color = Color.White,
-                                    fontSize = 10.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -265,7 +267,7 @@ fun HomeHeroCarousel(
                         Text(
                             text = overview,
                             color = Color.White.copy(alpha = 0.92f),
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 7.dp)
