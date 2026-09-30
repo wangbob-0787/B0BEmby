@@ -1949,9 +1949,10 @@ fun PlayerScreen(
                 // 「更多」:从更多按钮上方长出一竖列;选中某项后本列消失,换成该项的新列
                 if (inMoreMenu) {
                     SheetShell(
+                        // 靠右：从右侧的「更多」按钮上方长出（父亲 2026-09-30：原先落在屏幕中间、离右边太远）
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 458.dp, bottom = 84.dp),
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 48.dp, bottom = 84.dp),
                         title = "",
                         contentWidth = 190.dp
                     ) {

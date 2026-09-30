@@ -353,10 +353,9 @@ fun PlayerControlPanel(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    // 官方实测（F1 截图，1920×1080）：logo 显示 71×120px、距左 235px、距顶 60px
-                    // → 高 60dp、内边距 start 117dp / top 30dp。
-                    // 库里 clearlogo.png 是竖版 911×1504，按高度 120px 等比宽度约 72px，与实测 71px 吻合。
-                    .padding(start = 117.dp, top = 30.dp)
+                    // 官方实测（F1 截图，1920×1080）：logo 显示 71×120px、距左 235px、距顶 60px。
+                    // 但父亲 2026-09-30 要求往左移 —— 现在与剧名/时间文字的左边缘（48dp）对齐。
+                    .padding(start = 48.dp, top = 30.dp)
                     .height(60.dp)
             )
         }

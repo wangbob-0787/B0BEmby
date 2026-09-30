@@ -192,8 +192,13 @@ object EmbyApi {
         seriesId: String = ""
     ): List<BaseItemDto> {
         val limit = if (seriesId.isEmpty()) 15 else 1
+        // Fields 必须显式要：Resume 接口默认只回基础字段。
+        // 首页大片头要显示的 评分/类型/分级/简介、以及横版剧照(Backdrop) 都得在这里点出来，
+        // 否则海报上只剩一个年份（父亲 2026-09-30 实测发现"元数据缺内容"）
         val url = "/Users/$userId/Items/Resume?Limit=$limit&MediaTypes=Video&ParentId=$seriesId" +
-                "&Fields=PrimaryImageAspectRatio,ProductionYear&X-Emby-Token=$apiKey"
+                "&Fields=PrimaryImageAspectRatio,ProductionYear,CommunityRating,OfficialRating,Genres,Overview," +
+                "BackdropImageTags,ParentBackdropImageTags,ParentBackdropItemId,SeriesId,SeriesName" +
+                "&X-Emby-Token=$apiKey"
         return httpAsBaseItemDtoList(context, serverUrl, apiKey, deviceId, url)
     }
 
