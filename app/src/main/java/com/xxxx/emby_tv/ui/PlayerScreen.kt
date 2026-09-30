@@ -1866,6 +1866,13 @@ fun PlayerScreen(
                     title = panelTitle(),
                     subtitle = panelSubtitle(),
                     playMethodLabel = playMethodLabel(session),
+                    // 左上角片名 Logo：用剧集(Series)的 ClearLogo —— 单集本身没有 Logo(实测 404)，
+                    // 剧集才有(金色 (2026)/clearlogo.png, 1504×912)
+                    logoUrl = mediaInfo.seriesId?.let { sid ->
+                        if (sid.isNotEmpty() && serverUrl.isNotEmpty()) {
+                            "$serverUrl/emby/Items/$sid/Images/Logo?maxHeight=200"
+                        } else null
+                    },
                     position = position,
                     duration = duration,
                     buffered = buffered,

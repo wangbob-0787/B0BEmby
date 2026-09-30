@@ -290,6 +290,8 @@ fun PlayerControlPanel(
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onPlayPause: () -> Unit,
+    // 左上角剧集片名 Logo（官方播放界面左上角就是这张 ClearLogo，实测 x231-306, y60-146）
+    logoUrl: String? = null,
     // 控制条重新出现时焦点落在哪个一级图标上(-1 = 落在播放暂停);
     // 从信息/演职人员整屏返回时用它把焦点还给刚才那项,而不是跳到暂停
     initialFocusIndex: Int = -1,
@@ -325,6 +327,18 @@ fun PlayerControlPanel(
     }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomStart) {
+        // 左上角剧集片名 Logo（官方用剧集的 ClearLogo，实测位置 x231-306、y60-146 → 内边距 54dp/28dp、高 43dp）
+        if (!logoUrl.isNullOrEmpty()) {
+            AsyncImage(
+                model = logoUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 54.dp, top = 28.dp)
+                    .height(43.dp)
+            )
+        }
         // 底部渐变遮罩：白色图标/文字直接压在亮画面上会糊成一团（父亲 2026-09-30 实测）。
         // 官方在满屏内容时同样靠 scrim 压暗底部；高度 260dp 覆盖到进度条上方。
         Box(
