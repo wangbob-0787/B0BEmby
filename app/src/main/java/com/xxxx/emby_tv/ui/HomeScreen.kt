@@ -293,7 +293,8 @@ private fun MediaSection(
         Text(
             text = title,
             color = Color.White,
-            fontSize = 32.sp,
+            // 与首页大片头的剧名字号保持一致（父亲 2026-09-30：我的媒体库/继续观看等标题同大片头剧集名）
+            fontSize = 21.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 32.dp, top = 20.dp, bottom = 16.dp)
         )
