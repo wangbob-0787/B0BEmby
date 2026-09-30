@@ -120,24 +120,39 @@ enum class PlayerMenuItem(val label: String) {
         }
 }
 
-/** 主菜单(常用放外面);选集/演职人员由调用方按内容有无过滤 */
-val PLAYER_MAIN_MENU = listOf(
-    PlayerMenuItem.INFO,
-    PlayerMenuItem.EPISODES,
-    PlayerMenuItem.CAST,
+/**
+ * 按钮行左侧组（父亲 2026-09-30 定）：字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
+ * 左侧放"看信息、调轨道"这类项。
+ */
+val PLAYER_LEFT_MENU = listOf(
     PlayerMenuItem.SUBTITLE,
     PlayerMenuItem.DANMAKU,
-    PlayerMenuItem.SPEED,
-    PlayerMenuItem.INTRO,
     PlayerMenuItem.AUDIO,
+    PlayerMenuItem.INFO,
+    PlayerMenuItem.CAST,
     PlayerMenuItem.MORE
 )
 
-/** 「更多」页(播放校正与视频质量功能重复,已去掉;返回靠遥控器返回键,不再放菜单项) */
+/**
+ * 按钮行右侧组（靠右对齐）：倍速 · 选集。
+ * 右侧整组完整顺序：快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
+ * （快退/播放/快进/下一集是动作键，不走菜单项枚举）
+ */
+val PLAYER_RIGHT_MENU = listOf(
+    PlayerMenuItem.SPEED,
+    PlayerMenuItem.EPISODES
+)
+
+/** 主菜单 = 左组 + 右组（调用方按内容有无过滤） */
+val PLAYER_MAIN_MENU = PLAYER_LEFT_MENU + PLAYER_RIGHT_MENU
+
+/** 「更多」页（播放校正与视频质量功能重复已去掉；返回靠遥控器返回键；
+ *  跳过片头不在按钮行分组里，收到这里） */
 val PLAYER_MORE_MENU = listOf(
     PlayerMenuItem.QUALITY,
     PlayerMenuItem.PLAY_MODE,
-    PlayerMenuItem.BUFFER
+    PlayerMenuItem.BUFFER,
+    PlayerMenuItem.INTRO
 )
 
 /** 白字黑描边:底部区域没有底衬,靠阴影保证亮画面上可读 */
@@ -290,6 +305,8 @@ fun PlayerControlPanel(
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onPlayPause: () -> Unit,
+    // 下一集（右侧动作键，父亲 2026-09-30 定）
+    onNextEpisode: () -> Unit = {},
     // 左上角剧集片名 Logo（官方播放界面左上角就是这张 ClearLogo，实测 x231-306, y60-146）
     logoUrl: String? = null,
     // 控制条重新出现时焦点落在哪个一级图标上(-1 = 落在播放暂停);
@@ -298,6 +315,7 @@ fun PlayerControlPanel(
 ) {
     val playKeyFocus = remember { List(3) { FocusRequester() } } // 0 后退 / 1 播放暂停 / 2 前进
     val itemFocus = remember { List(PLAYER_MAIN_MENU.size) { FocusRequester() } }
+    val nextEpisodeFocus = remember { FocusRequester() }
     var lastIconIndex by remember { mutableIntStateOf(initialFocusIndex.coerceAtLeast(0)) }
     var sheetWasOpen by remember { mutableStateOf(false) }
 
@@ -452,8 +470,31 @@ fun PlayerControlPanel(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 第四行:播放三键 + 一级菜单同一行(不再在焦点项上方显示菜单名,省下那一行高度)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // 第四行:按钮行 —— 分组由父亲 2026-09-30 定
+            //   左组(靠左):字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
+            //   右组(靠右):快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // ── 左组 ──
+                menuItems.filter { it in PLAYER_LEFT_MENU }.forEach { item ->
+                    PanelMenuButton(
+                        item = item,
+                        selected = activeItem == item,
+                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(item).coerceIn(0, itemFocus.lastIndex)],
+                        onClick = {
+                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
+                            onMenuSelect(item)
+                        }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
+                // 中间留空,把右组推到最右
+                Spacer(modifier = Modifier.weight(1f))
+
+                // ── 右组 ──
                 PanelIcon(
                     icon = Icons.Default.Replay10,
                     description = "后退10秒",
@@ -475,57 +516,82 @@ fun PlayerControlPanel(
                     focusRequester = playKeyFocus[2],
                     onClick = onSeekForward
                 )
-
-                Spacer(modifier = Modifier.width(26.dp))
-
-                menuItems.forEachIndexed { index, item ->
-                    val selected = activeItem == item
-                    // 与左侧三个播放键用同一个 40dp 容器、同一种居中方式：
-                    // 下划线画在容器内部底边。原先下划线放在容器外的 Column 里，多出 3dp 高度，
-                    // 导致这一组图标整体比播放键偏高、图标在绿框里也不居中（父亲 2026-09-30 实测）
-                    Surface(
+                Spacer(modifier = Modifier.width(8.dp))
+                    PanelMenuButton(
+                        item = PlayerMenuItem.SPEED,
+                        selected = activeItem == PlayerMenuItem.SPEED,
+                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceIn(0, itemFocus.lastIndex)],
                         onClick = {
-                            lastIconIndex = index
-                            onMenuSelect(item)
-                        },
-                        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(6.dp)),
-                        colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (selected) SpecFocusGreen.copy(alpha = 0.55f) else Color.Transparent,
-                            contentColor = Color.White,
-                            focusedContainerColor = SpecFocusGreen,
-                            focusedContentColor = Color.White
-                        ),
-                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-                        modifier = Modifier
-                            .size(SpecFocusBox)
-                            .focusRequester(itemFocus[index.coerceAtMost(itemFocus.lastIndex)])
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label,
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .size(SpecIconSize)
-                            )
-                            // 当前打开的是哪一项：底部下划线（不占额外高度、不影响整行对齐）
-                            if (selected) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = 3.dp)
-                                        .width(24.dp)
-                                        .height(3.dp)
-                                        .background(EmbyGreen, RoundedCornerShape(2.dp))
-                                )
-                            }
+                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceAtLeast(0)
+                            onMenuSelect(PlayerMenuItem.SPEED)
                         }
-                    }
-                }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                PanelIcon(
+                    icon = Icons.Default.SkipNext,
+                    description = "下一集",
+                    focusRequester = nextEpisodeFocus,
+                    onClick = onNextEpisode
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                    PanelMenuButton(
+                        item = PlayerMenuItem.EPISODES,
+                        selected = activeItem == PlayerMenuItem.EPISODES,
+                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceIn(0, itemFocus.lastIndex)],
+                        onClick = {
+                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceAtLeast(0)
+                            onMenuSelect(PlayerMenuItem.EPISODES)
+                        }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
             }
         }
 
+    }
+}
+
+@Composable
+private fun PanelMenuButton(
+    item: PlayerMenuItem,
+    selected: Boolean,
+    focusRequester: FocusRequester,
+    onClick: () -> Unit,
+) {
+    // 与三个播放键同构：同一个 40dp 容器、同一种居中方式、下划线画在容器内部底边
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(6.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) SpecFocusGreen.copy(alpha = 0.55f) else Color.Transparent,
+            contentColor = Color.White,
+            focusedContainerColor = SpecFocusGreen,
+            focusedContentColor = Color.White
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        modifier = Modifier
+            .size(SpecFocusBox)
+            .focusRequester(focusRequester)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = item.label,
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(SpecIconSize)
+            )
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 3.dp)
+                        .width(24.dp)
+                        .height(3.dp)
+                        .background(EmbyGreen, RoundedCornerShape(2.dp))
+                )
+            }
+        }
     }
 }
 

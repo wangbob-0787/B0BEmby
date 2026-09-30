@@ -1866,6 +1866,27 @@ fun PlayerScreen(
                     title = panelTitle(),
                     subtitle = panelSubtitle(),
                     playMethodLabel = playMethodLabel(session),
+                    // 下一集：与自动连播同一套取数（剧集列表里找当前集的下一个）
+                    onNextEpisode = {
+                        scope.launch {
+                            val sid = mediaInfo.seriesId
+                            if (sid.isNullOrEmpty()) {
+                                DiagLog.w(context, "nextEpisode", "没有 seriesId，无法切下一集")
+                            } else {
+                                runCatching {
+                                    val list = repository.getSeriesList(sid)
+                                    val idx = list.indexOfFirst { it.id == mediaId }
+                                    if (idx >= 0 && idx < list.size - 1) {
+                                        onNavigateToPlayer(list[idx + 1])
+                                    } else {
+                                        DiagLog.w(context, "nextEpisode", "已是最后一集(idx=$idx/${list.size})")
+                                    }
+                                }.onFailure {
+                                    ErrorHandler.logError("PlayerScreen", "切下一集失败", it)
+                                }
+                            }
+                        }
+                    },
                     // 左上角片名 Logo：用剧集(Series)的 ClearLogo —— 单集本身没有 Logo(实测 404)，
                     // 剧集才有(金色 (2026)/clearlogo.png, 1504×912)
                     logoUrl = mediaInfo.seriesId?.let { sid ->
@@ -1880,7 +1901,9 @@ fun PlayerScreen(
                     menuItems = mainMenu,
                     activeItem = if (inMoreMenu) PlayerMenuItem.MORE else activeItem,
                     onMenuSelect = { item ->
-                        lastMenuIndex = mainMenu.indexOf(item).coerceAtLeast(0)
+                        // 用 PLAYER_MAIN_MENU 的固定下标：mainMenu 是按内容过滤后的列表，
+                        // 缺项时下标会偏移，而 PlayerControlPanel 里的 itemFocus 表是按 PLAYER_MAIN_MENU 建的
+                        lastMenuIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
                         when (item) {
                             PlayerMenuItem.MORE -> {
                                 inMoreMenu = true
