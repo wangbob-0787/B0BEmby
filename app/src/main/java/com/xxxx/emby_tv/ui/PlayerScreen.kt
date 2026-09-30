@@ -1995,15 +1995,27 @@ fun PlayerScreen(
                         }
                     } else {
                     SheetShell(
-                        modifier = if (item == PlayerMenuItem.SUBTITLE) {
-                            // 字幕菜单放画面左侧中部:官方就是这样做的,避免挡住画面底部的字幕
-                            Modifier
-                                .align(Alignment.CenterStart)
-                                .padding(start = 58.dp)
-                        } else {
-                            Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(start = 58.dp, bottom = 84.dp)
+                        // 菜单位置跟着按钮走：
+                        //   右组按钮（更多/弹幕 及其子项）→ 靠右出（父亲 2026-09-30：原先跑到左边）
+                        //   字幕/音轨 → 保持左侧（官方实测就是左侧浮层，见 ui-spec 规格）
+                        //   左组按钮（倍速/选集）→ 靠左出
+                        modifier = when {
+                            item == PlayerMenuItem.SUBTITLE || item == PlayerMenuItem.AUDIO ->
+                                Modifier
+                                    .align(Alignment.CenterStart)
+                                    .padding(start = 58.dp)
+                            item == PlayerMenuItem.DANMAKU ||
+                                    item == PlayerMenuItem.QUALITY ||
+                                    item == PlayerMenuItem.PLAY_MODE ||
+                                    item == PlayerMenuItem.BUFFER ||
+                                    item == PlayerMenuItem.INTRO ->
+                                Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 48.dp, bottom = 84.dp)
+                            else ->
+                                Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(start = 58.dp, bottom = 84.dp)
                         },
                         title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
                         contentWidth = when (item) {
