@@ -190,70 +190,81 @@ fun SeekHud(
     modifier: Modifier = Modifier,
 ) {
     val remaining = (duration - position).coerceAtLeast(0L)
-    Row(
+    // 官方 Emby TV 样式(2026-09-30 投影实测):
+    //   细条 4px(=2dp) · 已播 #45913D · 未播 #262626 · 绿色竖线游标 · 目标时间写在进度条下方左侧
+    //   官方不显示"快进/快退"字样,方向靠游标移动体现。
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 58.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 54.dp)
     ) {
-        Text(
-            text = (if (forward) "快进 " else "快退 ") + formatDuration(position),
-            color = Color.White,
-            fontSize = 18.sp,
-            style = OverlayTextStyleSoft
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-
-        // 与控制条内同款进度条(白条 + 当前位置圆点)
-        BoxWithConstraints(
-            modifier = Modifier
-                .weight(1f)
-                .height(14.dp)
-        ) {
-            val barWidth = maxWidth
-            Box(
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = formatDuration(position),
+                color = Color.White,
+                fontSize = 18.sp,
+                style = OverlayTextStyleSoft
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            BoxWithConstraints(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .align(Alignment.CenterStart)
-                    .background(Color.White.copy(alpha = 0.30f))
+                    .weight(1f)
+                    .height(24.dp)
             ) {
+                val barWidth = maxWidth
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .align(Alignment.CenterStart)
+                        .background(SpecBarRest)
+                ) {
+                    if (duration > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(
+                                    (buffered.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                                )
+                                .background(Color.White.copy(alpha = 0.22f))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(
+                                    (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                                )
+                                .background(SpecBarPlayed)
+                        )
+                    }
+                }
+                // 绿色竖线游标(官方实测:宽约 30px 高约 41px 的绿竖条)
                 if (duration > 0) {
+                    val fraction = (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(
-                                (buffered.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                            )
-                            .background(Color.White.copy(alpha = 0.45f))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(
-                                (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                            )
-                            .background(Color.White)
+                            .align(Alignment.CenterStart)
+                            .offset(x = (barWidth * fraction) - 1.5.dp)
+                            .width(3.dp)
+                            .height(20.dp)
+                            .background(SpecBarPlayed)
                     )
                 }
             }
-            if (duration > 0) {
-                val fraction = (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .offset(x = (barWidth * fraction) - 6.dp)
-                        .size(12.dp)
-                        .background(Color.White, CircleShape)
-                )
-            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = "-" + formatDuration(remaining) + " / " + formatEndClock(remaining),
+                color = Color(0xFFD0D0D0),
+                fontSize = 18.sp,
+                style = OverlayTextStyleSoft
+            )
         }
-
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        // 目标时间(官方放在进度条下方左侧,与左边已播时间同列)
         Text(
-            text = "-" + formatDuration(remaining) + " / " + formatEndClock(remaining),
-            color = Color(0xFFD0D0D0),
-            fontSize = 18.sp,
+            text = formatDuration(position),
+            color = SpecIconIdle,
+            fontSize = 15.sp,
             style = OverlayTextStyleSoft
         )
     }
