@@ -27,7 +27,7 @@ android {
         minSdk = 23
         targetSdk = 36
         versionName = "1.0.0"
-         versionCode = 100
+         versionCode = 1000   // 电视端现装 220；提到 1000 保证两台设备都是升级安装（Android 14 拒绝降级）
 //        versionCode = 92
 
     }
