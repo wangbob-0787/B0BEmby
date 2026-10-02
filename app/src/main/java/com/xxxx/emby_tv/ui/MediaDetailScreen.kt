@@ -176,6 +176,16 @@ fun MediaDetailScreen(
                     )
             )
 
+            // 2.8 背景层的隐形焦点锚点：进页面时焦点停在这里（= 海报/背景获得焦点），
+            //     不在任何文字上、页面也不滚动；从下面的按钮按 ↑ 回到这里（父亲 2026-10-02）
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .size(1.dp)
+                    .focusRequester(headerFocusRequester)
+                    .focusable()
+            )
+
             // 3. Main Scrollable Content
             Column(
                 modifier = Modifier
@@ -227,15 +237,6 @@ fun MediaDetailScreen(
                             ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // 隐形焦点锚点（1dp）：进页面时焦点停这儿 —— 页面不滚动、不落在任何文字上；
-                        // 按 ↓ 自然进「续播」按钮，按 ↑ 从按钮回到这里（父亲 2026-10-02）
-                        Box(
-                            modifier = Modifier
-                                .size(1.dp)
-                                .focusRequester(headerFocusRequester)
-                                .focusable()
-                        )
-
                         Text(
                             text = mediaInfo.name ?: "",
                             style = MaterialTheme.typography.displaySmall.copy(
@@ -412,7 +413,7 @@ fun MediaDetailScreen(
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         // 上下留出焦点放大（1.03x + 白描边）需要的余量，别被容器裁掉
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+                        contentPadding = PaddingValues(top = 14.dp, bottom = 22.dp)
                     ) {
                         itemsIndexed(seasonList) { index, season ->
                             val selected = index == selectedSeasonIndex
@@ -459,7 +460,7 @@ fun MediaDetailScreen(
                         // （缩略图 + 第一行剧名 + 第二行 "S1:E1 集名"，由 BuildItem(isShowImg17) 出）
                         // 季的切换仍是我们的胶囊行（父亲 2026-10-02 定：季用自己的方式，集用官方方式）
                         LazyRow(
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                            contentPadding = PaddingValues(top = 16.dp, bottom = 26.dp),
                             horizontalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
                             itemsIndexed(
@@ -688,7 +689,7 @@ fun PersonCard(
             )
         ),
         scale = ClickableSurfaceDefaults
-            .scale(focusedScale = 1.1f),
+            .scale(focusedScale = 1.06f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Black.copy(alpha = 0.2f),
             focusedContainerColor = MaterialTheme.colorScheme.primary,
@@ -841,9 +842,8 @@ private fun ActionTile(
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, Color.White))
-        ),
+        // 父亲 2026-10-02：获得焦点不要白边，只靠绿底表示
+        border = ClickableSurfaceDefaults.border(),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color(0xFF3A3A3A),

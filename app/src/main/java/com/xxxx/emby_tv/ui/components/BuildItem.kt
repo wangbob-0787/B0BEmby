@@ -116,8 +116,9 @@ fun BuildItem(
                 )
             )
         ),
+        // 放大倍数收到 1.06：1.1 时会被所在行裁掉边缘（父亲 2026-10-02）
         scale = ClickableSurfaceDefaults
-            .scale(focusedScale = 1.1f),
+            .scale(focusedScale = 1.06f),
         colors = ClickableSurfaceDefaults.colors(
             // 卡片底色改全透明（2026-10-02 GPU 实测）：原来每张卡垫一层 20% 黑，
             // 海报完全盖住它，却要多付一次整卡面积的混合（同屏十来张 = 一屏多余混合）。
