@@ -35,10 +35,13 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: 编译 debug APK（只编 debug：投影装机只用它，编 release 会白花近一半时间）
+      # 2026-10-02 起两个变体都编。原因（小米电视 192.168.150.10 实测，同一台机器同一套按键）：
+      #   debug 包每帧 650ms、卡顿率 80%；release 包每帧 32ms、卡顿率 35%
+      #   —— debug 变体不跑 AOT 编译，界面线程被解释执行拖死。装机一律用 release。
+      - name: 编译 APK（debug + release）
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace --build-cache
+          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace --build-cache
 
       - name: 收集 APK
         run: |
@@ -59,6 +62,6 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: B0BEmby build ${{ github.run_number }}
-          body: 自动编译产物(debug 签名)
+          body: 自动编译产物(debug+release,均为 fixedDebug 签名)
           files: out/*.apk
           draft: false
