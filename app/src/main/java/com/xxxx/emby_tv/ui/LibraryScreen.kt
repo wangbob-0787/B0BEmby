@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -242,11 +243,17 @@ fun LibraryScreen(
 
             val maxLength = 220.dp
 
+            // 电视直播库：台标是横版图，必须用 16:9 卡片，否则被裁（父亲 2026-10-02："比例不对"）
+            val isLiveTv = type.equals("TvChannel", ignoreCase = true) ||
+                items.any { it.type.equals("TvChannel", ignoreCase = true) }
+
             val (aspectRatioOver1List, aspectRatioUnder1List) = items
                 .mapNotNull { it.primaryImageAspectRatio?.toFloat() }
                 .partition { it > 1.0f }
 
-            val maxAspectRatio = if (aspectRatioOver1List.size >= aspectRatioUnder1List.size) {
+            val maxAspectRatio = if (isLiveTv) {
+                16f / 9f
+            } else if (aspectRatioOver1List.size >= aspectRatioUnder1List.size) {
                 aspectRatioOver1List.maxOrNull() ?: 1.777f
             } else {
                 aspectRatioUnder1List.maxOrNull() ?: 0.666f
@@ -258,7 +265,7 @@ fun LibraryScreen(
                 maxLength * maxAspectRatio
             }
 
-            val num = if (maxAspectRatio > 1.0f) 4 else 6
+            val num = if (isLiveTv) 5 else if (maxAspectRatio > 1.0f) 4 else 6
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(num),
@@ -289,7 +296,9 @@ fun LibraryScreen(
                                 imgWidth = imgWidth,
                                 aspectRatio = maxAspectRatio,
                                 modifier = itemModifier,
-                                isMyLibrary = false,
+                                // 频道卡当"图块"渲染：不画下面的年份/分级占位("--")、不画播放进度条
+                                isMyLibrary = isLiveTv,
+                                imageScale = if (isLiveTv) ContentScale.Fit else ContentScale.Crop,
                                 serverUrl = serverUrl,
                                 onItemClick = {
                                     returnFocusIndex = index

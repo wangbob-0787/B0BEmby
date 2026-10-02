@@ -83,6 +83,8 @@ fun BuildItem(
     downFocus: FocusRequester? = null,
     // 宿主想知道"这一张什么时候拿到焦点"（详情页用它记住用户停在哪一集）
     onFocused: (() -> Unit)? = null,
+    // 图片缩放方式（默认裁切；直播台标传 Fit，避免横版台标被裁）
+    imageScale: ContentScale = ContentScale.Crop,
 ) {
     val myFocusRequester = remember { FocusRequester() }
     val focusAnchor = focusRequester ?: myFocusRequester
@@ -197,7 +199,7 @@ fun BuildItem(
                     model = imageUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = imageScale
                 )
 
                 // 账号名称显示
