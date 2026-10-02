@@ -275,11 +275,8 @@ fun MediaDetailScreen(
                                     label = stringResource(R.string.play_all),
                                     primary = false
                                 ) { episodes!!.firstOrNull()?.let { onNavigateToPlayer(it) } }
-                                ActionTile(
-                                    icon = Icons.Default.Shuffle,
-                                    label = stringResource(R.string.shuffle),
-                                    primary = false
-                                ) { episodes!!.randomOrNull()?.let { onNavigateToPlayer(it) } }
+                                // 父亲 2026-10-02 定的按钮集：详情页只留「继续/播放 + 全部播放」。
+                                // 明确不要：随机播放、预告片、已播放、删除、更多（官方 TV 版有，我们不做）。
                             }
                         }
                         if (resume != null) Box(
