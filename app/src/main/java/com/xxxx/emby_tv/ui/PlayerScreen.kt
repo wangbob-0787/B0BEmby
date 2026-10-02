@@ -1901,12 +1901,20 @@ fun PlayerScreen(
                             }
                         }
                     },
-                    // 左上角片名 Logo：用剧集(Series)的 ClearLogo —— 单集本身没有 Logo(实测 404)，
-                    // 剧集才有(金色 (2026)/clearlogo.png, 1504×912)
-                    logoUrl = mediaInfo.seriesId?.let { sid ->
-                        if (sid.isNotEmpty() && serverUrl.isNotEmpty()) {
-                            "$serverUrl/emby/Items/$sid/Images/Logo?maxHeight=200"
-                        } else null
+                    // 左上角片名 Logo：
+                    //   剧集/单集 → 用所属剧集的 ClearLogo（单集本身没有 Logo，实测 404）
+                    //   电影等   → 用条目自己的 Logo
+                    //（原来只处理"有 seriesId"的情况 → 电影播放页没有 logo，父亲 2026-10-02 报"logo 被隐藏"）
+                    logoUrl = if (serverUrl.isEmpty()) null else {
+                        val sid = mediaInfo.seriesId
+                        val ownLogoTag = mediaInfo.imageTags?.get("Logo")
+                        when {
+                            !sid.isNullOrEmpty() ->
+                                "$serverUrl/emby/Items/$sid/Images/Logo?maxHeight=200"
+                            !ownLogoTag.isNullOrEmpty() ->
+                                "$serverUrl/emby/Items/${mediaInfo.id}/Images/Logo?maxHeight=200&tag=$ownLogoTag"
+                            else -> null
+                        }
                     },
                     position = position,
                     duration = duration,
