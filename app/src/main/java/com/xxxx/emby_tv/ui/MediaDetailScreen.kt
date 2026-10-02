@@ -191,6 +191,8 @@ fun MediaDetailScreen(
                         // 整块作为一个焦点目标（不逐项聚焦文字）；有焦点时不画任何高亮，
                         // 只是让"进入页面停在顶部、页面不滚动"成立（父亲 2026-10-02）
                         .focusRequester(headerFocusRequester)
+                        // 顶部块按下键要先去「续播」按钮（不能跳到下面的季胶囊；父亲 2026-10-02）
+                        .focusProperties { down = playButtonFocusRequester }
                         .focusable(),
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                     verticalAlignment = Alignment.Top
