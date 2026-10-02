@@ -73,6 +73,11 @@ fun MediaDetailScreen(
     var episodes by remember { mutableStateOf<List<BaseItemDto>?>(null) }
     var resume by remember { mutableStateOf<BaseItemDto?>(null) }
     var isLoadingSeriesData by remember { mutableStateOf(false) }
+    // 季列表与"当前季"提到这里：这样上面的「续播/重播」按钮按下键也能落到**当前季**那颗胶囊上
+    //（父亲 2026-10-02：焦点进季行时要落在当前季，多季时尤其重要）
+    val seasonList = seasons ?: emptyList()
+    val seasonFocusers = remember(seasonList.size) { List(seasonList.size) { FocusRequester() } }
+    var selectedSeasonIndex by remember(seasonList.size) { mutableIntStateOf(0) }
 
     LaunchedEffect(seriesId) {
         detailViewModel.loadMediaInfo(seriesId)
@@ -340,14 +345,16 @@ fun MediaDetailScreen(
                                 label = if (hasProgress) stringResource(R.string.resume_play)
                                 else stringResource(R.string.play),
                                 focusRequester = playButtonFocusRequester,
-                                upFocus = headerFocusRequester
+                                upFocus = headerFocusRequester,
+                                downFocus = seasonFocusers.getOrNull(selectedSeasonIndex)
                             ) {
                                 playTarget?.let { onNavigateToPlayer(it) }
                             }
                             ActionTile(
                                 icon = Icons.Default.Replay,
                                 label = stringResource(R.string.replay),
-                                upFocus = headerFocusRequester
+                                upFocus = headerFocusRequester,
+                                downFocus = seasonFocusers.getOrNull(selectedSeasonIndex)
                             ) {
                                 // 抹掉 userData → 播放页拿不到续播位置，即从 0 分钟开始
                                 playTarget?.let { onNavigateToPlayer(it.copy(userData = null)) }
@@ -409,11 +416,6 @@ fun MediaDetailScreen(
                 // 季选择器 + 只渲染当前季的集（2026-09-27 按官方形态重做）
                 // 原实现把所有季一次铺开：想看第 5 季要从第 1 季第 1 集一路按 ↓（上百次）
                 if (mediaInfo.isSeries && !seasons.isNullOrEmpty()) {
-                    val seasonList = seasons ?: emptyList()
-                    var selectedSeasonIndex by remember(seasonList.size) { mutableIntStateOf(0) }
-                    val seasonFocusers = remember(seasonList.size) {
-                        List(seasonList.size) { FocusRequester() }
-                    }
                     val firstEpisodeFocus = remember { FocusRequester() }
                     val noEpisodesText = stringResource(R.string.no_episodes_found)
 
@@ -850,6 +852,7 @@ private fun ActionTile(
     label: String,
     focusRequester: FocusRequester? = null,
     upFocus: FocusRequester? = null,
+    downFocus: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -868,8 +871,11 @@ private fun ActionTile(
             .width(DetailButtonWidth)
             .height(DetailButtonHeight)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            // 从按钮按 ↑ 回到背景（顶部），页面跟着滚回顶部
-            .focusProperties { if (upFocus != null) up = upFocus }
+            // ↑ 回背景（顶部）；↓ 落到**当前季**那颗胶囊（多季时不会跑到第一季去）
+            .focusProperties {
+                if (upFocus != null) up = upFocus
+                if (downFocus != null) down = downFocus
+            }
     ) {
         Row(
             modifier = Modifier
