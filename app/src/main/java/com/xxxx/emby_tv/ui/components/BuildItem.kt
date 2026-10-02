@@ -79,6 +79,8 @@ fun BuildItem(
     imageUrlOverride: String? = null,
     // 上键去向（详情页集卡按上键要回到季胶囊）
     upFocus: FocusRequester? = null,
+    // 下键去向（详情页集卡按下键要去演员行"上次停的那一位"）
+    downFocus: FocusRequester? = null,
     // 宿主想知道"这一张什么时候拿到焦点"（详情页用它记住用户停在哪一集）
     onFocused: (() -> Unit)? = null,
 ) {
@@ -148,7 +150,10 @@ fun BuildItem(
                 }
             }
             .focusRequester(focusAnchor)
-            .focusProperties { if (upFocus != null) up = upFocus }
+            .focusProperties {
+                if (upFocus != null) up = upFocus
+                if (downFocus != null) down = downFocus
+            }
             .onKeyEvent { keyEvent ->
                 if (onMenuClick != null && keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {

@@ -256,6 +256,9 @@ fun EmbyTvApp() {
                             libraryViewModel = libraryViewModel,
                             onNavigateToSeries = { seriesId ->
                                 navController.navigate("series/$seriesId")
+                            },
+                            onNavigateToPlayer = { channelId ->
+                                navController.navigate("player/$channelId?position=0")
                             }
                         )
                     }

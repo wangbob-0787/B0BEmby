@@ -44,6 +44,8 @@ fun LibraryScreen(
     type: String,
     libraryViewModel: LibraryViewModel,
     onNavigateToSeries: (String) -> Unit,
+    // 直播频道（TvChannel）点击直接播（父亲 2026-10-02：电视直播库点进去就是频道）
+    onNavigateToPlayer: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -292,7 +294,11 @@ fun LibraryScreen(
                                 onItemClick = {
                                     returnFocusIndex = index
                                     shouldFocusOnReturn = true
-                                    onNavigateToSeries(id)
+                                    if (item.type.equals("TvChannel", ignoreCase = true)) {
+                                        onNavigateToPlayer(id)
+                                    } else {
+                                        onNavigateToSeries(id)
+                                    }
                                 }
                             )
                         }

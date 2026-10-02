@@ -1,6 +1,7 @@
 package com.xxxx.emby_tv.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,11 +79,12 @@ fun TopStatusBar(
                             .size(32.dp)
                             .focusRequester(menuFocusRequester),
                         shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.CircleShape),
+                        // 父亲 2026-10-02：聚焦 = 绿底白图标
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = Color.White,
+                            focusedContainerColor = Color(0xFF52B54B),
                             contentColor = Color.White,
-                            focusedContentColor = MaterialTheme.colorScheme.secondary
+                            focusedContentColor = Color.White
                         )
                     ) {
                         Box(
@@ -144,11 +148,12 @@ fun TopStatusBar(
                             .size(32.dp)
                             .focusRequester(searchFocusRequester),
                         shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.CircleShape),
+                        // 父亲 2026-10-02：聚焦 = 绿底白图标
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = Color.White,
+                            focusedContainerColor = Color(0xFF52B54B),
                             contentColor = Color.White,
-                            focusedContentColor = MaterialTheme.colorScheme.secondary
+                            focusedContentColor = Color.White
                         )
                     ) {
                         Box(
@@ -186,12 +191,13 @@ fun TopStatusBar(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(end = 12.dp, start = 4.dp, top = 4.dp, bottom = 4.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
+                            // 头像：用父亲 2026-10-02 给的图（圆形裁剪）
+                            Image(
+                                painter = painterResource(R.drawable.ic_user_avatar),
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(24.dp)
-                                    .padding(4.dp)
+                                    .size(26.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
                             )
                             Text(
                                 text = userInfo,

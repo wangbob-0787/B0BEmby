@@ -79,9 +79,29 @@ fun MediaDetailScreen(
     val seasonList = seasons ?: emptyList()
     val seasonFocusers = remember(seasonList.size) { List(seasonList.size) { FocusRequester() } }
     var selectedSeasonIndex by remember(seasonList.size) { mutableIntStateOf(0) }
-    // 每行"用户上次停在哪一项"（父亲 2026-10-02：上下轮动要按用户选的焦点落回）
+    // 每行"用户上次停在哪一项"（父亲 2026-10-02：上下轮动要按用户选的焦点落回；
+    // 集行与演员行都要记）
     var lastPillIndex by remember(seasonList.size) { mutableIntStateOf(0) }
     var lastEpisodeIndex by remember { mutableIntStateOf(0) }
+    var lastCastIndex by remember { mutableIntStateOf(0) }
+    var lastCrewIndex by remember { mutableIntStateOf(0) }
+    val castPeople = remember(mediaInfo?.people) {
+        mediaInfo?.people?.filter {
+            it.type.equals("Actor", ignoreCase = true) || it.type.equals("GuestStar", ignoreCase = true)
+        } ?: emptyList()
+    }
+    val crewPeople = remember(mediaInfo?.people) {
+        mediaInfo?.people?.filter {
+            val t = it.type ?: ""
+            t.equals("Director", true) || t.equals("Writer", true) ||
+                t.equals("Producer", true) || t.equals("Composer", true)
+        } ?: emptyList()
+    }
+    val castFocusers = remember(castPeople.size) { List(castPeople.size) { FocusRequester() } }
+    val crewFocusers = remember(crewPeople.size) { List(crewPeople.size) { FocusRequester() } }
+    val episodeFocusers = remember(episodes?.size) {
+        List(episodes?.size ?: 0) { FocusRequester() }
+    }
 
     LaunchedEffect(seriesId) {
         detailViewModel.loadMediaInfo(seriesId)
@@ -214,40 +234,12 @@ fun MediaDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Poster —— 剧集页不画（官方 TV 版剧集页是"全屏剧照 + 左下文字"，没有左侧海报），
-                    // 电影页保留（父亲 2026-10-02）
-                    if (!mediaInfo.isSeries) {
-                        Box(
-                            modifier = Modifier
-                                .width(180.dp)
-                                .aspectRatio(
-                                    mediaInfo.primaryImageAspectRatio?.toFloat()
-                                        ?: 0.67f
-                                )
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            val imageUrl = Utils.getImageUrl(serverUrl, mediaInfo, false)
-                            if (imageUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = imageUrl,
-                                    contentDescription = mediaInfo.name,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                    }
-
                     // Info Column —— 剧集页左边与下面「第 1 季」胶囊对齐（同一个左边缘），
                     // 上边留一段距离；右边让给 logo（父亲 2026-10-02）
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .then(
-                                if (mediaInfo.isSeries) Modifier.padding(top = 140.dp)
-                                else Modifier
-                            ),
+                            .padding(top = 140.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
@@ -258,66 +250,39 @@ fun MediaDetailScreen(
                             )
                         )
 
-                        // 元数据
-                        // 剧集页按官方 TV 版做成两行文字：
+                        // 元数据两行文字（官方形态：剧集/电影一致）
                         //   第一行 ★评分  年份-现在  于 制作方  分级
-                        //   第二行 类型 · N 播出季
-                        // 电影页保留原来的胶囊标签（父亲 2026-10-02：季的切换用我们自己的方式）
-                        if (mediaInfo.isSeries) {
-                            val seriesYearText = when {
-                                mediaInfo.productionYear == null -> null
-                                mediaInfo.status.equals("Continuing", ignoreCase = true) ->
-                                    "${mediaInfo.productionYear} - 现在"
-                                else -> mediaInfo.productionYear.toString()
-                            }
-                            val studioName = mediaInfo.seriesStudio
-                                ?: mediaInfo.studios?.firstOrNull()?.name
-                            val metaLine1 = listOfNotNull(
-                                mediaInfo.communityRating?.let { "★$it" },
-                                seriesYearText,
-                                studioName?.takeIf { it.isNotBlank() }?.let { "于 $it" },
-                                mediaInfo.officialRating?.takeIf { it.isNotBlank() }
-                            ).joinToString("    ")
-                            val seasonCount = seasons?.size ?: 0
-                            val metaLine2 = listOfNotNull(
-                                mediaInfo.genres?.firstOrNull()?.takeIf { it.isNotBlank() },
-                                if (seasonCount > 0) "$seasonCount 播出季" else null
-                            ).joinToString(" · ")
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                if (metaLine1.isNotBlank()) Text(
-                                    text = metaLine1,
-                                    color = Color.White.copy(alpha = 0.92f),
-                                    fontSize = 15.sp
-                                )
-                                if (metaLine2.isNotBlank()) Text(
-                                    text = metaLine2,
-                                    color = Color.White.copy(alpha = 0.72f),
-                                    fontSize = 15.sp
-                                )
-                            }
-                        } else {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val year = mediaInfo.productionYear?.toString()
-                                if (!year.isNullOrEmpty()) MetaPill(year)
-
-                                val runtimeTicks = mediaInfo.runTimeTicks
-                                if (runtimeTicks != null) {
-                                    val runtime = Utils.formatRuntimeFromTicks(runtimeTicks)
-                                    if (runtime.isNotEmpty()) MetaPill(runtime)
-                                }
-
-                                val officialRating = mediaInfo.officialRating
-                                if (!officialRating.isNullOrEmpty()) MetaPill(officialRating)
-
-                                val communityRating = mediaInfo.communityRating?.toString()
-                                if (!communityRating.isNullOrEmpty()) MetaPill("★ $communityRating")
-
-                                val type = mediaInfo.type
-                                if (!type.isNullOrEmpty()) MetaPill(type)
-                            }
+                        //   第二行 类型 · N 播出季（电影没有季，只显示类型）
+                        val yearText = when {
+                            mediaInfo.productionYear == null -> null
+                            mediaInfo.status.equals("Continuing", ignoreCase = true) ->
+                                "${mediaInfo.productionYear} - 现在"
+                            else -> mediaInfo.productionYear.toString()
+                        }
+                        val studioName = mediaInfo.seriesStudio
+                            ?: mediaInfo.studios?.firstOrNull()?.name
+                        val metaLine1 = listOfNotNull(
+                            mediaInfo.communityRating?.let { "★$it" },
+                            yearText,
+                            studioName?.takeIf { it.isNotBlank() }?.let { "于 $it" },
+                            mediaInfo.officialRating?.takeIf { it.isNotBlank() }
+                        ).joinToString("    ")
+                        val seasonCount = seasons?.size ?: 0
+                        val metaLine2 = listOfNotNull(
+                            mediaInfo.genres?.firstOrNull()?.takeIf { it.isNotBlank() },
+                            if (seasonCount > 0) "$seasonCount 播出季" else null
+                        ).joinToString(" · ")
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (metaLine1.isNotBlank()) Text(
+                                text = metaLine1,
+                                color = Color.White.copy(alpha = 0.92f),
+                                fontSize = 15.sp
+                            )
+                            if (metaLine2.isNotBlank()) Text(
+                                text = metaLine2,
+                                color = Color.White.copy(alpha = 0.72f),
+                                fontSize = 15.sp
+                            )
                         }
 
                         // Overview —— 官方顺序是「标题 → 元数据 → 简介 → 按钮」（父亲 2026-10-02）
@@ -398,8 +363,8 @@ fun MediaDetailScreen(
 
                     }
 
-                    // 右侧剧集 Logo：占剩余宽度、按比例缩放（Fit），不设固定宽度
-                    if (mediaInfo.isSeries) {
+                    // 右侧 Logo：占剩余宽度、按比例缩放（Fit），不设固定宽度（剧集/电影一致）
+                    run {
                         val logoTag = mediaInfo.imageTags?.get("Logo")
                         if (!logoTag.isNullOrEmpty()) {
                             AsyncImage(
@@ -425,9 +390,6 @@ fun MediaDetailScreen(
                     val currentSeasonName = seasonList.getOrNull(selectedSeasonIndex)?.name ?: ""
                     val seasonEpisodes =
                         episodes?.filter { it.seasonName == currentSeasonName } ?: emptyList()
-                    val episodeFocusers = remember(seasonEpisodes.size) {
-                        List(seasonEpisodes.size) { FocusRequester() }
-                    }
 
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -501,6 +463,7 @@ fun MediaDetailScreen(
                                     onItemClick = { onNavigateToPlayer(ep) },
                                     focusRequester = episodeFocusers.getOrNull(idx) ?: firstEpisodeFocus,
                                     upFocus = seasonFocusers.getOrNull(lastPillIndex),
+                                    downFocus = castFocusers.getOrNull(lastCastIndex),
                                     onFocused = { lastEpisodeIndex = idx },
                                     // 每集自己的静帧（默认回落会取到父级剧照 → 每张一样）
                                     imageUrlOverride = Utils.getEpisodeStillUrl(serverUrl, ep)
@@ -530,18 +493,7 @@ fun MediaDetailScreen(
                 }
 
                 // People List（Cast / Crew）—— 只在有人员数据时渲染这几行
-                mediaInfo.people?.takeIf { it.isNotEmpty() }?.let { people ->
-                    // 演职人员：官方分两行 —— Cast（演员，卡下第三行是角色名）/ Crew（导演编剧等，第三行是职务）
-                    val castPeople = people.filter {
-                        it.type.equals("Actor", ignoreCase = true) ||
-                            it.type.equals("GuestStar", ignoreCase = true)
-                    }
-                    val crewPeople = people.filter {
-                        val t = it.type ?: ""
-                        t.equals("Director", true) || t.equals("Writer", true) ||
-                            t.equals("Producer", true) || t.equals("Composer", true)
-                    }
-
+                if (castPeople.isNotEmpty() || crewPeople.isNotEmpty()) {
                     if (castPeople.isNotEmpty()) {
                         Text(
                             text = stringResource(R.string.cast),
@@ -551,7 +503,16 @@ fun MediaDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(start = 40.dp, bottom = 16.dp)
                         )
-                        PersonRow(people = castPeople, serverUrl = serverUrl)
+                        PersonRow(
+                            people = castPeople,
+                            serverUrl = serverUrl,
+                            focusers = castFocusers,
+                            upFocus = episodeFocusers.getOrNull(
+                                lastEpisodeIndex.coerceIn(0, (episodeFocusers.size - 1).coerceAtLeast(0))
+                            ),
+                            downFocus = crewFocusers.getOrNull(lastCrewIndex),
+                            onFocused = { lastCastIndex = it }
+                        )
                         Spacer(modifier = Modifier.height(32.dp))
                     }
                     if (crewPeople.isNotEmpty()) {
@@ -563,7 +524,13 @@ fun MediaDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(start = 40.dp, bottom = 16.dp)
                         )
-                        PersonRow(people = crewPeople, serverUrl = serverUrl)
+                        PersonRow(
+                            people = crewPeople,
+                            serverUrl = serverUrl,
+                            focusers = crewFocusers,
+                            upFocus = castFocusers.getOrNull(lastCastIndex),
+                            onFocused = { lastCrewIndex = it }
+                        )
                         Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
@@ -700,6 +667,10 @@ fun PersonCard(
     imgWidth: Dp,
     aspectRatio: Float,
     serverUrl: String,
+    focusRequester: FocusRequester? = null,
+    upFocus: FocusRequester? = null,
+    downFocus: FocusRequester? = null,
+    onFocused: (() -> Unit)? = null,
 ) {
 
     Surface(
@@ -722,7 +693,14 @@ fun PersonCard(
             pressedContentColor = MaterialTheme.colorScheme.surface,
             focusedContentColor = MaterialTheme.colorScheme.onPrimary
         ),
-        modifier = Modifier.width(imgWidth)
+        modifier = Modifier
+            .width(imgWidth)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged { if (it.isFocused) onFocused?.invoke() }
+            .focusProperties {
+                if (upFocus != null) up = upFocus
+                if (downFocus != null) down = downFocus
+            }
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
@@ -784,7 +762,14 @@ fun PersonCard(
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun PersonRow(people: List<PersonInfo>, serverUrl: String) {
+private fun PersonRow(
+    people: List<PersonInfo>,
+    serverUrl: String,
+    focusers: List<FocusRequester> = emptyList(),
+    upFocus: FocusRequester? = null,
+    downFocus: FocusRequester? = null,
+    onFocused: ((Int) -> Unit)? = null,
+) {
     val maxAspectRatio = 0.66f
     val imgWidth = (160f * maxAspectRatio).dp
     LazyRow(
@@ -794,12 +779,16 @@ private fun PersonRow(people: List<PersonInfo>, serverUrl: String) {
         itemsIndexed(
             people,
             key = { index, person -> "${person.id ?: person.hashCode()}-$index" }
-        ) { _, person ->
+        ) { index, person ->
             PersonCard(
                 person = person,
                 imgWidth = imgWidth,
                 aspectRatio = maxAspectRatio,
-                serverUrl = serverUrl
+                serverUrl = serverUrl,
+                focusRequester = focusers.getOrNull(index),
+                upFocus = upFocus,
+                downFocus = downFocus,
+                onFocused = onFocused?.let { cb -> { cb(index) } }
             )
         }
     }

@@ -33,6 +33,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     // 直播频道（首页「电视直播」一行）
     var liveChannels by mutableStateOf<List<BaseItemDto>?>(null)
         private set
+    // 服务器上的「电视直播」视图（父亲 2026-10-02：媒体库里也要有这个入口，点进去看全部频道）
+    var liveTvView by mutableStateOf<BaseItemDto?>(null)
+        private set
 
     // === 加载状态 ===
     var isLoading by mutableStateOf(false)
@@ -104,11 +107,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     try { repository.getLiveTvChannels() }
                     catch (e: Exception) { emptyList() }
                 }
+                val viewsDeferred = async {
+                    try { repository.getViews() }
+                    catch (e: Exception) { emptyList() }
+                }
 
                 resumeItems = resumeDeferred.await()
                 libraryLatestItems = latestDeferred.await()
                 favoriteItems = favDeferred.await()
                 liveChannels = liveDeferred.await()
+                liveTvView = viewsDeferred.await()
+                    .firstOrNull { it.collectionType.equals("livetv", ignoreCase = true) }
             } catch (e: Exception) {
                 if (errorMessage == null) errorMessage = e.message
                 resumeItems = emptyList()

@@ -81,6 +81,14 @@ class EmbyRepository private constructor(private val context: Context) {
     // === 媒体库 ===
 
     /**
+     * 服务器视图（媒体库）列表 —— 首页「我的媒体库」里那个「电视直播」入口就是 LiveTV 视图(4490)
+     */
+    suspend fun getViews(): List<BaseItemDto> {
+        requireLoggedIn()
+        return EmbyApi.getViews(context, session.serverUrl!!, session.apiKey!!, session.deviceId, session.userId!!)
+    }
+
+    /**
      * 获取继续观看列表
      */
     suspend fun getResumeItems(seriesId: String = ""): List<BaseItemDto> {

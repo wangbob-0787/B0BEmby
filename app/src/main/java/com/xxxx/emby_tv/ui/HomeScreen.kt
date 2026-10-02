@@ -58,6 +58,7 @@ fun HomeScreen(
     val libraryLatestItems = homeViewModel.libraryLatestItems
     val favoriteItems = homeViewModel.favoriteItems
     val liveChannels = homeViewModel.liveChannels
+    val liveTvView = homeViewModel.liveTvView
     val isLoading = homeViewModel.isLoading
     val errorMessage = homeViewModel.errorMessage
 
@@ -169,7 +170,8 @@ fun HomeScreen(
     var heroFocusSignal by remember { mutableIntStateOf(0) }
 
     val heroItems = resumeItems ?: emptyList()
-    val libRow = libraryLatestItems ?: emptyList()
+    // 「我的媒体库」那一排的第一张是「电视直播」入口（服务器上的 LiveTV 视图，自带主图）
+    val libRow = listOfNotNull(liveTvView) + (libraryLatestItems ?: emptyList())
     val liveRow = liveChannels ?: emptyList()
     val resumeRow = resumeItems ?: emptyList()
     val favRow = favoriteItems ?: emptyList()
@@ -264,12 +266,17 @@ fun HomeScreen(
                         isMyLibrary = true,
                         serverUrl = serverUrl,
                         onItemSelected = { item ->
-                            val firstItem = item.latestItems?.firstOrNull()
-                            val type = firstItem?.type ?: ""
                             val id = item.id ?: ""
                             val title = item.name ?: ""
                             FocusMemory.lastItemId = null   // 进库走库页自己的焦点恢复
-                            navController.navigate("library/$id?libraryName=$title&type=$type")
+                            if (item.collectionType.equals("livetv", ignoreCase = true)) {
+                                // 电视直播：走库页，类型 TvChannel → 频道以库网格样式列出，点了直接播
+                                navController.navigate("library/$id?libraryName=$title&type=TvChannel")
+                            } else {
+                                val firstItem = item.latestItems?.firstOrNull()
+                                val type = firstItem?.type ?: ""
+                                navController.navigate("library/$id?libraryName=$title&type=$type")
+                            }
                         },
                         onMenuPressed = { showMenu = true }
                     )
