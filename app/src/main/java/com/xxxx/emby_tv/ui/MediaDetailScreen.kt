@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -63,6 +64,9 @@ fun MediaDetailScreen(
     
     val mediaInfo = detailViewModel.mediaInfo
     val playButtonFocusRequester = remember { FocusRequester() }
+    // 顶部块（标题/元数据/海报区域）的焦点锚点：进页面时焦点放这里，不自动滚到下面的按钮
+    //（父亲 2026-10-02：一进来标题和元数据就被"聚焦续播按钮"带得滚出屏幕）
+    val headerFocusRequester = remember { FocusRequester() }
 
     // Series Data State
     var seasons by remember { mutableStateOf<List<BaseItemDto>?>(null) }
@@ -104,15 +108,11 @@ fun MediaDetailScreen(
         }
     }
 
-    // Default focus logic
+    // 进页面的默认焦点：放在顶部块（标题/元数据/海报）上，页面不滚动
     LaunchedEffect(mediaInfo, isLoadingSeriesData) {
         if (mediaInfo != null && !isLoadingSeriesData) {
-            delay(200)
-            try {
-                playButtonFocusRequester.requestFocus()
-            } catch (e: Exception) {
-                // Ignore if not attached
-            }
+            delay(150)
+            runCatching { headerFocusRequester.requestFocus() }
         }
     }
 
@@ -186,7 +186,12 @@ fun MediaDetailScreen(
                 // Header Section：左 = 标题/元数据/简介/按钮；右 = 剧集 Logo（同排，各占一份宽度，
                 // 所以永远不会和左边的文字重叠；父亲 2026-10-02 要求 logo 自适应大小）
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // 整块作为一个焦点目标（不逐项聚焦文字）；有焦点时不画任何高亮，
+                        // 只是让"进入页面停在顶部、页面不滚动"成立（父亲 2026-10-02）
+                        .focusRequester(headerFocusRequester)
+                        .focusable(),
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -426,8 +431,9 @@ fun MediaDetailScreen(
                                 ) {
                                     Text(
                                         text = season.name ?: "",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = Color.White
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -842,7 +848,7 @@ private fun ActionTile(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -850,22 +856,22 @@ private fun ActionTile(
                 imageVector = icon,
                 contentDescription = label,
                 tint = Color.White,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
                 color = Color.White,
-                style = MaterialTheme.typography.labelLarge,
+                fontSize = 12.sp,
                 maxLines = 1
             )
         }
     }
 }
 
-/** 详情页按钮统一尺寸（动作按钮与季胶囊一致，父亲 2026-10-02） */
-private val DetailButtonWidth = 176.dp
-private val DetailButtonHeight = 60.dp
+/** 详情页按钮统一尺寸（动作按钮与季胶囊一致；父亲 2026-10-02：再缩小一半 → 96×36） */
+private val DetailButtonWidth = 96.dp
+private val DetailButtonHeight = 36.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
