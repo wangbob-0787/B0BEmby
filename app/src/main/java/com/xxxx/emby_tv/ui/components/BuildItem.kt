@@ -87,7 +87,10 @@ fun BuildItem(
         scale = ClickableSurfaceDefaults
             .scale(focusedScale = 1.1f),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Black.copy(alpha = 0.2f),
+            // 卡片底色改全透明（2026-10-02 GPU 实测）：原来每张卡垫一层 20% 黑，
+            // 海报完全盖住它，却要多付一次整卡面积的混合（同屏十来张 = 一屏多余混合）。
+            // 焦点态保留高亮（同屏只有一张卡带焦点）。
+            containerColor = Color.Transparent,
             focusedContainerColor = Color.Black.copy(alpha = 0.35f),
             contentColor = MaterialTheme.colorScheme.onSurface,
             pressedContentColor = MaterialTheme.colorScheme.secondary,
@@ -121,20 +124,28 @@ fun BuildItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(aspectRatio)
-                    .background(Color(0xFF2D2D2D), RoundedCornerShape(8.dp)),
+                    .aspectRatio(aspectRatio),
                 contentAlignment = Alignment.Center
             ) {
 
-                // 静态占位图标垫在底层（图片加载完会盖住它）——
-                // 不再用 SubcomposeAsyncImage + 转圈动画：海报墙里每张卡片一次子组合 +
-                // 一个持续动画，在低端电视上把帧时间拖到 90~150ms（2026-09-27 电视端卡顿主因）
-                Icon(
-                    imageVector = Icons.Default.Movie,
-                    contentDescription = null,
-                    tint = Color.Gray.copy(alpha = 0.35f),
-                    modifier = Modifier.size(40.dp)
-                )
+                // 占位只在「这一条根本没有海报」时画。
+                // 2026-10-02 电视端 GPU 实测：原来每张卡都垫一层深灰圆角底 + 一个矢量图标，
+                // 海报加载完又被盖住 —— 同屏十来张卡就等于多画一整屏的不透明填充。
+                // 现在有海报的卡不画占位（加载中直接露底色，与官方客户端一致）。
+                // （子组合 + 转圈动画已在 2026-09-27 移除：那是当时 90~150ms 帧时间的主因）
+                if (imageUrl.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF2D2D2D), RoundedCornerShape(8.dp))
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Movie,
+                        contentDescription = null,
+                        tint = Color.Gray.copy(alpha = 0.35f),
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
 
                 // 使用 Coil 加载图片（无子组合版本）
                 AsyncImage(

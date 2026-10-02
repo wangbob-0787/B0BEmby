@@ -137,7 +137,12 @@ fun MediaDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                // 有剧照时不再垫一层纯黑：背景本来就是深色，垫黑纯属多一次全屏不透明填充
+                //（2026-10-02 电视端 GPU 实测：详情页单帧 GPU 15.9ms，压掉这层后重测）。
+                .then(
+                    if (finalBackdropUrl.isEmpty()) Modifier.background(Color.Black)
+                    else Modifier
+                )
         ) {
             // 1. Backdrop Layer（用 AsyncImage 而非 SubcomposeAsyncImage：这里没有自定义
             // loading/error 槽，子组合纯属白付开销；低端电视上每次都多一次子组合）
@@ -151,10 +156,13 @@ fun MediaDetailScreen(
                 )
             }
 
-            // 2. Gradient Overlay (Scrim)
+            // 2. Gradient Overlay (Scrim)：只铺下面 65%，顶部本来就是全透明
+            //（2026-10-02：整屏渐变每帧都是一次全屏混合，是详情页 GPU 时间偏高的原因之一）
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.65f)
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(

@@ -151,31 +151,33 @@ fun HomeHeroCarousel(
             val item = list[i.coerceIn(0, list.lastIndex)]
             val meta = seriesMeta[item.parentBackdropItemId ?: item.seriesId ?: ""]
             Box(modifier = Modifier.fillMaxSize()) {
-                // 底层：剧集竖版海报，放大裁剪 + 压暗。有些剧集库里没有横版剧照
-                //（实测《深渊无间》的 /Images/Backdrop 返回 404），没有时至少不是纯黑。
-                AsyncImage(
-                    model = primaryUrlOf(item, serverUrl),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(0.55f)
-                )
-                // 上层：横版剧照（有就盖住底层）
+                // 只画一张图（2026-10-02 电视端 GPU 实测：同屏帧时间 30ms、其中 GPU 9ms，
+                // 官方客户端同机 2ms）。原来固定先画竖版海报（55% 透明度）再叠一张横版剧照，
+                // 有剧照时海报被完全盖住，却要多付一次全屏贴图 + 一次混合。
+                // 现在按「横版剧照 → 竖版海报兜底」只取一张；兜底那张仍压暗到 55%，
+                // 观感与原来一致。
                 val backdrop = backdropUrlOf(item, serverUrl)
-                if (backdrop != null) {
+                val heroImg = backdrop ?: primaryUrlOf(item, serverUrl)
+                if (heroImg != null) {
                     AsyncImage(
-                        model = backdrop,
+                        model = heroImg,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = if (backdrop == null) {
+                            Modifier.fillMaxSize().alpha(0.55f)
+                        } else {
+                            Modifier.fillMaxSize()
+                        }
                     )
                 }
 
-                // 底部渐变：保证左下角文字在亮剧照上也读得清
+                // 底部渐变：保证左下角文字在亮剧照上也读得清。
+                // 只铺下面 60%（顶部两段本来就是全透明），少画四成的不透明混合。
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.6f)
                         .background(
                             Brush.verticalGradient(
                                 listOf(
