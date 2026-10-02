@@ -176,22 +176,6 @@ fun MediaDetailScreen(
                     )
             )
 
-            // 2.5 剧集 Logo（官方形态：靠右、离右边留一点距离；父亲 2026-10-02 要求）
-            if (mediaInfo.isSeries) {
-                val logoTag = mediaInfo.imageTags?.get("Logo")
-                if (!logoTag.isNullOrEmpty()) {
-                    AsyncImage(
-                        model = "$serverUrl/emby/Items/${mediaInfo.id}/Images/Logo?maxWidth=800&tag=$logoTag&quality=90",
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 130.dp, end = 72.dp)
-                            .width(430.dp)
-                    )
-                }
-            }
-
             // 3. Main Scrollable Content
             Column(
                 modifier = Modifier
@@ -199,10 +183,12 @@ fun MediaDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 24.dp)
             ) {
-                // Header Section
+                // Header Section：左 = 标题/元数据/简介/按钮；右 = 剧集 Logo（同排，各占一份宽度，
+                // 所以永远不会和左边的文字重叠；父亲 2026-10-02 要求 logo 自适应大小）
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(32.dp)
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
                     // Poster —— 剧集页不画（官方 TV 版剧集页是"全屏剧照 + 左下文字"，没有左侧海报），
                     // 电影页保留（父亲 2026-10-02）
@@ -229,16 +215,13 @@ fun MediaDetailScreen(
                         }
                     }
 
-                    // Info Column —— 剧集页收到屏宽 60%（右边留给剧集 logo），并离上边/左边各留一段
-                    //（父亲 2026-10-02：标题与元数据不顶左上角）
+                    // Info Column —— 剧集页左边与下面「第 1 季」胶囊对齐（同一个左边缘），
+                    // 上边留一段距离；右边让给 logo（父亲 2026-10-02）
                     Column(
                         modifier = Modifier
+                            .weight(1f)
                             .then(
-                                if (mediaInfo.isSeries) Modifier.fillMaxWidth(0.6f)
-                                else Modifier.weight(1f)
-                            )
-                            .then(
-                                if (mediaInfo.isSeries) Modifier.padding(start = 40.dp, top = 72.dp)
+                                if (mediaInfo.isSeries) Modifier.padding(top = 140.dp)
                                 else Modifier
                             ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -381,6 +364,21 @@ fun MediaDetailScreen(
                         )
 
                     }
+
+                    // 右侧剧集 Logo：占剩余宽度、按比例缩放（Fit），不设固定宽度
+                    if (mediaInfo.isSeries) {
+                        val logoTag = mediaInfo.imageTags?.get("Logo")
+                        if (!logoTag.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = "$serverUrl/emby/Items/${mediaInfo.id}/Images/Logo?maxWidth=800&tag=$logoTag&quality=90",
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .weight(0.55f)
+                                    .padding(top = 12.dp, end = 8.dp)
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -406,12 +404,12 @@ fun MediaDetailScreen(
                                 onClick = { selectedSeasonIndex = index },
                                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                                 colors = ClickableSurfaceDefaults.colors(
-                                    containerColor = if (selected) MaterialTheme.colorScheme.secondary.copy(
-                                        alpha = 0.45f
-                                    ) else Color.Transparent,
+                                    // 父亲 2026-10-02：未选中 = 暗灰底白字；当前季/聚焦 = 绿底白字
+                                    containerColor = if (selected) Color(0xFF52B54B)
+                                    else Color(0xFF3A3A3A),
                                     contentColor = Color.White,
-                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                                    focusedContainerColor = Color(0xFF52B54B),
+                                    focusedContentColor = Color.White
                                 ),
                                 modifier = Modifier
                                     .focusRequester(seasonFocusers[index])
