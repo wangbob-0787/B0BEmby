@@ -321,10 +321,15 @@ fun MediaDetailScreen(
                         //   重播 —— 从上次那一集的开头（0 分钟）开始播
                         val playTarget = resume
                             ?: if (mediaInfo.isSeries) episodes?.firstOrNull() else mediaInfo
+                        // 没播过（没有续播点）时，第一个按钮显示「播放」而不是「续播」（父亲 2026-10-02）
+                        val hasProgress = (mediaInfo.userData?.playbackPositionTicks ?: 0L) > 0
+                            || (resume?.userData?.playbackPositionTicks ?: 0L) > 0
+                            || resume != null
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             ActionTile(
                                 icon = Icons.Default.PlayArrow,
-                                label = stringResource(R.string.resume_play),
+                                label = if (hasProgress) stringResource(R.string.resume_play)
+                                else stringResource(R.string.play),
                                 focusRequester = playButtonFocusRequester
                             ) {
                                 playTarget?.let { onNavigateToPlayer(it) }
