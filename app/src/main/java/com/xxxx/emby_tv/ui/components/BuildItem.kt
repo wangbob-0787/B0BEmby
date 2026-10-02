@@ -81,11 +81,11 @@ fun BuildItem(
         repeat(3) { attempt ->
             delay(if (attempt == 0) 120L else 260L)
             if (runCatching { myFocusRequester.requestFocus() }.isSuccess) {
-                DiagLog.w(ctx, "focusAuto", "id=$itemId 第${attempt + 1}次要焦点 成功")
+                DiagLog.w(ctx, "focusAuto", "id=${item.id} 第${attempt + 1}次要焦点 成功")
                 return@LaunchedEffect
             }
         }
-        DiagLog.w(ctx, "focusAuto", "id=$itemId 三次要焦点都失败")
+        DiagLog.w(ctx, "focusAuto", "id=${item.id} 三次要焦点都失败")
     }
     val primaryColor = MaterialTheme.colorScheme.secondary
     val isSeries = item.isSeries
