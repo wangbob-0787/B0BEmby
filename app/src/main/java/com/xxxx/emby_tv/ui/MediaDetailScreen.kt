@@ -193,13 +193,16 @@ fun MediaDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    // 内容不贴容器边（父亲 2026-10-02：之前 0 距离贴边、放大后还被裁）
-                    .padding(horizontal = 40.dp, vertical = 32.dp)
+                    // 外层只留上下；左右不留 —— 行容器左右贴屏幕边，
+                    // 内容靠行内 contentPadding 缩进（父亲 2026-10-02 定的结构）
+                    .padding(vertical = 32.dp)
             ) {
                 // Header Section：左 = 标题/元数据/简介/按钮；右 = 剧集 Logo（同排，各占一份宽度，
                 // 所以永远不会和左边的文字重叠；父亲 2026-10-02 要求 logo 自适应大小）
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 40.dp),
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -343,7 +346,8 @@ fun MediaDetailScreen(
                             }
                             ActionTile(
                                 icon = Icons.Default.Replay,
-                                label = stringResource(R.string.replay)
+                                label = stringResource(R.string.replay),
+                                upFocus = headerFocusRequester
                             ) {
                                 // 抹掉 userData → 播放页拿不到续播位置，即从 0 分钟开始
                                 playTarget?.let { onNavigateToPlayer(it.copy(userData = null)) }
@@ -416,7 +420,9 @@ fun MediaDetailScreen(
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         // 上下留出焦点放大（1.03x + 白描边）需要的余量，别被容器裁掉
-                        contentPadding = PaddingValues(top = 14.dp, bottom = 22.dp)
+                        contentPadding = PaddingValues(
+                            start = 40.dp, end = 40.dp, top = 14.dp, bottom = 22.dp
+                        )
                     ) {
                         itemsIndexed(seasonList) { index, season ->
                             val selected = index == selectedSeasonIndex
@@ -424,9 +430,8 @@ fun MediaDetailScreen(
                                 onClick = { selectedSeasonIndex = index },
                                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
                                 colors = ClickableSurfaceDefaults.colors(
-                                    // 父亲 2026-10-02：未选中 = 暗灰底白字；当前季/聚焦 = 绿底白字
-                                    containerColor = if (selected) Color(0xFF52B54B)
-                                    else Color(0xFF3A3A3A),
+                                    // 父亲 2026-10-02：**只有聚焦才是绿底**；当前季不聚焦时也是暗灰
+                                    containerColor = Color(0xFF3A3A3A),
                                     contentColor = Color.White,
                                     focusedContainerColor = Color(0xFF52B54B),
                                     focusedContentColor = Color.White
@@ -436,7 +441,8 @@ fun MediaDetailScreen(
                                     .height(DetailButtonHeight)
                                     .focusRequester(seasonFocusers[index])
                                     .focusProperties {
-                                        // 焦点在"当前选中的那一季"上时，下键直接进集列表第一集
+                                        // 上键回「续播」按钮；当前季按下键直接进集列表第一集
+                                        up = playButtonFocusRequester
                                         if (index == selectedSeasonIndex) down = firstEpisodeFocus
                                     }
                             ) {
@@ -463,7 +469,9 @@ fun MediaDetailScreen(
                         // （缩略图 + 第一行剧名 + 第二行 "S1:E1 集名"，由 BuildItem(isShowImg17) 出）
                         // 季的切换仍是我们的胶囊行（父亲 2026-10-02 定：季用自己的方式，集用官方方式）
                         LazyRow(
-                            contentPadding = PaddingValues(top = 16.dp, bottom = 26.dp),
+                            contentPadding = PaddingValues(
+                                start = 40.dp, end = 40.dp, top = 16.dp, bottom = 26.dp
+                            ),
                             horizontalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
                             itemsIndexed(
@@ -480,6 +488,7 @@ fun MediaDetailScreen(
                                     serverUrl = serverUrl,
                                     onItemClick = { onNavigateToPlayer(ep) },
                                     focusRequester = if (idx == 0) firstEpisodeFocus else null,
+                                    upFocus = seasonFocusers[selectedSeasonIndex],
                                     // 每集自己的静帧（默认回落会取到父级剧照 → 每张一样）
                                     imageUrlOverride = Utils.getEpisodeStillUrl(serverUrl, ep)
                                 )
@@ -527,7 +536,7 @@ fun MediaDetailScreen(
                                 fontWeight = FontWeight.Bold
                             ),
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            modifier = Modifier.padding(start = 40.dp, bottom = 16.dp)
                         )
                         PersonRow(people = castPeople, serverUrl = serverUrl)
                         Spacer(modifier = Modifier.height(32.dp))
@@ -539,7 +548,7 @@ fun MediaDetailScreen(
                                 fontWeight = FontWeight.Bold
                             ),
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            modifier = Modifier.padding(start = 40.dp, bottom = 16.dp)
                         )
                         PersonRow(people = crewPeople, serverUrl = serverUrl)
                         Spacer(modifier = Modifier.height(32.dp))
@@ -766,7 +775,7 @@ private fun PersonRow(people: List<PersonInfo>, serverUrl: String) {
     val maxAspectRatio = 0.66f
     val imgWidth = (160f * maxAspectRatio).dp
     LazyRow(
-        contentPadding = PaddingValues(24.dp),
+        contentPadding = PaddingValues(start = 40.dp, end = 40.dp, top = 16.dp, bottom = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         itemsIndexed(

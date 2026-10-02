@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.delay
@@ -76,6 +77,8 @@ fun BuildItem(
     focusRequester: FocusRequester? = null,
     // 宿主直接给图 URL（详情页集卡要用"本集静帧"，不能走默认的父级剧照回落）
     imageUrlOverride: String? = null,
+    // 上键去向（详情页集卡按上键要回到季胶囊）
+    upFocus: FocusRequester? = null,
 ) {
     val myFocusRequester = remember { FocusRequester() }
     val focusAnchor = focusRequester ?: myFocusRequester
@@ -138,6 +141,7 @@ fun BuildItem(
             // 记住"最后聚焦的条目"：从详情页返回时用它把焦点送回来（父亲 2026-10-02）
             .onFocusChanged { if (it.isFocused && rememberFocus) FocusMemory.lastItemId = itemId }
             .focusRequester(focusAnchor)
+            .focusProperties { if (upFocus != null) up = upFocus }
             .onKeyEvent { keyEvent ->
                 if (onMenuClick != null && keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {
