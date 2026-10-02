@@ -278,7 +278,10 @@ fun HomeScreen(
                                 navController.navigate("library/$id?libraryName=$title&type=$type")
                             }
                         },
-                        onMenuPressed = { showMenu = true }
+                        onMenuPressed = { showMenu = true },
+                        // 「电视直播」图块是网络返回后才插到第一位；LazyRow 默认保持"原第一张"的位置，
+                        // 新图块会被挤到屏幕左边外（父亲 2026-10-02 报"图标跑到左侧外面"）→ 出现后滚回行首
+                        scrollToStartSignal = liveTvView?.id
                     )
                 }
 
@@ -359,6 +362,8 @@ private fun MediaSection(
     onMenuPressed: () -> Unit,
     // 从详情页返回时要恢复焦点到的那一条（父亲 2026-10-02）
     focusTarget: String? = null,
+    // 变成非空时把这一行滚回行首（用于"首项是异步插入"的场景）
+    scrollToStartSignal: Any? = null,
 ) {
     val maxLength = when {
         isMyLibrary -> 260.dp   // P1：库入口按官方做成宽银幕大图块
@@ -395,6 +400,9 @@ private fun MediaSection(
         } else {
             // 要恢复焦点的那条可能不在首屏，先横向滚过去，再让卡片自己 requestFocus
             val rowState = rememberLazyListState()
+            LaunchedEffect(scrollToStartSignal) {
+                if (scrollToStartSignal != null) runCatching { rowState.scrollToItem(0) }
+            }
             LaunchedEffect(focusTarget) {
                 val idx = items.indexOfFirst { it.id == focusTarget }
                 if (idx >= 0) rowState.scrollToItem(idx)
