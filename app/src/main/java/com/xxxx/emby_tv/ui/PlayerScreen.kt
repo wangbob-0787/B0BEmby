@@ -1595,6 +1595,19 @@ fun PlayerScreen(
     val focusRequester = remember { FocusRequester() }
 
     // UI 结构 - 最外层纯黑背景
+    // 左上角片名 Logo 的地址：剧集/单集用所属剧集的 ClearLogo，电影用条目自己的 Logo。
+    // 父亲 2026-10-02：这个 logo 要**一直显示**（原来只在按 ↓ 唤出控制面板时才画）。
+    val playerLogoUrl = if (serverUrl.isEmpty()) null else {
+        val sid = mediaInfo.seriesId
+        val ownLogoTag = mediaInfo.imageTags?.get("Logo")
+        when {
+            !sid.isNullOrEmpty() -> "$serverUrl/emby/Items/$sid/Images/Logo?maxHeight=200"
+            !ownLogoTag.isNullOrEmpty() ->
+                "$serverUrl/emby/Items/${mediaInfo.id}/Images/Logo?maxHeight=200&tag=$ownLogoTag"
+            else -> null
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1850,6 +1863,19 @@ fun PlayerScreen(
             }
 
 
+            // 1.85 左上角片名 Logo：常显（不随控制面板显隐；父亲 2026-10-02）
+            playerLogoUrl?.let { url ->
+                coil3.compose.AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 48.dp, top = 30.dp)
+                        .width(140.dp)
+                )
+            }
+
             // 1.9 左右键快进快退唤出的进度条(未按 ↓ 时不展开整条控制条,不抢焦点)
             if (seekHud && !showPanel && activeItem == null && !inMoreMenu) {
                 SeekHud(
@@ -1901,21 +1927,8 @@ fun PlayerScreen(
                             }
                         }
                     },
-                    // 左上角片名 Logo：
-                    //   剧集/单集 → 用所属剧集的 ClearLogo（单集本身没有 Logo，实测 404）
-                    //   电影等   → 用条目自己的 Logo
-                    //（原来只处理"有 seriesId"的情况 → 电影播放页没有 logo，父亲 2026-10-02 报"logo 被隐藏"）
-                    logoUrl = if (serverUrl.isEmpty()) null else {
-                        val sid = mediaInfo.seriesId
-                        val ownLogoTag = mediaInfo.imageTags?.get("Logo")
-                        when {
-                            !sid.isNullOrEmpty() ->
-                                "$serverUrl/emby/Items/$sid/Images/Logo?maxHeight=200"
-                            !ownLogoTag.isNullOrEmpty() ->
-                                "$serverUrl/emby/Items/${mediaInfo.id}/Images/Logo?maxHeight=200&tag=$ownLogoTag"
-                            else -> null
-                        }
-                    },
+                    // 左上角片名 Logo 已改为常显图层（见上面的 1.85），这里传空避免重复画
+                    logoUrl = null,
                     position = position,
                     duration = duration,
                     buffered = buffered,
