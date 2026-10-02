@@ -124,28 +124,21 @@ fun BuildItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(aspectRatio),
+                    .aspectRatio(aspectRatio)
+                    .background(Color(0xFF2D2D2D), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
 
-                // 占位只在「这一条根本没有海报」时画。
-                // 2026-10-02 电视端 GPU 实测：原来每张卡都垫一层深灰圆角底 + 一个矢量图标，
-                // 海报加载完又被盖住 —— 同屏十来张卡就等于多画一整屏的不透明填充。
-                // 现在有海报的卡不画占位（加载中直接露底色，与官方客户端一致）。
-                // （子组合 + 转圈动画已在 2026-09-27 移除：那是当时 90~150ms 帧时间的主因）
-                if (imageUrl.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFF2D2D2D), RoundedCornerShape(8.dp))
-                    )
-                    Icon(
-                        imageVector = Icons.Default.Movie,
-                        contentDescription = null,
-                        tint = Color.Gray.copy(alpha = 0.35f),
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
+                // 静态占位垫在底层，海报加载完盖住它。
+                // 2026-10-02 曾试过「只在没有海报时画占位」，结果加载中的卡片会空着（父亲看到空卡），
+                // 已改回：release 包 GPU 只占 5ms/16.7ms 预算，这点填充付得起，观感优先。
+                // （子组合 + 转圈动画在 2026-09-27 移除，那是当时 90~150ms 帧时间的主因）
+                Icon(
+                    imageVector = Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = Color.Gray.copy(alpha = 0.35f),
+                    modifier = Modifier.size(40.dp)
+                )
 
                 // 使用 Coil 加载图片（无子组合版本）
                 AsyncImage(
