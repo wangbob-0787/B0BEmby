@@ -371,8 +371,9 @@ fun MediaDetailScreen(
                                 model = "$serverUrl/emby/Items/${mediaInfo.id}/Images/Logo?maxWidth=800&tag=$logoTag&quality=90",
                                 contentDescription = null,
                                 contentScale = ContentScale.Fit,
+                                // 父亲 2026-10-02：固定宽度、等比缩放（小图放大、大图缩小），高度自动
                                 modifier = Modifier
-                                    .weight(0.55f)
+                                    .width(400.dp)
                                     .padding(top = 12.dp, end = 8.dp)
                             )
                         }
