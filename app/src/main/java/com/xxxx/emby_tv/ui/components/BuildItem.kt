@@ -72,15 +72,18 @@ fun BuildItem(
     // 是否把"最后聚焦的条目"记进 FocusMemory。只给首页的行开：
     // 播放页选集菜单/搜索页也有卡片，它们写了会污染返回首页的焦点恢复目标。
     rememberFocus: Boolean = false,
+    // 宿主指定的焦点锚点（详情页"季 → 下键进第一集"要指到第一张集卡上）
+    focusRequester: FocusRequester? = null,
 ) {
     val myFocusRequester = remember { FocusRequester() }
+    val focusAnchor = focusRequester ?: myFocusRequester
     val ctx = LocalContext.current
-    LaunchedEffect(autoFocus) {
+    LaunchedEffect(autoFocus, focusAnchor) {
         if (!autoFocus) return@LaunchedEffect
         // 等这一帧布局完再要焦点，失败就重试（列表还在铺的时候 requestFocus 会被忽略）
         repeat(3) { attempt ->
             delay(if (attempt == 0) 120L else 260L)
-            if (runCatching { myFocusRequester.requestFocus() }.isSuccess) {
+            if (runCatching { focusAnchor.requestFocus() }.isSuccess) {
                 DiagLog.w(ctx, "focusAuto", "id=${item.id} 第${attempt + 1}次要焦点 成功")
                 return@LaunchedEffect
             }
@@ -131,7 +134,7 @@ fun BuildItem(
             .wrapContentHeight()
             // 记住"最后聚焦的条目"：从详情页返回时用它把焦点送回来（父亲 2026-10-02）
             .onFocusChanged { if (it.isFocused && rememberFocus) FocusMemory.lastItemId = itemId }
-            .focusRequester(myFocusRequester)
+            .focusRequester(focusAnchor)
             .onKeyEvent { keyEvent ->
                 if (onMenuClick != null && keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {

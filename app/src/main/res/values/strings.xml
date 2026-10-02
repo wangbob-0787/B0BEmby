@@ -26,6 +26,7 @@
     <string name="end">End</string>
     <string name="status">Status</string>
     <string name="tagline">Tagline</string>
+    <string name="crew">Crew</string>
     <string name="cast">Cast</string>
     <string name="provider_ids">Provider IDs</string>
     <string name="path">Path</string>

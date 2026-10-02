@@ -187,25 +187,28 @@ fun MediaDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(32.dp)
                 ) {
-                    // Poster
-                    Box(
-                        modifier = Modifier
-                            .width(180.dp)
-                            .aspectRatio(
-                                mediaInfo.primaryImageAspectRatio?.toFloat()
-                                    ?: 0.67f
-                            )
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        val imageUrl = Utils.getImageUrl(serverUrl, mediaInfo, false)
-                        if (imageUrl.isNotEmpty()) {
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = mediaInfo.name,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
+                    // Poster —— 剧集页不画（官方 TV 版剧集页是"全屏剧照 + 左下文字"，没有左侧海报），
+                    // 电影页保留（父亲 2026-10-02）
+                    if (!mediaInfo.isSeries) {
+                        Box(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .aspectRatio(
+                                    mediaInfo.primaryImageAspectRatio?.toFloat()
+                                        ?: 0.67f
+                                )
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            val imageUrl = Utils.getImageUrl(serverUrl, mediaInfo, false)
+                            if (imageUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = mediaInfo.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
                     }
 
@@ -222,28 +225,79 @@ fun MediaDetailScreen(
                             )
                         )
 
-                        // Meta Pills Row
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val year = mediaInfo.productionYear?.toString()
-                            if (!year.isNullOrEmpty()) MetaPill(year)
-
-                            val runtimeTicks = mediaInfo.runTimeTicks
-                            if (runtimeTicks != null) {
-                                val runtime = Utils.formatRuntimeFromTicks(runtimeTicks)
-                                if (runtime.isNotEmpty()) MetaPill(runtime)
+                        // 元数据
+                        // 剧集页按官方 TV 版做成两行文字：
+                        //   第一行 ★评分  年份-现在  于 制作方  分级
+                        //   第二行 类型 · N 播出季
+                        // 电影页保留原来的胶囊标签（父亲 2026-10-02：季的切换用我们自己的方式）
+                        if (mediaInfo.isSeries) {
+                            val seriesYearText = when {
+                                mediaInfo.productionYear == null -> null
+                                mediaInfo.status.equals("Continuing", ignoreCase = true) ->
+                                    "${mediaInfo.productionYear} - 现在"
+                                else -> mediaInfo.productionYear.toString()
                             }
+                            val studioName = mediaInfo.seriesStudio
+                                ?: mediaInfo.studios?.firstOrNull()?.name
+                            val metaLine1 = listOfNotNull(
+                                mediaInfo.communityRating?.let { "★$it" },
+                                seriesYearText,
+                                studioName?.takeIf { it.isNotBlank() }?.let { "于 $it" },
+                                mediaInfo.officialRating?.takeIf { it.isNotBlank() }
+                            ).joinToString("    ")
+                            val seasonCount = seasons?.size ?: 0
+                            val metaLine2 = listOfNotNull(
+                                mediaInfo.genres?.firstOrNull()?.takeIf { it.isNotBlank() },
+                                if (seasonCount > 0) "$seasonCount 播出季" else null
+                            ).joinToString(" · ")
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (metaLine1.isNotBlank()) Text(
+                                    text = metaLine1,
+                                    color = Color.White.copy(alpha = 0.92f),
+                                    fontSize = 15.sp
+                                )
+                                if (metaLine2.isNotBlank()) Text(
+                                    text = metaLine2,
+                                    color = Color.White.copy(alpha = 0.72f),
+                                    fontSize = 15.sp
+                                )
+                            }
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val year = mediaInfo.productionYear?.toString()
+                                if (!year.isNullOrEmpty()) MetaPill(year)
 
-                            val officialRating = mediaInfo.officialRating
-                            if (!officialRating.isNullOrEmpty()) MetaPill(officialRating)
+                                val runtimeTicks = mediaInfo.runTimeTicks
+                                if (runtimeTicks != null) {
+                                    val runtime = Utils.formatRuntimeFromTicks(runtimeTicks)
+                                    if (runtime.isNotEmpty()) MetaPill(runtime)
+                                }
 
-                            val communityRating = mediaInfo.communityRating?.toString()
-                            if (!communityRating.isNullOrEmpty()) MetaPill("★ $communityRating")
+                                val officialRating = mediaInfo.officialRating
+                                if (!officialRating.isNullOrEmpty()) MetaPill(officialRating)
 
-                            val type = mediaInfo.type
-                            if (!type.isNullOrEmpty()) MetaPill(type)
+                                val communityRating = mediaInfo.communityRating?.toString()
+                                if (!communityRating.isNullOrEmpty()) MetaPill("★ $communityRating")
+
+                                val type = mediaInfo.type
+                                if (!type.isNullOrEmpty()) MetaPill(type)
+                            }
+                        }
+
+                        // Overview —— 官方顺序是「标题 → 元数据 → 简介 → 按钮」（父亲 2026-10-02）
+                        mediaInfo.overview?.let { overview ->
+                            Text(
+                                text = overview,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    lineHeight = TextUnit(1.5f, TextUnitType.Em)
+                                ),
+                                maxLines = 5,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
                         // 动作按钮组（官方形态：圆角方块图标 + 下方小字标签）
@@ -312,28 +366,10 @@ fun MediaDetailScreen(
                             color = MaterialTheme.colorScheme.onSecondary
                         )
 
-                        // Overview
-                        mediaInfo.overview?.let { overview ->
-                            Text(
-                                text = overview,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    color = Color.White.copy(alpha = 0.9f),
-                                    lineHeight = TextUnit(
-                                        1.5f,
-                                        TextUnitType.Em
-                                    )
-                                ),
-                                maxLines = 6,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-
-                // People List (Below Episodes)
-                mediaInfo.people?.takeIf { it.isNotEmpty() }?.let { people ->
 
                 // 季选择器 + 只渲染当前季的集（2026-09-27 按官方形态重做）
                 // 原实现把所有季一次铺开：想看第 5 季要从第 1 季第 1 集一路按 ↓（上百次）
@@ -383,16 +419,28 @@ fun MediaDetailScreen(
                     val seasonEpisodes =
                         episodes?.filter { it.seasonName == currentSeasonName } ?: emptyList()
                     if (seasonEpisodes.isNotEmpty()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            seasonEpisodes.forEachIndexed { idx, ep ->
-                                EpisodeRow(
-                                    index = idx + 1,
-                                    episode = ep,
+                        // 集列表：官方形态 —— 横向滚动的 16:9 集卡
+                        // （缩略图 + 第一行剧名 + 第二行 "S1:E1 集名"，由 BuildItem(isShowImg17) 出）
+                        // 季的切换仍是我们的胶囊行（父亲 2026-10-02 定：季用自己的方式，集用官方方式）
+                        LazyRow(
+                            contentPadding = PaddingValues(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            itemsIndexed(
+                                seasonEpisodes,
+                                key = { _, ep -> ep.id ?: ep.hashCode() }
+                            ) { idx, ep ->
+                                BuildItem(
+                                    modifier = Modifier,
+                                    item = ep,
+                                    aspectRatio = 16f / 9f,
+                                    imgWidth = 240.dp,
+                                    isShowImg17 = true,
+                                    isMyLibrary = false,
                                     serverUrl = serverUrl,
+                                    onItemClick = { onNavigateToPlayer(ep) },
                                     focusRequester = if (idx == 0) firstEpisodeFocus else null
-                                ) {
-                                    onNavigateToPlayer(ep)
-                                }
+                                )
                             }
                         }
                     } else {
@@ -417,7 +465,20 @@ fun MediaDetailScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
 
-                    if (people.isNotEmpty()) {
+                // People List（Cast / Crew）—— 只在有人员数据时渲染这几行
+                mediaInfo.people?.takeIf { it.isNotEmpty() }?.let { people ->
+                    // 演职人员：官方分两行 —— Cast（演员，卡下第三行是角色名）/ Crew（导演编剧等，第三行是职务）
+                    val castPeople = people.filter {
+                        it.type.equals("Actor", ignoreCase = true) ||
+                            it.type.equals("GuestStar", ignoreCase = true)
+                    }
+                    val crewPeople = people.filter {
+                        val t = it.type ?: ""
+                        t.equals("Director", true) || t.equals("Writer", true) ||
+                            t.equals("Producer", true) || t.equals("Composer", true)
+                    }
+
+                    if (castPeople.isNotEmpty()) {
                         Text(
                             text = stringResource(R.string.cast),
                             style = MaterialTheme.typography.titleLarge.copy(
@@ -426,32 +487,19 @@ fun MediaDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
-
-                        val castMaxLength = 160.dp
-                        val maxAspectRatio = 0.66f
-
-                        val castImgWidth = if (maxAspectRatio >= 1f) {
-                            castMaxLength
-                        } else {
-                            (castMaxLength.value * maxAspectRatio).dp
-                        }
-
-                        LazyRow(
-                            contentPadding = PaddingValues(24.dp),
-                            horizontalArrangement = Arrangement.spacedBy(22.dp),
-                        ) {
-                            itemsIndexed(
-                people,
-                key = { index, person -> "${person.id ?: person.hashCode()}-$index" }
-            ) { _, person ->
-                                PersonCard(
-                                    person = person,
-                                    imgWidth = castImgWidth,
-                                    aspectRatio = maxAspectRatio,
-                                    serverUrl = serverUrl
-                                )
-                            }
-                        }
+                        PersonRow(people = castPeople, serverUrl = serverUrl)
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
+                    if (crewPeople.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.crew),
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        PersonRow(people = crewPeople, serverUrl = serverUrl)
                         Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
@@ -662,6 +710,32 @@ fun PersonCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp)
+            )
+        }
+    }
+}
+
+/**
+ * 一行人物卡（Cast / Crew 共用）。官方形态：竖版头像 + 姓名 + 角色名或职务。
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PersonRow(people: List<PersonInfo>, serverUrl: String) {
+    val maxAspectRatio = 0.66f
+    val imgWidth = (160f * maxAspectRatio).dp
+    LazyRow(
+        contentPadding = PaddingValues(24.dp),
+        horizontalArrangement = Arrangement.spacedBy(22.dp),
+    ) {
+        itemsIndexed(
+            people,
+            key = { index, person -> "${person.id ?: person.hashCode()}-$index" }
+        ) { _, person ->
+            PersonCard(
+                person = person,
+                imgWidth = imgWidth,
+                aspectRatio = maxAspectRatio,
+                serverUrl = serverUrl
             )
         }
     }

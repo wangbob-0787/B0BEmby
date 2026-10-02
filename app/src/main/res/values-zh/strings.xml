@@ -27,6 +27,7 @@
     <string name="end">结束</string>
     <string name="status">状态</string>
     <string name="tagline">标语</string>
+    <string name="crew">导演编剧</string>
     <string name="cast">演员</string>
     <string name="provider_ids">提供者 ID</string>
     <string name="path">路径</string>
