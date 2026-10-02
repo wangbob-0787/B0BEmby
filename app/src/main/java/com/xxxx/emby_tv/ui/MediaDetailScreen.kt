@@ -181,19 +181,13 @@ fun MediaDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 24.dp)
+                    // 内容不贴容器边（父亲 2026-10-02：之前 0 距离贴边、放大后还被裁）
+                    .padding(horizontal = 40.dp, vertical = 32.dp)
             ) {
                 // Header Section：左 = 标题/元数据/简介/按钮；右 = 剧集 Logo（同排，各占一份宽度，
                 // 所以永远不会和左边的文字重叠；父亲 2026-10-02 要求 logo 自适应大小）
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        // 整块作为一个焦点目标（不逐项聚焦文字）；有焦点时不画任何高亮，
-                        // 只是让"进入页面停在顶部、页面不滚动"成立（父亲 2026-10-02）
-                        .focusRequester(headerFocusRequester)
-                        // 顶部块按下键要先去「续播」按钮（不能跳到下面的季胶囊；父亲 2026-10-02）
-                        .focusProperties { down = playButtonFocusRequester }
-                        .focusable(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -233,6 +227,15 @@ fun MediaDetailScreen(
                             ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // 隐形焦点锚点（1dp）：进页面时焦点停这儿 —— 页面不滚动、不落在任何文字上；
+                        // 按 ↓ 自然进「续播」按钮，按 ↑ 从按钮回到这里（父亲 2026-10-02）
+                        Box(
+                            modifier = Modifier
+                                .size(1.dp)
+                                .focusRequester(headerFocusRequester)
+                                .focusable()
+                        )
+
                         Text(
                             text = mediaInfo.name ?: "",
                             style = MaterialTheme.typography.displaySmall.copy(
@@ -408,7 +411,8 @@ fun MediaDetailScreen(
 
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 12.dp)
+                        // 上下留出焦点放大（1.03x + 白描边）需要的余量，别被容器裁掉
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
                     ) {
                         itemsIndexed(seasonList) { index, season ->
                             val selected = index == selectedSeasonIndex
@@ -439,7 +443,7 @@ fun MediaDetailScreen(
                                     Text(
                                         text = season.name ?: "",
                                         color = Color.White,
-                                        fontSize = 13.sp,
+                                        fontSize = 15.sp,
                                         maxLines = 1
                                     )
                                 }
@@ -455,7 +459,7 @@ fun MediaDetailScreen(
                         // （缩略图 + 第一行剧名 + 第二行 "S1:E1 集名"，由 BuildItem(isShowImg17) 出）
                         // 季的切换仍是我们的胶囊行（父亲 2026-10-02 定：季用自己的方式，集用官方方式）
                         LazyRow(
-                            contentPadding = PaddingValues(bottom = 8.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
                             itemsIndexed(
@@ -863,22 +867,22 @@ private fun ActionTile(
                 imageVector = icon,
                 contentDescription = label,
                 tint = Color.White,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = label,
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = 15.sp,
                 maxLines = 1
             )
         }
     }
 }
 
-/** 详情页按钮统一尺寸（动作按钮与季胶囊一致；父亲 2026-10-02：再缩小一半 → 96×36） */
-private val DetailButtonWidth = 96.dp
-private val DetailButtonHeight = 36.dp
+/** 详情页按钮统一尺寸（动作按钮与季胶囊一致；字体与元数据同为 15sp，图标 20dp） */
+private val DetailButtonWidth = 108.dp
+private val DetailButtonHeight = 44.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
