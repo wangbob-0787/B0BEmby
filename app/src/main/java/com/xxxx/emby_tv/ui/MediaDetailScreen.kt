@@ -78,6 +78,9 @@ fun MediaDetailScreen(
     val seasonList = seasons ?: emptyList()
     val seasonFocusers = remember(seasonList.size) { List(seasonList.size) { FocusRequester() } }
     var selectedSeasonIndex by remember(seasonList.size) { mutableIntStateOf(0) }
+    // 每行"用户上次停在哪一项"（父亲 2026-10-02：上下轮动要按用户选的焦点落回）
+    var lastPillIndex by remember(seasonList.size) { mutableIntStateOf(0) }
+    var lastEpisodeIndex by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(seriesId) {
         detailViewModel.loadMediaInfo(seriesId)
@@ -181,18 +184,6 @@ fun MediaDetailScreen(
                     )
             )
 
-            // 2.8 背景层的焦点锚点：进页面时焦点停在这里（= 海报/背景获得焦点），不在任何文字上、
-            //     页面也不滚动；按下键**显式**去「续播」按钮（1dp 大小会让方向键找不到落点 → 页面不滚）
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .height(240.dp)
-                    .focusRequester(headerFocusRequester)
-                    .focusProperties { down = playButtonFocusRequester }
-                    .focusable()
-            )
-
             // 3. Main Scrollable Content
             Column(
                 modifier = Modifier
@@ -202,6 +193,17 @@ fun MediaDetailScreen(
                     // 内容靠行内 contentPadding 缩进（父亲 2026-10-02 定的结构）
                     .padding(vertical = 32.dp)
             ) {
+                // 顶部焦点锚点：必须放在**滚动内容里**，这样从下面的按钮按 ↑ 回到它时页面才会滚回顶部
+                //（放在滚动区外面的话只能"丢掉焦点"，页面不动；父亲 2026-10-02 实测）
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .focusRequester(headerFocusRequester)
+                        .focusProperties { down = playButtonFocusRequester }
+                        .focusable()
+                )
+
                 // Header Section：左 = 标题/元数据/简介/按钮；右 = 剧集 Logo（同排，各占一份宽度，
                 // 所以永远不会和左边的文字重叠；父亲 2026-10-02 要求 logo 自适应大小）
                 Row(
@@ -346,7 +348,7 @@ fun MediaDetailScreen(
                                 else stringResource(R.string.play),
                                 focusRequester = playButtonFocusRequester,
                                 upFocus = headerFocusRequester,
-                                downFocus = seasonFocusers.getOrNull(selectedSeasonIndex)
+                                downFocus = seasonFocusers.getOrNull(lastPillIndex)
                             ) {
                                 playTarget?.let { onNavigateToPlayer(it) }
                             }
@@ -354,7 +356,7 @@ fun MediaDetailScreen(
                                 icon = Icons.Default.Replay,
                                 label = stringResource(R.string.replay),
                                 upFocus = headerFocusRequester,
-                                downFocus = seasonFocusers.getOrNull(selectedSeasonIndex)
+                                downFocus = seasonFocusers.getOrNull(lastPillIndex)
                             ) {
                                 // 抹掉 userData → 播放页拿不到续播位置，即从 0 分钟开始
                                 playTarget?.let { onNavigateToPlayer(it.copy(userData = null)) }
@@ -418,6 +420,13 @@ fun MediaDetailScreen(
                 if (mediaInfo.isSeries && !seasons.isNullOrEmpty()) {
                     val firstEpisodeFocus = remember { FocusRequester() }
                     val noEpisodesText = stringResource(R.string.no_episodes_found)
+                    // 当前季的集（季胶囊的"下键去向"和集行都要用，所以先算出来）
+                    val currentSeasonName = seasonList.getOrNull(selectedSeasonIndex)?.name ?: ""
+                    val seasonEpisodes =
+                        episodes?.filter { it.seasonName == currentSeasonName } ?: emptyList()
+                    val episodeFocusers = remember(seasonEpisodes.size) {
+                        List(seasonEpisodes.size) { FocusRequester() }
+                    }
 
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -442,10 +451,13 @@ fun MediaDetailScreen(
                                     .width(DetailButtonWidth)
                                     .height(DetailButtonHeight)
                                     .focusRequester(seasonFocusers[index])
+                                    .onFocusChanged { if (it.isFocused) lastPillIndex = index }
                                     .focusProperties {
-                                        // 上键回「续播」按钮；当前季按下键直接进集列表第一集
+                                        // 上键回「续播」按钮；下键进集行"上次停的那一集"（默认第一集）
                                         up = playButtonFocusRequester
-                                        if (index == selectedSeasonIndex) down = firstEpisodeFocus
+                                        down = episodeFocusers.getOrNull(
+                                            lastEpisodeIndex.coerceIn(0, (seasonEpisodes.size - 1).coerceAtLeast(0))
+                                        ) ?: firstEpisodeFocus
                                     }
                             ) {
                                 Box(
@@ -463,9 +475,6 @@ fun MediaDetailScreen(
                         }
                     }
 
-                    val currentSeasonName = seasonList.getOrNull(selectedSeasonIndex)?.name ?: ""
-                    val seasonEpisodes =
-                        episodes?.filter { it.seasonName == currentSeasonName } ?: emptyList()
                     if (seasonEpisodes.isNotEmpty()) {
                         // 集列表：官方形态 —— 横向滚动的 16:9 集卡
                         // （缩略图 + 第一行剧名 + 第二行 "S1:E1 集名"，由 BuildItem(isShowImg17) 出）
@@ -489,8 +498,9 @@ fun MediaDetailScreen(
                                     isMyLibrary = false,
                                     serverUrl = serverUrl,
                                     onItemClick = { onNavigateToPlayer(ep) },
-                                    focusRequester = if (idx == 0) firstEpisodeFocus else null,
-                                    upFocus = seasonFocusers[selectedSeasonIndex],
+                                    focusRequester = episodeFocusers.getOrNull(idx) ?: firstEpisodeFocus,
+                                    upFocus = seasonFocusers.getOrNull(lastPillIndex),
+                                    onFocused = { lastEpisodeIndex = idx },
                                     // 每集自己的静帧（默认回落会取到父级剧照 → 每张一样）
                                     imageUrlOverride = Utils.getEpisodeStillUrl(serverUrl, ep)
                                 )

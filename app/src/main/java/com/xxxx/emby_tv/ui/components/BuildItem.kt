@@ -79,6 +79,8 @@ fun BuildItem(
     imageUrlOverride: String? = null,
     // 上键去向（详情页集卡按上键要回到季胶囊）
     upFocus: FocusRequester? = null,
+    // 宿主想知道"这一张什么时候拿到焦点"（详情页用它记住用户停在哪一集）
+    onFocused: (() -> Unit)? = null,
 ) {
     val myFocusRequester = remember { FocusRequester() }
     val focusAnchor = focusRequester ?: myFocusRequester
@@ -139,7 +141,12 @@ fun BuildItem(
             // .clickable(interactionSource = null, onClick = onItemClick)
             .wrapContentHeight()
             // 记住"最后聚焦的条目"：从详情页返回时用它把焦点送回来（父亲 2026-10-02）
-            .onFocusChanged { if (it.isFocused && rememberFocus) FocusMemory.lastItemId = itemId }
+            .onFocusChanged {
+                if (it.isFocused) {
+                    if (rememberFocus) FocusMemory.lastItemId = itemId
+                    onFocused?.invoke()
+                }
+            }
             .focusRequester(focusAnchor)
             .focusProperties { if (upFocus != null) up = upFocus }
             .onKeyEvent { keyEvent ->
