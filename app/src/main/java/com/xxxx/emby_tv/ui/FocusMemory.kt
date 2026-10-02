@@ -13,6 +13,9 @@ package com.xxxx.emby_tv.ui
 object FocusMemory {
     var lastItemId: String? = null
 
+    /** 看一眼但不消费（组合期判断"这次是不是要恢复焦点"） */
+    fun peek(): String? = lastItemId
+
     /** 取一次就清空；没记住过返回 null */
     fun consume(): String? {
         val v = lastItemId

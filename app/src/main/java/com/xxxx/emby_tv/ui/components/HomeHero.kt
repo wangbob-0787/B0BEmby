@@ -85,6 +85,8 @@ fun HomeHeroCarousel(
     // 首次进首页要不要把焦点给大图。从详情页返回时由首页传 false —— 焦点要送回原来那张卡
     //（父亲 2026-10-02：「回到上一页面时焦点要回到之前的焦点」）
     requestInitialFocus: Boolean = true,
+    // 焦点兜底信号：首页"要恢复的条目找不到"时 +1，让大片头把焦点接过去（免得整页没人聚焦）
+    focusSignal: Int = 0,
 ) {
     // 顶部大片头轮播（父亲 2026-09-30 定）
     //
@@ -109,6 +111,13 @@ fun HomeHeroCarousel(
         delay(150)
         runCatching { heroFocus.requestFocus() }
         focusRequested = true
+    }
+
+    // 兜底：要恢复的卡片没找到时，把焦点接过来（首次组合时 focusSignal=0，不触发）
+    LaunchedEffect(focusSignal) {
+        if (focusSignal <= 0) return@LaunchedEffect
+        delay(80)
+        runCatching { heroFocus.requestFocus() }
     }
 
     // 自动切换：5 秒一次；焦点移到下面内容时暂停

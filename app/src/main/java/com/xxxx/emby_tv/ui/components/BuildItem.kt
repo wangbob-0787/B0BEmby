@@ -37,6 +37,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.delay
 import com.xxxx.emby_tv.ui.FocusMemory
+import com.xxxx.emby_tv.util.DiagLog
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Icon
@@ -73,11 +74,18 @@ fun BuildItem(
     rememberFocus: Boolean = false,
 ) {
     val myFocusRequester = remember { FocusRequester() }
+    val ctx = LocalContext.current
     LaunchedEffect(autoFocus) {
-        if (autoFocus) {
-            delay(120)   // 等这一帧布局完，否则 requestFocus 会被忽略
-            runCatching { myFocusRequester.requestFocus() }
+        if (!autoFocus) return@LaunchedEffect
+        // 等这一帧布局完再要焦点，失败就重试（列表还在铺的时候 requestFocus 会被忽略）
+        repeat(3) { attempt ->
+            delay(if (attempt == 0) 120L else 260L)
+            if (runCatching { myFocusRequester.requestFocus() }.isSuccess) {
+                DiagLog.w(ctx, "focusAuto", "id=$itemId 第${attempt + 1}次要焦点 成功")
+                return@LaunchedEffect
+            }
         }
+        DiagLog.w(ctx, "focusAuto", "id=$itemId 三次要焦点都失败")
     }
     val primaryColor = MaterialTheme.colorScheme.secondary
     val isSeries = item.isSeries

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.tv.material3.*
 import com.xxxx.emby_tv.data.model.BaseItemDto
 import androidx.compose.ui.res.stringResource
@@ -29,6 +30,7 @@ import com.xxxx.emby_tv.ui.components.Loading
 import com.xxxx.emby_tv.ui.components.MenuDialog
 import com.xxxx.emby_tv.ui.components.NoData
 import com.xxxx.emby_tv.ui.components.TopStatusBar
+import com.xxxx.emby_tv.util.DiagLog
 import com.xxxx.emby_tv.util.ErrorHandler
 import com.xxxx.emby_tv.ui.viewmodel.HomeViewModel
 import com.xxxx.emby_tv.ui.viewmodel.MainViewModel
@@ -125,6 +127,7 @@ fun HomeScreen(
         val position = userData?.playbackPositionTicks ?: 0L
         // 记住"从哪一条走的"，返回时把焦点送回这张卡（父亲 2026-10-02）
         FocusMemory.lastItemId = id
+        DiagLog.w(context, "focusSave", "去播放 id=$id")
         navController.navigate("player/$id?position=$position")
     }
 
@@ -132,6 +135,7 @@ fun HomeScreen(
     fun openDetail(item: BaseItemDto) {
         val id = item.id ?: return
         FocusMemory.lastItemId = id
+        DiagLog.w(context, "focusSave", "去详情 id=$id")
         if (item.isSeries) {
             navController.navigate("series/$id")
         } else {
@@ -155,9 +159,14 @@ fun HomeScreen(
     }
 
     // === 焦点回原位（父亲 2026-10-02）===
-    // 进详情页/播放页前记下的条目 id，在这里取一次就清空；据它定位到第几行、行内哪一条，
-    // 先滚动到那一行，再让那张卡自己 requestFocus（MediaSection / LiveTvRow 里传下去）。
-    val pendingFocusId = remember { FocusMemory.consume() }
+    // 进详情页/播放页前记下的条目 id；返回首页时据它定位到第几行、行内哪一条，
+    // 先滚动到那一行，再让那张卡自己 requestFocus。
+    //
+    // 关键：**不能挂在"首次组合"上**。返回首页时这个页面通常还在内存里（没被销毁重建），
+    // 那次 LaunchedEffect 不会再跑 → 焦点恢复永远不执行，表现为返回后整页没有任何焦点
+    //（2026-10-02 实测：A2 截图无绿框、列表还停在顶部）。改成监听"首页重新成为当前页"。
+    var restoreId by remember { mutableStateOf<String?>(null) }
+    var heroFocusSignal by remember { mutableIntStateOf(0) }
 
     val heroItems = resumeItems ?: emptyList()
     val libRow = libraryLatestItems ?: emptyList()
@@ -175,10 +184,23 @@ fun HomeScreen(
         if (favRow.isNotEmpty()) add(favRow.mapNotNull { it.id })
         libLatestRows.forEach { r -> add((r.latestItems ?: emptyList()).mapNotNull { it.id }) }
     }
-    val pendingRow = pendingFocusId?.let { id -> rowIds.indexOfFirst { it.contains(id) } } ?: -1
     val listState = rememberLazyListState()
-    LaunchedEffect(pendingFocusId) {
-        if (pendingRow >= 0) listState.scrollToItem(pendingRow)
+    val navEntry by navController.currentBackStackEntryAsState()
+    val isCurrentScreen = navEntry?.destination?.route == "home"
+    LaunchedEffect(isCurrentScreen) {
+        if (!isCurrentScreen) return@LaunchedEffect
+        val id = FocusMemory.consume() ?: return@LaunchedEffect
+        val row = rowIds.indexOfFirst { it.contains(id) }
+        DiagLog.w(context, "focusRestore", "恢复 id=$id 行号=$row 总行数=${rowIds.size}")
+        if (row >= 0) {
+            listState.scrollToItem(row)
+            delay(80)                 // 等这一行铺完，再让卡片要焦点
+            restoreId = id
+        } else {
+            // 目标不在首页这些行里（例如从库页进去播的）：退回大片头，别让整页没人聚焦
+            restoreId = null
+            heroFocusSignal++
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -223,7 +245,8 @@ fun HomeScreen(
                             onFocusChanged = { heroFocused = it },
                             // 元数据用所属剧集的（单集没有评分/类型/分级）
                             seriesMeta = seriesMeta,
-                            requestInitialFocus = pendingRow < 0
+                            requestInitialFocus = FocusMemory.peek() == null,
+                            focusSignal = heroFocusSignal
                         )
                     }
                 }
@@ -255,7 +278,7 @@ fun HomeScreen(
                             channels = liveRow,
                             serverUrl = serverUrl,
                             onChannelClick = { item -> goPlay(item) },
-                            pendingFocusId = pendingFocusId
+                            pendingFocusId = restoreId
                         )
                     }
                 }
@@ -271,7 +294,7 @@ fun HomeScreen(
                             serverUrl = serverUrl,
                             onItemSelected = { item -> goPlay(item) },
                             onMenuPressed = { showMenu = true },
-                            focusTarget = pendingFocusId
+                            focusTarget = restoreId
                         )
                     }
                 }
@@ -286,7 +309,7 @@ fun HomeScreen(
                             serverUrl = serverUrl,
                             onItemSelected = { item -> openDetail(item) },
                             onMenuPressed = { showMenu = true },
-                            focusTarget = pendingFocusId
+                            focusTarget = restoreId
                         )
                     }
                 }
@@ -303,7 +326,7 @@ fun HomeScreen(
                         serverUrl = serverUrl,
                         onItemSelected = { item -> openDetail(item) },
                         onMenuPressed = { showMenu = true },
-                        focusTarget = pendingFocusId
+                        focusTarget = restoreId
                     )
                 }
             }
