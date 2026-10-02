@@ -74,6 +74,8 @@ fun BuildItem(
     rememberFocus: Boolean = false,
     // 宿主指定的焦点锚点（详情页"季 → 下键进第一集"要指到第一张集卡上）
     focusRequester: FocusRequester? = null,
+    // 宿主直接给图 URL（详情页集卡要用"本集静帧"，不能走默认的父级剧照回落）
+    imageUrlOverride: String? = null,
 ) {
     val myFocusRequester = remember { FocusRequester() }
     val focusAnchor = focusRequester ?: myFocusRequester
@@ -99,7 +101,7 @@ fun BuildItem(
     val primaryTag = imageTags?.get("Primary")
 
     // Construct Image URL using Utils.getImageUrl
-    val imageUrl = Utils.getImageUrl(serverUrl, item, isShowImg17)
+    val imageUrl = imageUrlOverride ?: Utils.getImageUrl(serverUrl, item, isShowImg17)
 
     // TV 端核心组件：Surface 自动处理焦点缩放、边框和点击
     Surface(

@@ -46,6 +46,28 @@ object Utils {
         return ""
     }
 
+    /**
+     * 单集静帧 URL。Emby 把"这一集的画面"存在该集自己的 Primary 上（各集 tag 不同）；
+     * 父级的 Backdrop/Thumb 是**剧集**的图，所有集共用一张。
+     * 所以必须先取自己的 Primary —— 否则详情页每张集卡都是同一张剧照（2026-10-02 父亲指出）。
+     */
+    fun getEpisodeStillUrl(serverUrl: String, item: BaseItemDto, maxWidth: Int = 640): String {
+        if (serverUrl.isEmpty()) return ""
+        val id = item.id ?: return ""
+        item.imageTags?.get("Primary")?.takeIf { it.isNotEmpty() }?.let {
+            return "$serverUrl/emby/Items/$id/Images/Primary?maxWidth=$maxWidth&tag=$it&quality=80"
+        }
+        item.imageTags?.get("Thumb")?.takeIf { it.isNotEmpty() }?.let {
+            return "$serverUrl/emby/Items/$id/Images/Thumb?maxWidth=$maxWidth&tag=$it&quality=80"
+        }
+        val parentId = item.parentBackdropItemId
+        val parentTags = item.parentBackdropImageTags
+        if (parentId != null && !parentTags.isNullOrEmpty()) {
+            return "$serverUrl/emby/Items/$parentId/Images/Backdrop?maxWidth=$maxWidth&tag=${parentTags[0]}&quality=80"
+        }
+        return getImageUrl(serverUrl, item, true)
+    }
+
     fun formatDate(dateStr: Any?): String {
         if (dateStr == null) return ""
         val s = dateStr.toString()

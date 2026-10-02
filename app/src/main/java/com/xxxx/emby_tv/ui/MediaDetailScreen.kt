@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
@@ -175,6 +176,22 @@ fun MediaDetailScreen(
                     )
             )
 
+            // 2.5 剧集 Logo（官方形态：靠右、离右边留一点距离；父亲 2026-10-02 要求）
+            if (mediaInfo.isSeries) {
+                val logoTag = mediaInfo.imageTags?.get("Logo")
+                if (!logoTag.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = "$serverUrl/emby/Items/${mediaInfo.id}/Images/Logo?maxWidth=800&tag=$logoTag&quality=90",
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 130.dp, end = 72.dp)
+                            .width(430.dp)
+                    )
+                }
+            }
+
             // 3. Main Scrollable Content
             Column(
                 modifier = Modifier
@@ -212,9 +229,18 @@ fun MediaDetailScreen(
                         }
                     }
 
-                    // Info Column
+                    // Info Column —— 剧集页收到屏宽 60%（右边留给剧集 logo），并离上边/左边各留一段
+                    //（父亲 2026-10-02：标题与元数据不顶左上角）
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .then(
+                                if (mediaInfo.isSeries) Modifier.fillMaxWidth(0.6f)
+                                else Modifier.weight(1f)
+                            )
+                            .then(
+                                if (mediaInfo.isSeries) Modifier.padding(start = 40.dp, top = 72.dp)
+                                else Modifier
+                            ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
@@ -300,37 +326,25 @@ fun MediaDetailScreen(
                             )
                         }
 
-                        // 动作按钮组（官方形态：圆角方块图标 + 下方小字标签）
+                        // 动作按钮（父亲 2026-10-02 定：只要两个，方块图标 + 下方文字）
+                        //   续播 —— 从上次看到的位置接着播
+                        //   重播 —— 从上次那一集的开头（0 分钟）开始播
+                        val playTarget = resume
+                            ?: if (mediaInfo.isSeries) episodes?.firstOrNull() else mediaInfo
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             ActionTile(
                                 icon = Icons.Default.PlayArrow,
-                                label = if (resume != null || ((mediaInfo.userData?.playbackPositionTicks
-                                        ?: 0L) > 0)
-                                ) stringResource(R.string.resume) else stringResource(R.string.play),
-                                primary = true,
+                                label = stringResource(R.string.resume_play),
                                 focusRequester = playButtonFocusRequester
                             ) {
-                                if (mediaInfo.isSeries) {
-                                    val currentResume = resume
-                                    if (currentResume != null) {
-                                        onNavigateToPlayer(currentResume)
-                                    } else if (!seasons.isNullOrEmpty() && !episodes.isNullOrEmpty()) {
-                                        onNavigateToPlayer(episodes!!.first())
-                                    }
-                                } else if (mediaInfo.type.equals("MusicAlbum", ignoreCase = true)) {
-                                    episodes?.firstOrNull()?.let { onNavigateToPlayer(it) }
-                                } else {
-                                    onNavigateToPlayer(mediaInfo)
-                                }
+                                playTarget?.let { onNavigateToPlayer(it) }
                             }
-                            if (mediaInfo.isSeries && !episodes.isNullOrEmpty()) {
-                                ActionTile(
-                                    icon = Icons.Default.PlaylistPlay,
-                                    label = stringResource(R.string.play_all),
-                                    primary = false
-                                ) { episodes!!.firstOrNull()?.let { onNavigateToPlayer(it) } }
-                                // 父亲 2026-10-02 定的按钮集：详情页只留「继续/播放 + 全部播放」。
-                                // 明确不要：随机播放、预告片、已播放、删除、更多（官方 TV 版有，我们不做）。
+                            ActionTile(
+                                icon = Icons.Default.Replay,
+                                label = stringResource(R.string.replay)
+                            ) {
+                                // 抹掉 userData → 播放页拿不到续播位置，即从 0 分钟开始
+                                playTarget?.let { onNavigateToPlayer(it.copy(userData = null)) }
                             }
                         }
                         if (resume != null) Box(
@@ -439,7 +453,9 @@ fun MediaDetailScreen(
                                     isMyLibrary = false,
                                     serverUrl = serverUrl,
                                     onItemClick = { onNavigateToPlayer(ep) },
-                                    focusRequester = if (idx == 0) firstEpisodeFocus else null
+                                    focusRequester = if (idx == 0) firstEpisodeFocus else null,
+                                    // 每集自己的静帧（默认回落会取到父级剧照 → 每张一样）
+                                    imageUrlOverride = Utils.getEpisodeStillUrl(serverUrl, ep)
                                 )
                             }
                         }
@@ -793,7 +809,6 @@ private fun SongRow(
 private fun ActionTile(
     icon: ImageVector,
     label: String,
-    primary: Boolean,
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
@@ -802,12 +817,11 @@ private fun ActionTile(
             onClick = onClick,
             shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = if (primary) MaterialTheme.colorScheme.secondary else Color.White.copy(
-                    alpha = 0.16f
-                ),
+                // 父亲 2026-10-02：未选中 = 暗灰底白图标；选中（有焦点）= 绿底白图标
+                containerColor = Color(0xFF3A3A3A),
                 contentColor = Color.White,
-                focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                focusedContainerColor = Color(0xFF52B54B),
+                focusedContentColor = Color.White
             ),
             modifier = Modifier.then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier

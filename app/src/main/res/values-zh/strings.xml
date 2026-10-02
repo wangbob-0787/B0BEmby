@@ -18,6 +18,7 @@
     <string name="continue_watching">继续观看</string>
     <string name="press_menu_to_show_menu">按菜单键打开菜单</string>
     <string name="press_menu_down_to_show_menu">按菜单键或下方向键打开菜单</string>
+    <string name="resume_play">续播</string>
     <string name="resume">继续</string>
     <string name="play">播放</string>
     <string name="details">详情</string>
