@@ -402,7 +402,7 @@ fun MediaDetailScreen(
                             val selected = index == selectedSeasonIndex
                             Surface(
                                 onClick = { selectedSeasonIndex = index },
-                                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+                                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
                                 colors = ClickableSurfaceDefaults.colors(
                                     // 父亲 2026-10-02：未选中 = 暗灰底白字；当前季/聚焦 = 绿底白字
                                     containerColor = if (selected) Color(0xFF52B54B)
@@ -412,17 +412,24 @@ fun MediaDetailScreen(
                                     focusedContentColor = Color.White
                                 ),
                                 modifier = Modifier
+                                    .width(DetailButtonWidth)
+                                    .height(DetailButtonHeight)
                                     .focusRequester(seasonFocusers[index])
                                     .focusProperties {
                                         // 焦点在"当前选中的那一季"上时，下键直接进集列表第一集
                                         if (index == selectedSeasonIndex) down = firstEpisodeFocus
                                     }
                             ) {
-                                Text(
-                                    text = season.name ?: "",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = season.name ?: "",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
                     }
@@ -801,7 +808,11 @@ private fun SongRow(
     }
 }
 
-/** 详情页动作按钮:圆角方块图标 + 下方小字标签(官方详情页形态,遥控器上点击区域大) */
+/**
+ * 详情页动作按钮（父亲 2026-10-02 定稿形态）：
+ *   长方形，和「第 N 季」胶囊同样尺寸（176×60），图标 + 文字横排居中；
+ *   未选中 = 暗灰底白图标/白字；选中（有焦点）= 绿底白图标/白字。
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun ActionTile(
@@ -810,37 +821,51 @@ private fun ActionTile(
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            onClick = onClick,
-            shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
-            colors = ClickableSurfaceDefaults.colors(
-                // 父亲 2026-10-02：未选中 = 暗灰底白图标；选中（有焦点）= 绿底白图标
-                containerColor = Color(0xFF3A3A3A),
-                contentColor = Color.White,
-                focusedContainerColor = Color(0xFF52B54B),
-                focusedContentColor = Color.White
-            ),
-            modifier = Modifier.then(
-                if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
-            )
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, Color.White))
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color(0xFF3A3A3A),
+            contentColor = Color.White,
+            focusedContainerColor = Color(0xFF52B54B),
+            focusedContentColor = Color.White
+        ),
+        modifier = Modifier
+            .width(DetailButtonWidth)
+            .height(DetailButtonHeight)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier
-                    .padding(14.dp)
-                    .size(26.dp)
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = label,
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White
-        )
     }
 }
+
+/** 详情页按钮统一尺寸（动作按钮与季胶囊一致，父亲 2026-10-02） */
+private val DetailButtonWidth = 176.dp
+private val DetailButtonHeight = 60.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
