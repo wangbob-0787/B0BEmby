@@ -55,6 +55,7 @@ fun HomeScreen(
     val resumeItems = homeViewModel.resumeItems
     val libraryLatestItems = homeViewModel.libraryLatestItems
     val favoriteItems = homeViewModel.favoriteItems
+    val liveChannels = homeViewModel.liveChannels
     val isLoading = homeViewModel.isLoading
     val errorMessage = homeViewModel.errorMessage
 
