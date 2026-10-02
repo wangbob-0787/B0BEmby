@@ -175,25 +175,30 @@ fun HomeScreen(
     val favRow = favoriteItems ?: emptyList()
     val libLatestRows = libRow.filter { !it.latestItems.isNullOrEmpty() }
 
-    // 各行的条目 id（下标 = 行号，顺序必须与下面 LazyColumn 完全一致）
-    val rowIds: List<List<String>> = buildList {
-        if (heroItems.isNotEmpty()) add(heroItems.mapNotNull { it.id })
+    // 卡片行的条目 id（**不含大片头那一行**：大片头里没有可聚焦的卡片，
+    // 一旦把它的条目算进来，"继续观看"里同一集会被匹配到第 0 行 → 滚回顶部 → 那行压根没被
+    // 画出来 → 谁都拿不到焦点。2026-10-02 实测日志：`恢复 id=3953271 行号=0`）
+    val cardRowIds: List<List<String>> = buildList {
         add(libRow.mapNotNull { it.id })
         if (liveRow.isNotEmpty()) add(liveRow.mapNotNull { it.id })
         if (resumeRow.isNotEmpty()) add(resumeRow.mapNotNull { it.id })
         if (favRow.isNotEmpty()) add(favRow.mapNotNull { it.id })
         libLatestRows.forEach { r -> add((r.latestItems ?: emptyList()).mapNotNull { it.id }) }
     }
+    // 大片头在列表里占一行（有才占），算滚动目标时要加回去
+    val heroRowOffset = if (heroItems.isNotEmpty()) 1 else 0
     val listState = rememberLazyListState()
     val navEntry by navController.currentBackStackEntryAsState()
     val isCurrentScreen = navEntry?.destination?.route == "home"
     LaunchedEffect(isCurrentScreen) {
         if (!isCurrentScreen) return@LaunchedEffect
         val id = FocusMemory.consume() ?: return@LaunchedEffect
-        val row = rowIds.indexOfFirst { it.contains(id) }
-        DiagLog.w(context, "focusRestore", "恢复 id=$id 行号=$row 总行数=${rowIds.size}")
-        if (row >= 0) {
-            listState.scrollToItem(row)
+        val cardRow = cardRowIds.indexOfFirst { it.contains(id) }
+        val inHero = heroItems.any { it.id == id }
+        DiagLog.w(context, "focusRestore",
+            "恢复 id=$id 卡片行=$cardRow 在片头内=$inHero 卡片行数=${cardRowIds.size}")
+        if (cardRow >= 0) {
+            listState.scrollToItem(cardRow + heroRowOffset)
             delay(80)                 // 等这一行铺完，再让卡片要焦点
             restoreId = id
         } else {
