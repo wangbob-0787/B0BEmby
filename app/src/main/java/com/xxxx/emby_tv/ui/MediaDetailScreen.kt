@@ -176,13 +176,15 @@ fun MediaDetailScreen(
                     )
             )
 
-            // 2.8 背景层的隐形焦点锚点：进页面时焦点停在这里（= 海报/背景获得焦点），
-            //     不在任何文字上、页面也不滚动；从下面的按钮按 ↑ 回到这里（父亲 2026-10-02）
+            // 2.8 背景层的焦点锚点：进页面时焦点停在这里（= 海报/背景获得焦点），不在任何文字上、
+            //     页面也不滚动；按下键**显式**去「续播」按钮（1dp 大小会让方向键找不到落点 → 页面不滚）
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .size(1.dp)
+                    .fillMaxWidth()
+                    .height(240.dp)
                     .focusRequester(headerFocusRequester)
+                    .focusProperties { down = playButtonFocusRequester }
                     .focusable()
             )
 
@@ -334,7 +336,8 @@ fun MediaDetailScreen(
                                 icon = Icons.Default.PlayArrow,
                                 label = if (hasProgress) stringResource(R.string.resume_play)
                                 else stringResource(R.string.play),
-                                focusRequester = playButtonFocusRequester
+                                focusRequester = playButtonFocusRequester,
+                                upFocus = headerFocusRequester
                             ) {
                                 playTarget?.let { onNavigateToPlayer(it) }
                             }
@@ -837,6 +840,7 @@ private fun ActionTile(
     icon: ImageVector,
     label: String,
     focusRequester: FocusRequester? = null,
+    upFocus: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -855,6 +859,8 @@ private fun ActionTile(
             .width(DetailButtonWidth)
             .height(DetailButtonHeight)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            // 从按钮按 ↑ 回到背景（顶部），页面跟着滚回顶部
+            .focusProperties { if (upFocus != null) up = upFocus }
     ) {
         Row(
             modifier = Modifier
