@@ -6,6 +6,7 @@ import com.xxxx.emby_tv.ui.LoginScreen
 import com.xxxx.emby_tv.ui.PlayerScreen
 
 import android.content.pm.ActivityInfo
+import androidx.activity.compose.BackHandler
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.xxxx.emby_tv.ui.AccountScreen
@@ -31,6 +33,7 @@ import com.xxxx.emby_tv.ui.UpdateScreen
 import com.xxxx.emby_tv.ui.ProxySettingsScreen
 import com.xxxx.emby_tv.ui.SearchScreen
 import com.xxxx.emby_tv.ui.components.BuildGradientBackground
+import com.xxxx.emby_tv.ui.components.ExitConfirmDialog
 import com.xxxx.emby_tv.ui.components.Loading
 import com.xxxx.emby_tv.ui.theme.ThemeColorManager
 import com.xxxx.emby_tv.ui.viewmodel.MainViewModel
@@ -105,6 +108,15 @@ fun EmbyTvApp() {
     val context = LocalContext.current
     val currentThemeColor =
         ThemeColorManager.getThemeColorById(context, mainViewModel.currentThemeId)
+
+    // === 退出确认（父亲 2026-10-02：连按返回键会直接把应用退掉）===
+    // 只在首页拦返回键；弹层开着时返回键先关弹层（误按返回不会退出应用）。
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    var showExitConfirm by remember { mutableStateOf(false) }
+    BackHandler(enabled = currentRoute == "home" || showExitConfirm) {
+        if (showExitConfirm) showExitConfirm = false else showExitConfirm = true
+    }
 
     Emby_tvTheme(themeColor = currentThemeColor) {
         Surface(
@@ -325,6 +337,15 @@ fun EmbyTvApp() {
                             }
                         )
                     }
+                }
+                if (showExitConfirm) {
+                    ExitConfirmDialog(
+                        onCancel = { showExitConfirm = false },
+                        onConfirm = {
+                            showExitConfirm = false
+                            (context as? android.app.Activity)?.finish()
+                        }
+                    )
                 }
             }
         }

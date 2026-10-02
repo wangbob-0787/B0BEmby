@@ -280,6 +280,31 @@ object EmbyApi {
             }
     }
 
+    // ==================== 直播电视（简单版） ====================
+
+    /**
+     * 直播频道列表。
+     *
+     * 用途：首页「电视直播」一行 —— 列出频道，选中直接进播放页。
+     * Fields=CurrentProgram 让每条带"正在播出"的节目名，行里直接显示。
+     * 播放走既有通道：`/Items/{频道id}/PlaybackInfo`（已带 AutoOpenLiveStream=true）会返回带
+     * api_key 的 HLS 转码地址（2026-10-02 实测 71 频道，CCTV1 返回 master.m3u8）。
+     */
+    suspend fun getLiveTvChannels(
+        context: Context,
+        serverUrl: String,
+        apiKey: String,
+        deviceId: String,
+        userId: String,
+        limit: Int = 200
+    ): List<BaseItemDto> {
+        val url = "/LiveTv/Channels?UserId=$userId&Limit=$limit" +
+                "&Fields=CurrentProgram" +
+                "&EnableImageTypes=Primary&ImageTypeLimit=1" +
+                "&X-Emby-Token=$apiKey"
+        return httpAsBaseItemDtoListWithTotal(context, serverUrl, apiKey, deviceId, url).first
+    }
+
     // ==================== 详情与剧集 ====================
 
     /**

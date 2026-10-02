@@ -82,15 +82,29 @@ fun HomeHeroCarousel(
     onFocusChanged: (Boolean) -> Unit = {},
     // 剧集级元数据（key = 剧集 id）：补单集缺失的评分/类型/分级/年份
     seriesMeta: Map<String, BaseItemDto> = emptyMap(),
+    // 首次进首页要不要把焦点给大图。从详情页返回时由首页传 false —— 焦点要送回原来那张卡
+    //（父亲 2026-10-02：「回到上一页面时焦点要回到之前的焦点」）
+    requestInitialFocus: Boolean = true,
 ) {
+    // 顶部大片头轮播（父亲 2026-09-30 定）
+    //
+    // 2026-10-02 修「没有图的剧集显示成全黑」（父亲反馈）：
+    //   1) 取图 URL 必须有 tag（原来无 tag 也拼 URL → 服务端 404 → 黑屏）；
+    //   2) 一张图都没有的条目直接不进轮播（宁少一条，不留黑屏）；
+    //   3) 轮播里一条可用都没有 → 整块不显示。
     if (items.isEmpty()) return
-    val list = remember(items) { items.take(6) }
+    val list = remember(items, serverUrl) {
+        items.filter { backdropUrlOf(it, serverUrl) != null || primaryUrlOf(it, serverUrl) != null }
+            .take(6)
+    }
+    if (list.isEmpty()) return
     var index by remember(list) { mutableIntStateOf(0) }
     val heroFocus = remember { FocusRequester() }
     var focusRequested by rememberSaveable { mutableStateOf(false) }
 
     // 首次进首页把焦点给大图：轮播才跑得起来；用户按下键即进下面内容区（轮播随即暂停）
     LaunchedEffect(Unit) {
+        if (!requestInitialFocus) return@LaunchedEffect
         if (focusRequested) return@LaunchedEffect
         delay(150)
         runCatching { heroFocus.requestFocus() }
@@ -336,12 +350,10 @@ fun HomeHeroCarousel(
 private fun primaryUrlOf(item: BaseItemDto, serverUrl: String): String? {
     if (serverUrl.isEmpty()) return null
     val sid = item.seriesId ?: item.id ?: return null
-    val tag = item.seriesPrimaryImageTag ?: item.imageTags?.get("Primary")
-    return if (!tag.isNullOrEmpty()) {
-        "$serverUrl/emby/Items/$sid/Images/Primary?maxWidth=1920&tag=$tag&quality=80"
-    } else {
-        "$serverUrl/emby/Items/$sid/Images/Primary?maxWidth=1920&quality=80"
-    }
+    // 必须有 tag：无 tag 的 /Images/Primary 服务端返回 404，客户端就是一片黑（2026-10-02）
+    val tag = item.seriesPrimaryImageTag ?: item.imageTags?.get("Primary") ?: return null
+    if (tag.isEmpty()) return null
+    return "$serverUrl/emby/Items/$sid/Images/Primary?maxWidth=1920&tag=$tag&quality=80"
 }
 
 private fun backdropUrlOf(item: BaseItemDto, serverUrl: String): String? {
@@ -351,11 +363,11 @@ private fun backdropUrlOf(item: BaseItemDto, serverUrl: String): String? {
     val parent = item.parentBackdropImageTags
     val parentId = item.parentBackdropItemId
     return when {
-        !own.isNullOrEmpty() ->
+        !own.isNullOrEmpty() && own[0].isNotEmpty() ->
             "$serverUrl/emby/Items/$id/Images/Backdrop?maxWidth=1920&tag=${own[0]}&quality=80"
-        !parent.isNullOrEmpty() && !parentId.isNullOrEmpty() ->
+        !parent.isNullOrEmpty() && !parentId.isNullOrEmpty() && parent[0].isNotEmpty() ->
             "$serverUrl/emby/Items/$parentId/Images/Backdrop?maxWidth=1920&tag=${parent[0]}&quality=80"
-        else ->
-            "$serverUrl/emby/Items/${item.seriesId ?: id}/Images/Backdrop?maxWidth=1920&quality=80"
+        // 没有 tag 就没图可拿：返回 null，让调用方走兜底/跳过（原来自拼无 tag URL → 404 → 黑屏）
+        else -> null
     }
 }

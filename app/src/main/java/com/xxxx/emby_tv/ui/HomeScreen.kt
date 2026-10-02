@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -20,8 +21,10 @@ import com.xxxx.emby_tv.data.model.BaseItemDto
 import androidx.compose.ui.res.stringResource
 import com.xxxx.emby_tv.R
 import com.xxxx.emby_tv.data.repository.EmbyRepository
+import com.xxxx.emby_tv.ui.FocusMemory
 import com.xxxx.emby_tv.ui.components.BuildItem
 import com.xxxx.emby_tv.ui.components.HomeHeroCarousel
+import com.xxxx.emby_tv.ui.components.LiveTvRow
 import com.xxxx.emby_tv.ui.components.Loading
 import com.xxxx.emby_tv.ui.components.MenuDialog
 import com.xxxx.emby_tv.ui.components.NoData
@@ -119,12 +122,15 @@ fun HomeScreen(
         val id = item.id ?: ""
         val userData = item.userData
         val position = userData?.playbackPositionTicks ?: 0L
+        // 记住"从哪一条走的"，返回时把焦点送回这张卡（父亲 2026-10-02）
+        FocusMemory.lastItemId = id
         navController.navigate("player/$id?position=$position")
     }
 
     /** 首页条目 → 进详情页(剧集进剧集详情,其余进通用详情);"继续观看"仍保留一键续播 */
     fun openDetail(item: BaseItemDto) {
         val id = item.id ?: return
+        FocusMemory.lastItemId = id
         if (item.isSeries) {
             navController.navigate("series/$id")
         } else {
@@ -145,6 +151,33 @@ fun HomeScreen(
         "${currentAccount.username}@$domain"
     } else {
         null
+    }
+
+    // === 焦点回原位（父亲 2026-10-02）===
+    // 进详情页/播放页前记下的条目 id，在这里取一次就清空；据它定位到第几行、行内哪一条，
+    // 先滚动到那一行，再让那张卡自己 requestFocus（MediaSection / LiveTvRow 里传下去）。
+    val pendingFocusId = remember { FocusMemory.consume() }
+
+    val heroItems = resumeItems ?: emptyList()
+    val libRow = libraryLatestItems ?: emptyList()
+    val liveRow = liveChannels ?: emptyList()
+    val resumeRow = resumeItems ?: emptyList()
+    val favRow = favoriteItems ?: emptyList()
+    val libLatestRows = libRow.filter { !it.latestItems.isNullOrEmpty() }
+
+    // 各行的条目 id（下标 = 行号，顺序必须与下面 LazyColumn 完全一致）
+    val rowIds: List<List<String>> = buildList {
+        if (heroItems.isNotEmpty()) add(heroItems.mapNotNull { it.id })
+        add(libRow.mapNotNull { it.id })
+        if (liveRow.isNotEmpty()) add(liveRow.mapNotNull { it.id })
+        if (resumeRow.isNotEmpty()) add(resumeRow.mapNotNull { it.id })
+        if (favRow.isNotEmpty()) add(favRow.mapNotNull { it.id })
+        libLatestRows.forEach { r -> add((r.latestItems ?: emptyList()).mapNotNull { it.id }) }
+    }
+    val pendingRow = pendingFocusId?.let { id -> rowIds.indexOfFirst { it.contains(id) } } ?: -1
+    val listState = rememberLazyListState()
+    LaunchedEffect(pendingFocusId) {
+        if (pendingRow >= 0) listState.scrollToItem(pendingRow)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -172,21 +205,24 @@ fun HomeScreen(
 //        }
         if (libraryLatestItems != null) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(bottom = 40.dp)
             ) {
                 // 顶部大片头：取「继续观看」前 6 部，5 秒自动切、左右键手动切、OK 续播
                 // （父亲 2026-09-30 定：放在滚动区里，往下滚时它跟着上移，下面的内容区才够大）
-                if (!resumeItems.isNullOrEmpty()) {
+                // 返回首页时如果焦点要送回下面某张卡（pendingRow >= 0），大片头就不再抢焦点
+                if (heroItems.isNotEmpty()) {
                     item {
                         HomeHeroCarousel(
-                            items = resumeItems ?: emptyList(),
+                            items = heroItems,
                             serverUrl = serverUrl,
                             autoAdvance = heroFocused,   // 焦点在大图上才轮播，移到下面即暂停
                             onOpenItem = { item -> goPlay(item) },
                             onFocusChanged = { heroFocused = it },
                             // 元数据用所属剧集的（单集没有评分/类型/分级）
-                            seriesMeta = seriesMeta
+                            seriesMeta = seriesMeta,
+                            requestInitialFocus = pendingRow < 0
                         )
                     }
                 }
@@ -195,7 +231,7 @@ fun HomeScreen(
                 item {
                     MediaSection(
                         title = stringResource(R.string.my_libraries),
-                        items = libraryLatestItems,
+                        items = libRow,
                         isMyLibrary = true,
                         serverUrl = serverUrl,
                         onItemSelected = { item ->
@@ -203,37 +239,53 @@ fun HomeScreen(
                             val type = firstItem?.type ?: ""
                             val id = item.id ?: ""
                             val title = item.name ?: ""
+                            FocusMemory.lastItemId = null   // 进库走库页自己的焦点恢复
                             navController.navigate("library/$id?libraryName=$title&type=$type")
                         },
                         onMenuPressed = { showMenu = true }
                     )
                 }
 
+                // 电视直播（简单版：频道列表，选中直接播；父亲 2026-10-02 定）
+                if (liveRow.isNotEmpty()) {
+                    item {
+                        LiveTvRow(
+                            title = stringResource(R.string.live_tv),
+                            channels = liveRow,
+                            serverUrl = serverUrl,
+                            onChannelClick = { item -> goPlay(item) },
+                            pendingFocusId = pendingFocusId
+                        )
+                    }
+                }
+
                 // 继续观看
-                if (resumeItems != null && resumeItems.isNotEmpty()) {
+                if (resumeRow.isNotEmpty()) {
                     item {
                         MediaSection(
                             title = stringResource(R.string.continue_watching),
-                            items = resumeItems,
+                            items = resumeRow,
                             isShowImg17 = true,
                             isContinueWatching = true,
                             serverUrl = serverUrl,
                             onItemSelected = { item -> goPlay(item) },
-                            onMenuPressed = { showMenu = true }
+                            onMenuPressed = { showMenu = true },
+                            focusTarget = pendingFocusId
                         )
                     }
                 }
 
                 // 收藏
-                if (favoriteItems != null && favoriteItems.isNotEmpty()) {
+                if (favRow.isNotEmpty()) {
                     item {
                         MediaSection(
                             title = stringResource(R.string.favorite),
-                            items = favoriteItems,
+                            items = favRow,
                             isShowImg17 = true,
                             serverUrl = serverUrl,
                             onItemSelected = { item -> openDetail(item) },
-                            onMenuPressed = { showMenu = true }
+                            onMenuPressed = { showMenu = true },
+                            focusTarget = pendingFocusId
                         )
                     }
                 }
@@ -241,7 +293,7 @@ fun HomeScreen(
                 // 各库最新内容（空库不占一行——合集/PikPak电影/115蓝光原盘 没有最新条目，
                 // 原来会渲染一行空占位；「我的媒体库」那一排仍然保留所有库的入口）
                 itemsIndexed(
-                    (libraryLatestItems ?: emptyList()).filter { !it.latestItems.isNullOrEmpty() },
+                    libLatestRows,
                     key = { _, library -> library.id ?: library.hashCode() }
                 ) { _, library ->
                     MediaSection(
@@ -249,7 +301,8 @@ fun HomeScreen(
                         items = library.latestItems ?: emptyList(),
                         serverUrl = serverUrl,
                         onItemSelected = { item -> openDetail(item) },
-                        onMenuPressed = { showMenu = true }
+                        onMenuPressed = { showMenu = true },
+                        focusTarget = pendingFocusId
                     )
                 }
             }
@@ -268,6 +321,8 @@ private fun MediaSection(
     serverUrl: String,
     onItemSelected: (BaseItemDto) -> Unit,
     onMenuPressed: () -> Unit,
+    // 从详情页返回时要恢复焦点到的那一条（父亲 2026-10-02）
+    focusTarget: String? = null,
 ) {
     val maxLength = when {
         isMyLibrary -> 260.dp   // P1：库入口按官方做成宽银幕大图块
@@ -302,7 +357,14 @@ private fun MediaSection(
         if (items.isEmpty()) {
             NoData(modifier = Modifier.height(maxLength))
         } else {
+            // 要恢复焦点的那条可能不在首屏，先横向滚过去，再让卡片自己 requestFocus
+            val rowState = rememberLazyListState()
+            LaunchedEffect(focusTarget) {
+                val idx = items.indexOfFirst { it.id == focusTarget }
+                if (idx >= 0) rowState.scrollToItem(idx)
+            }
             LazyRow(
+                state = rowState,
                 contentPadding = PaddingValues(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
@@ -325,6 +387,8 @@ private fun MediaSection(
                         serverUrl = serverUrl,
                         onItemClick = { onItemSelected(item) },
                         onMenuClick = { onMenuPressed() },
+                        autoFocus = item.id != null && item.id == focusTarget,
+                        rememberFocus = true,
                     )
                 }
             }

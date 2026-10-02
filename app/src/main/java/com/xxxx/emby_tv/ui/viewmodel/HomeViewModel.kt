@@ -30,6 +30,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var favoriteItems by mutableStateOf<List<BaseItemDto>?>(null)
         private set
+    // 直播频道（首页「电视直播」一行）
+    var liveChannels by mutableStateOf<List<BaseItemDto>?>(null)
+        private set
 
     // === 加载状态 ===
     var isLoading by mutableStateOf(false)
@@ -75,6 +78,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             resumeItems = emptyList()
             libraryLatestItems = emptyList()
             favoriteItems = emptyList()
+            liveChannels = emptyList()
             return
         }
 
@@ -95,15 +99,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     try { repository.getFavoriteItems() }
                     catch (e: Exception) { errorMessage = e.message; emptyList() }
                 }
+                // 直播频道：失败不影响首页其余部分（服务器没配直播源时就是空行）
+                val liveDeferred = async {
+                    try { repository.getLiveTvChannels() }
+                    catch (e: Exception) { emptyList() }
+                }
 
                 resumeItems = resumeDeferred.await()
                 libraryLatestItems = latestDeferred.await()
                 favoriteItems = favDeferred.await()
+                liveChannels = liveDeferred.await()
             } catch (e: Exception) {
                 if (errorMessage == null) errorMessage = e.message
                 resumeItems = emptyList()
                 libraryLatestItems = emptyList()
                 favoriteItems = emptyList()
+                liveChannels = emptyList()
             } finally {
                 isLoading = false
                 saveCache()

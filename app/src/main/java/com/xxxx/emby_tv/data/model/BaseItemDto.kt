@@ -55,6 +55,9 @@ data class BaseItemDto(
     @SerializedName("TagItems") val tagItems: List<NameGuidPairDto>? = null,
     @SerializedName("LocalTrailerCount") val localTrailerCount: Int? = null,
     @SerializedName("UserData") val userData: UserDataDto? = null,
+    // 直播频道（Type=TvChannel）专用：频道号 + 正在播出的节目（首页「电视直播」那行直接显示）
+    @SerializedName("ChannelNumber") val channelNumber: String? = null,
+    @SerializedName("CurrentProgram") val currentProgram: BaseItemDto? = null,
     @SerializedName("DisplayPreferencesId") val displayPreferencesId: String? = null,
     @SerializedName("PrimaryImageAspectRatio") val primaryImageAspectRatio: Double? = null,
     @SerializedName("PartCount") val partCount: Int? = null,

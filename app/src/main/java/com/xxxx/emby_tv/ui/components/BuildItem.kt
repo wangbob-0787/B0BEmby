@@ -29,7 +29,14 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import kotlinx.coroutines.delay
+import com.xxxx.emby_tv.ui.FocusMemory
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Icon
@@ -59,7 +66,19 @@ fun BuildItem(
     isPlaying: Boolean = false,
     onItemClick: () -> Unit,
     onMenuClick: (() -> Unit)? = null,
+    // 返回上一页时把焦点送回这一张（父亲 2026-10-02）；由宿主页面按 FocusMemory 里的 id 置 true
+    autoFocus: Boolean = false,
+    // 是否把"最后聚焦的条目"记进 FocusMemory。只给首页的行开：
+    // 播放页选集菜单/搜索页也有卡片，它们写了会污染返回首页的焦点恢复目标。
+    rememberFocus: Boolean = false,
 ) {
+    val myFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) {
+            delay(120)   // 等这一帧布局完，否则 requestFocus 会被忽略
+            runCatching { myFocusRequester.requestFocus() }
+        }
+    }
     val primaryColor = MaterialTheme.colorScheme.secondary
     val isSeries = item.isSeries
     val userData = item.userData
@@ -99,9 +118,12 @@ fun BuildItem(
 
         modifier = modifier
             .width(imgWidth)
-            //兼容移动端点击  TODO：移除
+            // 兼容移动端点击  TODO：移除
             // .clickable(interactionSource = null, onClick = onItemClick)
             .wrapContentHeight()
+            // 记住"最后聚焦的条目"：从详情页返回时用它把焦点送回来（父亲 2026-10-02）
+            .onFocusChanged { if (it.isFocused && rememberFocus) FocusMemory.lastItemId = itemId }
+            .focusRequester(myFocusRequester)
             .onKeyEvent { keyEvent ->
                 if (onMenuClick != null && keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {

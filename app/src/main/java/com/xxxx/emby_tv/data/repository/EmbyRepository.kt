@@ -126,6 +126,20 @@ class EmbyRepository private constructor(private val context: Context) {
     }
 
     /**
+     * 直播频道列表（首页「电视直播」一行用）
+     */
+    suspend fun getLiveTvChannels(): List<BaseItemDto> {
+        requireLoggedIn()
+        return EmbyApi.getLiveTvChannels(
+            context,
+            session.serverUrl!!,
+            session.apiKey!!,
+            session.deviceId,
+            session.userId!!
+        )
+    }
+
+    /**
      * 获取媒体库列表（支持分页）
      * 
      * @param parentId 父级ID

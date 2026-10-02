@@ -13,6 +13,7 @@
     <string name="logout">Logout</string>
     <string name="download_latest_version">Download latest version</string>
     <string name="my_libraries">My libraries</string>
+    <string name="live_tv">Live TV</string>
     <string name="continue_watching">Continue watching</string>
     <string name="press_menu_to_show_menu">Press menu key to show menu</string>
     <string name="press_menu_down_to_show_menu">Press menu key or down key to show menu</string>
@@ -265,4 +266,7 @@
     <string name="tracks">Tracks</string>
     <string name="play_all">Play all</string>
     <string name="shuffle">Shuffle</string>
+    <string name="exit_confirm_title">Quit B0BEmby?</string>
+    <string name="exit_confirm_ok">Quit</string>
+    <string name="exit_confirm_cancel">Cancel</string>
 </resources>
