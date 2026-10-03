@@ -294,7 +294,7 @@ fun HomeHeroCarousel(
                                     .border(
                                         width = 1.dp,
                                         color = Color.White.copy(alpha = 0.85f),
-                                        shape = RoundedCornerShape(3.dp)
+                                        shape = RoundedCornerShape(4.dp)
                                     )
                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
@@ -314,7 +314,7 @@ fun HomeHeroCarousel(
                         Text(
                             text = overview,
                             color = Color.White.copy(alpha = 0.92f),
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 7.dp)

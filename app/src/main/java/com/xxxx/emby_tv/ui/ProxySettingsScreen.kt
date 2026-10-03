@@ -320,8 +320,8 @@ fun ProxySettingsScreen(
                                 } else false
                             },
                         colors = ButtonDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.primary,
-                            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                            focusedContentColor = MaterialTheme.colorScheme.onTertiary,
                             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
                             contentColor = MaterialTheme.colorScheme.onSurface
                         ),
@@ -395,8 +395,8 @@ private fun ProxySwitchRow(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.15f),
             contentColor = Color.White,
-            focusedContainerColor = MaterialTheme.colorScheme.primary,
-            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary,
             
         ),
         modifier = modifier.height(56.dp)
@@ -417,7 +417,7 @@ private fun ProxySwitchRow(
                     .size(52.dp, 28.dp)
                     .background(
                         if (enabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f),
-                        RoundedCornerShape(14.dp)
+                        RoundedCornerShape(12.dp)
                     ),
                 contentAlignment = if (enabled) Alignment.CenterEnd else Alignment.CenterStart
             ) {
@@ -455,8 +455,8 @@ private fun ProxyTypeButton(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.primary,
-            focusedContentColor = MaterialTheme.colorScheme.onPrimary
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary
         ),
         modifier = modifier.height(56.dp)
     ) {
@@ -496,8 +496,8 @@ private fun ProxyTvInputButton(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.primary,
-            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary,
         ),
         modifier = modifier
             .fillMaxWidth(0.8f)

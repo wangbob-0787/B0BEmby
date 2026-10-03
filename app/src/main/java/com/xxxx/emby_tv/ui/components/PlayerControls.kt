@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -163,14 +164,14 @@ val OverlayTextStyle = TextStyle(
 )
 
 /** 官方主题绿(与详情页焦点色一致) */
-val EmbyGreen = Color(0xFF52B54B)
+// val EmbyGreen = Color(0xFF52B54B)  // 2026-10-03 一致性收敛：播放页不再写死绿色，统一取 MaterialTheme.colorScheme.secondary
 
 // ── 官方 Emby TV 2.1.54g 播放界面实测色板（2026-09-30 规格，见 notes/ui-spec/emby-tv-playback-spec-20260930.md）──
 // 焦点态在官方是「实心绿块 + 图标提亮」，不是白框/放大；进度条是细条（4px=2dp）。
-val SpecFocusGreen = Color(0xFF428A39)   // 焦点态实心块
+// val SpecFocusGreen = Color(0xFF428A39)  // 2026-10-03 同上（原为官方实测绿，现统一主题色）
 val SpecIconIdle = Color(0xFFA4A3A3)     // 图标 · 非焦点
 val SpecIconFocus = Color(0xFFC6C6C6)    // 图标 · 焦点态
-val SpecBarPlayed = Color(0xFF45913D)    // 进度条 · 已播
+// val SpecBarPlayed = Color(0xFF45913D)  // 2026-10-03 同上（进度条已播色统一主题色）
 val SpecBarRest = Color(0xFF262626)      // 进度条 · 未播
 val SpecPanelBg = Color(0xFF303030)      // 二级菜单面板底色（不透明）
 val SpecClockText = Color(0xFFA6A6A6)    // 顶部时钟/次要文字
@@ -251,7 +252,7 @@ fun SeekHud(
                                 .fillMaxWidth(
                                     (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                                 )
-                                .background(SpecBarPlayed)
+                                .background(MaterialTheme.colorScheme.secondary)
                         )
                     }
                 }
@@ -264,7 +265,7 @@ fun SeekHud(
                             .offset(x = (barWidth * fraction) - 1.5.dp)
                             .width(3.dp)
                             .height(20.dp)
-                            .background(SpecBarPlayed)
+                            .background(MaterialTheme.colorScheme.secondary)
                     )
                 }
             }
@@ -395,7 +396,7 @@ fun PlayerControlPanel(
                 Text(
                     text = title,
                     color = Color.White,
-                    fontSize = 25.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -463,7 +464,7 @@ fun PlayerControlPanel(
                                     .fillMaxWidth(
                                         (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                                     )
-                                    .background(SpecBarPlayed)
+                                    .background(MaterialTheme.colorScheme.secondary)
                             )
                         }
                     }
@@ -574,14 +575,14 @@ private fun PanelMenuButton(
     // 与三个播放键同构：同一个 40dp 容器、同一种居中方式、下划线画在容器内部底边
     Surface(
         onClick = onClick,
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(6.dp)),
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) SpecFocusGreen.copy(alpha = 0.55f) else Color.Transparent,
+            containerColor = if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f) else Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecFocusGreen,
-            focusedContentColor = Color.White
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary
         ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         modifier = Modifier
             .size(SpecFocusBox)
             .focusRequester(focusRequester)
@@ -609,7 +610,7 @@ private fun PanelMenuButton(
                         .padding(bottom = 3.dp)
                         .width(24.dp)
                         .height(3.dp)
-                        .background(EmbyGreen, RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(4.dp))
                 )
             }
         }
@@ -627,12 +628,12 @@ private fun PanelIcon(
     // 官方形态：28dp 圆角方块，焦点时整块填充 #428A39、图标提亮；无缩放、无描边
     Surface(
         onClick = onClick,
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(6.dp)),
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecFocusGreen,
-            focusedContentColor = Color.White
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary
         ),
         modifier = Modifier
             .size(SpecFocusBox)
@@ -644,7 +645,7 @@ private fun PanelIcon(
                     Modifier
                 }
             ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Icon(
@@ -725,9 +726,9 @@ fun SheetRow(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(4.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) SpecFocusGreen.copy(alpha = 0.30f) else Color.Transparent,
+            containerColor = if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.30f) else Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecFocusGreen.copy(alpha = 0.45f),
+            focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.45f),
             focusedContentColor = Color.White
         ),
         modifier = Modifier
@@ -739,7 +740,7 @@ fun SheetRow(
             .then(
                 if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier
             ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f)
     ) {
         Row(
             modifier = Modifier
@@ -774,7 +775,7 @@ fun SheetRow(
                     Box(
                         modifier = Modifier
                             .size(20.dp)
-                            .background(EmbyGreen, RoundedCornerShape(4.dp)),
+                            .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(4.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -852,7 +853,7 @@ fun InfoSheet(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(152.dp)
-                    .background(Color(0xFF2A2A2A), RoundedCornerShape(6.dp))
+                    .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
             )
             Spacer(modifier = Modifier.width(20.dp))
         }
@@ -861,7 +862,7 @@ fun InfoSheet(
             Spacer(modifier = Modifier.height(46.dp))
             Text(
                 text = title,
-                fontSize = 26.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 maxLines = 1,
@@ -989,7 +990,7 @@ fun CastListSheet(
     Column(modifier = modifier) {
         Text(
             text = "演职人员",
-            fontSize = 26.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             style = OverlayTextStyle

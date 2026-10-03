@@ -73,7 +73,7 @@ fun AccountScreen(
             modifier = Modifier
                 .width(700.dp)
                 .heightIn(min = 400.dp, max = 550.dp),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = SurfaceDefaults.colors(
                 containerColor = Color.Transparent
             )
@@ -157,12 +157,12 @@ fun AccountScreen(
                             ),
                         onClick = onAddAccount,
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.White.copy(alpha = 0.08f),
-                            focusedContainerColor = Color.White.copy(alpha = 0.95f),
+                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
                             contentColor = Color.White,
-                            focusedContentColor = Color.Black
+                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )
                     ) {
                         Row(
@@ -220,23 +220,23 @@ private fun AccountListItem(
                 .height(72.dp)
                 .then(if (isFirst) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
             border = ClickableSurfaceDefaults.border(
                 border = if (isCurrentAccount) {
                     Border(BorderStroke(2.dp,  MaterialTheme.colorScheme.tertiary))
                 } else {
                     Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)))
                 },
-                focusedBorder = Border(BorderStroke(2.dp, Color.White))
+                focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
             ),
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = if (isCurrentAccount)  MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.2f)
                 else  Color.White.copy(alpha = 0.05f)
                 ,
-                focusedContainerColor = MaterialTheme.colorScheme.primary,
+                focusedContainerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = if (isCurrentAccount)  MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.tertiary,
-                focusedContentColor = MaterialTheme.colorScheme.onPrimary
+                focusedContentColor = MaterialTheme.colorScheme.onTertiary
             )
         ) {
             Row(
@@ -300,7 +300,7 @@ private fun AccountListItem(
             onClick = onDelete,
             modifier = Modifier.size(72.dp),
             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
             border = ClickableSurfaceDefaults.border(
                 border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
                 focusedBorder = Border(BorderStroke(2.dp, Color(0xFFEF5350)))
@@ -347,7 +347,7 @@ private fun DeleteConfirmDialog(
                 modifier = Modifier
                     .width(420.dp)
                     .wrapContentHeight(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))),
                 colors = SurfaceDefaults.colors(
                     containerColor = Color(0xFF1C1C1C),
@@ -402,12 +402,12 @@ private fun DeleteConfirmDialog(
                                 .weight(1f)
                                 .height(46.dp)
                                 .focusRequester(cancelFocusRequester),
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = Color.White.copy(alpha = 0.1f),
-                                focusedContainerColor = Color.White.copy(alpha = 0.9f),
+                                focusedContainerColor = MaterialTheme.colorScheme.secondary,
                                 contentColor = Color.White,
-                                focusedContentColor = Color.Black
+                                focusedContentColor = MaterialTheme.colorScheme.onTertiary
                             )
                         ) {
                             Box(
@@ -429,7 +429,7 @@ private fun DeleteConfirmDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(46.dp),
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = Color(0xFFEF5350).copy(alpha = 0.7f),
                                 focusedContainerColor = Color(0xFFEF5350),

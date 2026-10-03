@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import androidx.tv.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -122,9 +123,9 @@ private fun ChannelCard(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, Color(0xFF52B54B)))
+            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
         ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.08f),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             focusedContainerColor = Color.Black.copy(alpha = 0.35f),
@@ -172,7 +173,7 @@ private fun ChannelCard(
                             .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text(text = num, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(text = num, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

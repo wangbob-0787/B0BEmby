@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -59,18 +60,18 @@ fun ExitConfirmDialog(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .width(560.dp)
+                .width(380.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
-                .padding(horizontal = 40.dp, vertical = 32.dp)
+                .padding(horizontal = 28.dp, vertical = 20.dp)
         ) {
             Text(
                 text = stringResource(R.string.exit_confirm_title),
                 color = Color.White,
-                fontSize = 26.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(28.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 DialogButton(
                     text = stringResource(R.string.exit_confirm_cancel),
                     onClick = onCancel,
@@ -94,14 +95,15 @@ private fun DialogButton(
 ) {
     Surface(
         onClick = onClick,
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(10.dp)),
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, Color(0xFF52B54B)))
+            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
         ),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color(0xFF333333),
-            focusedContainerColor = Color(0xFF444444),
-            contentColor = Color.White
+            contentColor = Color.White,
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary
         ),
         modifier = Modifier.then(
             if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
@@ -109,10 +111,9 @@ private fun DialogButton(
     ) {
         Text(
             text = text,
-            color = Color.White,
-            fontSize = 18.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 40.dp, vertical = 14.dp)
+            modifier = Modifier.padding(horizontal = 28.dp, vertical = 11.dp)
         )
     }
 }

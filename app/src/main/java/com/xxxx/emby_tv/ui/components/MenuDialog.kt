@@ -87,7 +87,7 @@ fun MenuDialog(
                     modifier = Modifier
                         .width(500.dp) // 菜单不需要太宽，窄一点更精致
                         .wrapContentHeight(),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(28.dp),
                     border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))),
                     colors = SurfaceDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.onPrimary,
@@ -227,16 +227,16 @@ fun MenuListItem(
         selected = false,
         onClick = onClick,
         modifier = modifier,
-        scale = ListItemDefaults.scale(focusedScale = 1.05f),
+        scale = ListItemDefaults.scale(focusedScale = 1.04f),
         shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ListItemDefaults.colors(
             containerColor = Color.White.copy(alpha = 0.05f),
             contentColor = Color.White.copy(alpha = 0.8f),
             focusedContainerColor = primaryColor, // 聚焦时使用当前选中的主题色！
-            focusedContentColor = Color.White
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary
         ),
         headlineContent = {
-            Text(text = text, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+            Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.Medium)
         },
         leadingContent = {
             Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(24.dp))
@@ -295,8 +295,8 @@ fun ThemeSelectionDialog(
                                 .fillMaxWidth()
                                 .height(180.dp)
                                 .focusRequester(if (index == 0) firstItemFocusRequester else FocusRequester.Default),
-                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.12f), // 稍微加大缩放感
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f), // 稍微加大缩放感
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
                             glow = ClickableSurfaceDefaults.glow(
                                 focusedGlow = Glow(
                                     elevationColor = theme.secondary.copy(alpha = 0.5f),
@@ -304,7 +304,7 @@ fun ThemeSelectionDialog(
                                 )
                             ),
                             border = ClickableSurfaceDefaults.border(
-                                focusedBorder = Border(BorderStroke(3.dp, Color.White))
+                                focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
                             ),
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = Color.Transparent

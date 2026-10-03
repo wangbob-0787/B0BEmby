@@ -332,8 +332,8 @@ fun LoginScreen(
                             } else false
                         },
                     colors = ButtonDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.primary,
-                        focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                        focusedContentColor = MaterialTheme.colorScheme.onTertiary,
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ),
@@ -377,9 +377,9 @@ fun LoginScreen(
                     shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(100)),
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = Color.Transparent,
-                        focusedContainerColor = MaterialTheme.colorScheme.primary,
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
                         contentColor = Color.White.copy(alpha = 0.5f),
-                        focusedContentColor = MaterialTheme.colorScheme.onPrimary
+                        focusedContentColor = MaterialTheme.colorScheme.onTertiary
                     ),
                     modifier = Modifier.fillMaxWidth(0.8f)
                 ) {
@@ -497,8 +497,8 @@ fun TvInputButton(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.primary,
-            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary,
         ),
         modifier = modifier
             .fillMaxWidth(0.8f)
@@ -561,7 +561,7 @@ fun ProtocolButton(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = MaterialTheme.colorScheme.onSurface,
             focusedContainerColor = MaterialTheme.colorScheme.onSurface,
-            focusedContentColor = MaterialTheme.colorScheme.surface,
+            focusedContentColor = MaterialTheme.colorScheme.onTertiary,
         ),
         modifier = modifier.height(64.dp)
     ) {

@@ -1857,7 +1857,7 @@ fun PlayerScreen(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(top = 18.dp, end = 22.dp)
-                            .background(Color.Black.copy(alpha = 0.40f), RoundedCornerShape(6.dp))
+                            .background(Color.Black.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }

@@ -85,16 +85,16 @@ fun SkipIntroButton(
                     .height(48.dp)
                     .focusRequester(skipButtonFocusRequester),
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(28.dp)),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                 border = ClickableSurfaceDefaults.border(
                     border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))),
-                    focusedBorder = Border(BorderStroke(2.dp, Color.White))
+                    focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
                 ),
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color.White.copy(alpha = 0.1f),
-                    focusedContainerColor = Color.White.copy(alpha = 0.9f),
+                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = Color.White,
-                    focusedContentColor = Color.Black
+                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
                 )
             ) {
                 Box(

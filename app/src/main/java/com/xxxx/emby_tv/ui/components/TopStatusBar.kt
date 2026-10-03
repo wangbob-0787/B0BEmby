@@ -82,9 +82,9 @@ fun TopStatusBar(
                         // 父亲 2026-10-02：聚焦 = 绿底白图标
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = Color(0xFF52B54B),
+                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
                             contentColor = Color.White,
-                            focusedContentColor = Color.White
+                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )
                     ) {
                         Box(
@@ -132,7 +132,7 @@ fun TopStatusBar(
                         Text(
                             text = stringResource(R.string.proxy_indicator),
                             color = MaterialTheme.colorScheme.secondary,
-                            fontSize = 10.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -151,9 +151,9 @@ fun TopStatusBar(
                         // 父亲 2026-10-02：聚焦 = 绿底白图标
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = Color(0xFF52B54B),
+                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
                             contentColor = Color.White,
-                            focusedContentColor = Color.White
+                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )
                     ) {
                         Box(
@@ -179,12 +179,12 @@ fun TopStatusBar(
                         onClick = onUserInfoClick ?: {},
                         modifier = Modifier
                             .focusRequester(userInfoFocusRequester),
-                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.primary,
+                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
                             contentColor = MaterialTheme.colorScheme.onSecondary,
-                            focusedContentColor = MaterialTheme.colorScheme.secondary
+                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )
                     ) {
                         Row(

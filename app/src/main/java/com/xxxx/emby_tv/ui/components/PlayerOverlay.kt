@@ -105,7 +105,7 @@ fun PlayerOverlay(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }

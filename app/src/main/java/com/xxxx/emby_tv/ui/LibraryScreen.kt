@@ -163,10 +163,10 @@ fun LibraryScreen(
                     containerColor = Color.White.copy(alpha = 0.15f),
                     contentColor = Color.White,
                     focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
                 ),
                 border = ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(BorderStroke(2.dp, Color.White))
+                    focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
                 ),
                 modifier = Modifier.padding(end = 12.dp)
             ) {
@@ -215,13 +215,13 @@ fun LibraryScreen(
                             Color.White.copy(alpha = 0.7f)
                         },
                         focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                        focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                        focusedContentColor = MaterialTheme.colorScheme.onTertiary
                     ),
                     border = ClickableSurfaceDefaults.border(
                         border = if (!isSelected) Border(
                             BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
                         ) else Border(BorderStroke(0.dp, Color.Transparent)),
-                        focusedBorder = Border(BorderStroke(2.dp, Color.White))
+                        focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
                     )
                 ) {
                     Text(
@@ -410,7 +410,7 @@ private fun SortDialog(
                                     },
                                     contentColor = Color.White,
                                     focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                                    focusedContentColor = MaterialTheme.colorScheme.onSecondary
+                                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
                                 )
                             ) {
                                 Row(

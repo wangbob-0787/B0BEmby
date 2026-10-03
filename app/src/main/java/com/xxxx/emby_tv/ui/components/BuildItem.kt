@@ -120,8 +120,8 @@ fun BuildItem(
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
                 BorderStroke(
-                    3.dp,
-                    Color(0xFF52B54B)
+                    2.dp,
+                    MaterialTheme.colorScheme.secondary
                 )
             )
         ),
@@ -213,7 +213,7 @@ fun BuildItem(
                     ) {
                         Text(
                             text = accountName,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
                             color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -263,7 +263,7 @@ fun BuildItem(
                             Text(
                             text = userData?.unplayedItemCount?.toString() ?: "",
                                 color = Color.White,
-                                fontSize = 10.sp,
+                                fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
                             )
                         }

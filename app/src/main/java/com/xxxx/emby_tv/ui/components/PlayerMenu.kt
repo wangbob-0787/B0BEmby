@@ -145,7 +145,7 @@ fun PlayerMenu(
                 modifier = Modifier
                     .width(900.dp)
                     .height(470.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
                 colors = SurfaceDefaults.colors(
                     containerColor = Color(0xFF0E0E0E),
@@ -193,7 +193,7 @@ fun PlayerMenu(
                                     ) else Color.Transparent,
                                     contentColor = if (isSelected) TvMaterialTheme.colorScheme.onSurfaceVariant else Color.White,
                                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary
+                                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary
                                 )
                             ) {
                                 Text(
@@ -353,12 +353,12 @@ fun InfoTab(
             Button(
                 onClick = onToggleFavorite,
                 contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                scale = ButtonDefaults.scale(focusedScale = 1.1f),
+                scale = ButtonDefaults.scale(focusedScale = 1.06f),
                 colors = ButtonDefaults.colors(
                     containerColor = TvMaterialTheme.colorScheme.onSecondary.copy(alpha = 0.1f),
                     contentColor = TvMaterialTheme.colorScheme.onSecondary,
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                 )
             ) {
                 Icon(
@@ -380,10 +380,10 @@ fun InfoTab(
             onClick = { },
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = Color.Transparent,
-                focusedContainerColor = Color.Gray.copy(alpha = 0.4f),
+                focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
             ),
             scale = ClickableSurfaceDefaults.scale(
-                focusedScale = 1.03f
+                focusedScale = 1.04f
             ),
         ) {
             Text(
@@ -660,12 +660,12 @@ private fun OffsetButton(
         onClick = onClick,
         enabled = enabled,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(4.dp)),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = TvMaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
             contentColor = Color.White,
             focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-            focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+            focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
             disabledContainerColor = Color.White.copy(alpha = 0.05f),
             disabledContentColor = Color.White.copy(alpha = 0.3f)
         ),
@@ -709,14 +709,14 @@ fun SubtitlesTab(
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = if (isSelected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f
                     ) else Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSurface
                 ),
                 scale = ClickableSurfaceDefaults.scale(
-                    focusedScale = 1.03f,
+                    focusedScale = 1.04f,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -750,14 +750,14 @@ fun SubtitlesTab(
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = if (isSelected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f
                     ) else Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSurface
                 ),
                 scale = ClickableSurfaceDefaults.scale(
-                    focusedScale = 1.03f,
+                    focusedScale = 1.04f,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -797,14 +797,14 @@ fun AudioTab(tracks: List<MediaStreamDto>, selectedIndex: Int, onSelect: (Int) -
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = if (isSelected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f
                     ) else Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSurface
                 ),
                 scale = ClickableSurfaceDefaults.scale(
-                    focusedScale = 1.03f,
+                    focusedScale = 1.04f,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -842,14 +842,14 @@ fun SpeedTab(currentSpeed: Float, onChange: (Float) -> Unit) {
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = if (isSelected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f
                     ) else Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSurface
                 ),
                 scale = ClickableSurfaceDefaults.scale(
-                    focusedScale = 1.03f,
+                    focusedScale = 1.04f,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -909,13 +909,13 @@ private fun MenuRow(label: String, selected: Boolean, onClick: () -> Unit) {
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(
             focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-            focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+            focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
             containerColor = if (selected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                 alpha = 0.5f
             ) else Color.Transparent,
             contentColor = TvMaterialTheme.colorScheme.onSurface
         ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
@@ -979,14 +979,14 @@ fun PlaybackCorrectionTab(current: Int, onChange: (Int) -> Unit) {
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = if (isSelected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f
                     ) else Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSurface
                 ),
                 scale = ClickableSurfaceDefaults.scale(
-                    focusedScale = 1.03f,
+                    focusedScale = 1.04f,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1026,14 +1026,14 @@ fun PlayModeTab(current: Int, onChange: (Int) -> Unit) {
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = if (isSelected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f
                     ) else Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSurface
                 ),
                 scale = ClickableSurfaceDefaults.scale(
-                    focusedScale = 1.03f,
+                    focusedScale = 1.04f,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1075,14 +1075,14 @@ fun IntroSkipTab(
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
-                    focusedContentColor = TvMaterialTheme.colorScheme.onSecondary,
+                    focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = if (isSelected) TvMaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f
                     ) else Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSurface
                 ),
                 scale = ClickableSurfaceDefaults.scale(
-                    focusedScale = 1.03f,
+                    focusedScale = 1.04f,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()

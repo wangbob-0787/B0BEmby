@@ -206,9 +206,9 @@ fun SearchScreen(
                                 containerColor = if (isAllSelected) MaterialTheme.colorScheme.primary.copy(
                                     alpha = 0.2f
                                 ) else Color.White.copy(alpha = 0.05f),
-                                focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                focusedContainerColor = MaterialTheme.colorScheme.secondary,
                                 contentColor = Color.White,
-                                focusedContentColor = Color.White
+                                focusedContentColor = MaterialTheme.colorScheme.onTertiary
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 border = if (isAllSelected) Border(
@@ -224,7 +224,7 @@ fun SearchScreen(
                                     )
                                 )
                             ),
-                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(60.dp)
@@ -281,9 +281,9 @@ fun SearchScreen(
                             containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(
                                 alpha = 0.2f
                             ) else Color.White.copy(alpha = 0.05f),
-                            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
                             contentColor = Color.White,
-                            focusedContentColor = Color.White
+                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         ),
                         border = ClickableSurfaceDefaults.border(
                             border = if (isSelected) Border(
@@ -299,7 +299,7 @@ fun SearchScreen(
                                 )
                             )
                         ),
-                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(60.dp)
@@ -376,7 +376,7 @@ fun SearchScreen(
                             }
                         },
                     shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(28.dp)),
-                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                     border = ClickableSurfaceDefaults.border(
                         border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))),
                         focusedBorder = Border(
@@ -388,7 +388,7 @@ fun SearchScreen(
                     ),
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = Color.White.copy(alpha = 0.1f),
-                        focusedContainerColor = Color.White.copy(alpha = 0.2f),
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f),
                         contentColor = Color.White
                     )
                 ) {
