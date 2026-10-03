@@ -358,16 +358,19 @@ fun PlayerControlPanel(
                 model = logoUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
+                alignment = Alignment.CenterStart,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     // 官方实测（F1 截图）：logo 显示 71×120px、距左 235px、距顶 60px；
                     // 父亲 2026-09-30 要求左移，与剧名/时间文字左边缘（48dp）对齐。
                     // 父亲 2026-10-02：改成**固定宽度**，图片小就放大、大就缩小（高度按比例自动）
-                    // 父亲 2026-10-03：只卡宽度会让「又高又窄」的 logo 竖着占半个屏，
-                    // 改为**限宽 + 限高**（contentScale=Fit 取先到的那条线）：
-                    //   宽扁的 → 宽度先到 140dp；竖高的 → 高度先到 60dp；方正的 → 落在中间。
+                    // 父亲 2026-10-03：只卡宽度会让「又高又窄」的 logo 竖着占半个屏。
+                    // 只写 sizeIn(maxWidth/maxHeight) 不够——它只限上限，图片仍按自身尺寸绘制，
+                    // 又高又窄的图不会被压到 60dp。必须**同时给定尺寸框 + FillBounds**：
+                    //   先 size(width=140dp, height=60dp) 把框钉死，再让图按比例缩放进框内并居中。
+                    //   结果：宽扁的铺满 140dp 宽、竖高的顶到 60dp 高，都不会出框。
                     .padding(start = 48.dp, top = 30.dp)
-                    .sizeIn(maxWidth = 140.dp, maxHeight = 60.dp)
+                    .size(width = 140.dp, height = 60.dp)
             )
         }
         // 底部渐变遮罩：白色图标/文字直接压在亮画面上会糊成一团（父亲 2026-09-30 实测）。
