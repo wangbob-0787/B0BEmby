@@ -277,14 +277,6 @@ fun SeekHud(
                 style = OverlayTextStyleSoft
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        // 目标时间(官方放在进度条下方左侧,与左边已播时间同列)
-        Text(
-            text = formatDuration(position),
-            color = SpecIconIdle,
-            fontSize = 15.sp,
-            style = OverlayTextStyleSoft
-        )
     }
 }
 
