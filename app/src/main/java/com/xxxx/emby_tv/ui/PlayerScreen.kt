@@ -1865,15 +1865,18 @@ fun PlayerScreen(
 
 
             // 1.85 左上角片名 Logo：常显（不随控制面板显隐；父亲 2026-10-02）
+            // 父亲 2026-10-03：只卡宽度会让「又高又窄」的 ClearLogo 竖着占半个屏。
+            // 改为把 140x60dp 的框钉死，再让图按比例缩放进框内（Fit + 左对齐）。
             playerLogoUrl?.let { url ->
                 coil3.compose.AsyncImage(
                     model = url,
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart,
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(start = 48.dp, top = 30.dp)
-                        .width(140.dp)
+                        .size(width = 140.dp, height = 60.dp)
                 )
             }
 
