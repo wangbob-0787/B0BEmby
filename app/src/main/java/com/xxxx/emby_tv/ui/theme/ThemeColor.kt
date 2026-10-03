@@ -21,16 +21,16 @@ object ThemeColorManager {
     
     @Composable
     fun getThemeColors(context: Context) = listOf(
-        // 暗夜(默认):近黑背景 + 低饱和绿色强调色,适合关灯看片
-        // 2026-10-03 父亲: 蓝灰 → 绿灰 → 纯绿
-        // secondary 用作焦点底,必须够亮才能配深色字(近黑字压 #A6C8A4 = 8.9:1)
+        // 暗夜(默认):近黑背景 + 绿色强调色,适合关灯看片
+        // 2026-10-03 父亲: 蓝灰 → 绿灰 → 纯绿(不要灰调)
+        // secondary 用作焦点底,必须够亮才能配深色字(近黑字压 #7ED97A = 10.4:1)
         ThemeColor(
             id = "dark",
             name = "暗夜",
-            primary = Color(0xFF8FBF8C),
-            primaryLight = Color(0xFFAED6AB),
+            primary = Color(0xFF4CD137),
+            primaryLight = Color(0xFF7BE86A),
             primaryDark = Color(0xFF0C0D10),
-            secondary = Color(0xFFA6C8A4),
+            secondary = Color(0xFF7ED97A),
             secondaryLight = Color(0xFF17191D),
             secondaryDark = Color(0xFF101216)
         ),
