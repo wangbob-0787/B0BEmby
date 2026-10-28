@@ -183,6 +183,7 @@ class MainActivity : ComponentActivity() {
     private var holdLastY = 0f
     private var holdRate = 0f
     private var holdTicking = false
+    private var lastPlayerKeyAt = 0L
 
     private val holdTick = object : Runnable {
         override fun run() {
@@ -192,6 +193,21 @@ class MainActivity : ComponentActivity() {
             val mag = kotlin.math.max(kotlin.math.abs(dx), kotlin.math.abs(dy))
             if (mag > ViewConfiguration.get(this@MainActivity).scaledTouchSlop) {
                 dragMoved = true
+                /*
+                 * 播放页保持方向键语义（父亲 2026-10-29：摇杆往下要能唤出控制条）：
+                 * 只认「往下」，一次推只发一次，往上与左右什么都不做。
+                 */
+                if (com.xxxx.emby_tv.util.InputBridge.playerScreenActive) {
+                    if (dy > 0f && kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+                        val nowKey = SystemClock.uptimeMillis()
+                        if (nowKey - lastPlayerKeyAt > 400L) {
+                            lastPlayerKeyAt = nowKey
+                            fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
+                        }
+                    }
+                    holdHandler.postDelayed(this, 16L)
+                    return
+                }
                 val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
                 val dirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
                 val dirY = if (vertical) (if (dy > 0f) 1f else -1f) else 0f

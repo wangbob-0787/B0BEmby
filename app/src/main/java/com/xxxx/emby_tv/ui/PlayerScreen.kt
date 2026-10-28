@@ -1701,12 +1701,9 @@ fun PlayerScreen(
                                     return@onPreviewKeyEvent true
                                 }
                             }
-                            // 摇杆往上收起控制条（光标不在按钮上时才收，免得翻菜单时被收掉）
+                            // 摇杆往上不做任何动作（父亲 2026-10-29：收面板改按 B/返回键）
                             Key.DirectionUp -> {
-                                if (showPanel && !overBar && activeItem == null && !inMoreMenu) {
-                                    showPanel = false
-                                    return@onPreviewKeyEvent true
-                                }
+                                if (!showPanel) return@onPreviewKeyEvent true
                             }
                             else -> {}
                         }
@@ -1823,17 +1820,11 @@ fun PlayerScreen(
                                 showPanel = true
                                 inMoreMenu = false
                                 activeItem = null
-                            } else {
-                                // 上键：面板收起时调大音量（原来上键被吃掉却什么也不做，父亲 2026-10-29 报）
-                                runCatching {
-                                    (context.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
-                                        .adjustStreamVolume(
-                                            AudioManager.STREAM_MUSIC,
-                                            AudioManager.ADJUST_RAISE,
-                                            AudioManager.FLAG_SHOW_UI
-                                        )
-                                }
+                                return@onKeyEvent true
                             }
+                            // 上键：不接音量、也不收面板（父亲 2026-10-29 明确摇杆往上不做动作）；
+                            // 面板开着时交给焦点系统，在按钮行里往上走
+                            if (showPanel) return@onKeyEvent false
                             return@onKeyEvent true
                         }
                         if (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) {

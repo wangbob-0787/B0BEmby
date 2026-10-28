@@ -230,7 +230,8 @@ fun PlayerOverlay(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    CircularProgressIndicator(color = Color.White)
+                    // 等待圈改成 VR 那套画法（父亲 2026-10-29）
+                    VrLoadingRing()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = Utils.formatBandwidth(downloadSpeed),
