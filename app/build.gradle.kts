@@ -27,6 +27,9 @@ android {
         minSdk = 23
         targetSdk = 36
         versionName = "1.0.0"
+        // 云端把 github.run_number 写进来（-PbuildRun=xxx）；应用内更新拿它跟清单里的 run 比大小。
+        // 本地编译不带这个参数 → 0 → 永不提示更新。
+        resValue("string", "build_run", (project.findProperty("buildRun") as String?) ?: "0")
          versionCode = 1000   // 电视端现装 220；提到 1000 保证两台设备都是升级安装（Android 14 拒绝降级）
 //        versionCode = 92
 

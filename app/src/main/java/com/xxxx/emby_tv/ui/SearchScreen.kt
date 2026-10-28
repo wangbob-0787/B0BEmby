@@ -147,7 +147,7 @@ fun SearchScreen(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 32.dp, vertical = 24.dp)
+            .padding(horizontal = 40.dp, vertical = 24.dp)
     ) {
         // Left Sidebar: Account List
         if (sortedAccounts.isNotEmpty()) {
@@ -388,7 +388,7 @@ fun SearchScreen(
                     ),
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = Color.White.copy(alpha = 0.1f),
-                        focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f),
+                        focusedContainerColor = Color(0x3D2FD57C),
                         contentColor = Color.White
                     )
                 ) {

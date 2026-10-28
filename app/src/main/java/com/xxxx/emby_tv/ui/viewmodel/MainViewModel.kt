@@ -37,6 +37,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isLoggedIn: Boolean get() = repository.isLoggedIn
     val isLoaded: Boolean get() = repository.isLoaded
 
+    // === 版本与更新（父亲 2026-10-28：照 VR 的方式，点版本号一步更新；只读 TV 自己的更新源）===
+    /** 更新流程所处阶段；界面只按它显示，不各自推断 */
+    var updatePhase by mutableStateOf(UpdatePhase.Idle)
+        private set
+
+    /** 下载百分比（0~100），只在 Downloading 时有意义 */
+    var updateProgress by mutableStateOf(0)
+        private set
+
+    /** 失败/取消后跟在版本号后面的那句话；空表示没有话要说 */
+    var updateNote by mutableStateOf("")
+        private set
+
+    /** 有新版待处理 —— 界面据此决定版本号能不能点 */
+    val needUpdate: Boolean
+        get() = updatePhase != UpdatePhase.Idle
+
+    private var manifest: com.xxxx.emby_tv.data.remote.TvUpdateApi.Manifest? = null
+
+    /** 自身编译流水号（云端把 github.run_number 写进 resValue build_run），与清单里的 run 比大小 */
+    private var selfRun: Int = 0
+
     // === 版本信息 ===
     var currentVersion by mutableStateOf("")
         private set
@@ -103,36 +125,76 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             ""
         }
+        // 云端把 github.run_number 写进 resValue build_run；本地编译没有就按 0 处理（不提示更新）
+        selfRun = try {
+            context.getString(com.xxxx.emby_tv.R.string.build_run).trim().toIntOrNull() ?: 0
+        } catch (e: Exception) {
+            0
+        }
     }
 
     /**
      * 检查更新
      */
     fun checkUpdate() {
-        if (newVersion.isNotEmpty()) return
-
+        if (updatePhase != UpdatePhase.Idle) return
         viewModelScope.launch {
-            try {
-                val context = getApplication<Application>().applicationContext
-                val res = withContext(Dispatchers.IO) {
-                    EmbyApi.getNewVersion(context)
-                }
-
-                val tagName = res.safeGetString("tag_name") ?: ""
-                val body = res.safeGetString("body") ?: ""
-                val assets = res["assets"]?.asJsonArray
-
-                if (assets != null && assets.size() > 0) {
-                    downloadUrl = assets[0].asJsonObject.safeGetString("browser_download_url") ?: ""
-                }
-
-                newVersion = tagName
-                updateLog = body
-
-            } catch (e: Exception) {
-                ErrorHandler.logError("MainViewModel", "操作失败", e)
-            }
+            val m = com.xxxx.emby_tv.data.remote.TvUpdateApi.fetchManifest() ?: return@launch
+            manifest = m
+            updateNote = ""
+            updatePhase = if (selfRun > 0 && m.run > selfRun) UpdatePhase.Available else UpdatePhase.Idle
+            if (updatePhase == UpdatePhase.Available) newVersion = "build-" + m.run
         }
+    }
+
+    /**
+     * 点版本号。
+     *
+     * 只有「有新版本」「上次失败」才真的开始下载；下载中再点一次是取消；
+     * 安装阶段不响应 —— 那时包已经交给系统安装器，进程随时会被结束。
+     */
+    fun onVersionClick() {
+        when (updatePhase) {
+            UpdatePhase.Available, UpdatePhase.Failed -> startDownload()
+            UpdatePhase.Downloading -> cancelDownload()
+            UpdatePhase.Idle, UpdatePhase.Installing -> Unit
+        }
+    }
+
+    private fun startDownload() {
+        val m = manifest ?: return
+        val context = getApplication<Application>().applicationContext
+        updateNote = ""
+        updateProgress = 0
+        updatePhase = UpdatePhase.Downloading
+        com.xxxx.emby_tv.data.update.ApkUpdater.download(
+            context = context,
+            url = m.apkUrl,
+            onProgress = { p -> viewModelScope.launch { updateProgress = p } },
+            onDone = { file ->
+                viewModelScope.launch {
+                    updatePhase = UpdatePhase.Installing
+                    val err = com.xxxx.emby_tv.data.update.ApkUpdater.install(context, file)
+                    if (err != null) {
+                        updatePhase = UpdatePhase.Failed
+                        updateNote = "更新失败，请重试"
+                        ErrorHandler.logError("MainViewModel", "调起安装器失败", Exception(err))
+                    }
+                }
+            },
+            onError = { msg ->
+                viewModelScope.launch {
+                    updatePhase = UpdatePhase.Failed
+                    updateNote = if (msg == "已取消") "已取消更新" else "更新失败，请重试"
+                }
+            }
+        )
+    }
+
+    private fun cancelDownload() {
+        com.xxxx.emby_tv.data.update.ApkUpdater.cancel()
+        updatePhase = UpdatePhase.Failed
+        updateNote = "已取消更新"
     }
 
     /**

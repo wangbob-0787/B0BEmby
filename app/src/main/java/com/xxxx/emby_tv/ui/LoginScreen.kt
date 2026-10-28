@@ -187,8 +187,11 @@ fun LoginScreen(
         // 顶部状态栏
         TopStatusBar(
             currentVersion = mainViewModel.currentVersion,
-            newVersion = mainViewModel.newVersion,
             needUpdate = mainViewModel.needUpdate,
+            updatePhase = mainViewModel.updatePhase,
+            updateProgress = mainViewModel.updateProgress,
+            updateNote = mainViewModel.updateNote,
+            onVersionClick = { mainViewModel.onVersionClick() },
             onMenuClick = { showMenu = true }
         )
         Row(
@@ -332,9 +335,10 @@ fun LoginScreen(
                                 }
                             } else false
                         },
+                    // 聚焦底与其它控件统一成绿 24%（VR 登录页同款），文字保持白色
                     colors = ButtonDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                        focusedContentColor = MaterialTheme.colorScheme.onTertiary,
+                        focusedContainerColor = Color(0x3D2FD57C),
+                        focusedContentColor = Color.White,
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ),
@@ -371,56 +375,19 @@ fun LoginScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val proxyFocus = remember { FocusRequester() }
-                Surface(
-                    onClick = { navController.navigate("proxy_settings") },
-                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(100)),
-                    colors = ClickableSurfaceDefaults.colors(
-                        containerColor = Color.Transparent,
-                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = Color.White.copy(alpha = 0.5f),
-                        focusedContentColor = MaterialTheme.colorScheme.onTertiary
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .focusRequester(proxyFocus)
-                        .hoverToFocus(proxyFocus)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.proxy_settings),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
             }
         }
     }
 
     if (showMenu) {
         MenuDialog(
-            needUpdate = mainViewModel.needUpdate,
             onDismiss = { showMenu = false },
             onLogout = {
                 loginViewModel.logout()
                 showMenu = false
             },
-            onUpdate = {
-                mainViewModel.checkUpdate()
-                showMenu = false
-                navController.navigate("update")
-            },
             onThemeChange = { themeColor ->
                 mainViewModel.saveThemeId(themeColor.id)
-            },
-            onProxySettings = {
-                showMenu = false
-                navController.navigate("proxy_settings")
             },
             isShowLogout = false
         )
@@ -494,6 +461,7 @@ fun TvInputButton(
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        // 与 VR 登录页同一套：静默时 50% 白描边，聚焦用绿 24% 底 + 白字，不再画彩色边框
         border = ClickableSurfaceDefaults.border(
             border = Border(
                 BorderStroke(
@@ -501,13 +469,13 @@ fun TvInputButton(
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
             ),
-            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.primary))
+            focusedBorder = Border(BorderStroke(0.dp, Color.Transparent))
         ),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.secondary,
-            focusedContentColor = MaterialTheme.colorScheme.onTertiary,
+            focusedContainerColor = Color(0x3D2FD57C),
+            focusedContentColor = Color.White,
         ),
         modifier = modifier
             .fillMaxWidth(0.8f)
@@ -567,13 +535,13 @@ fun ProtocolButton(
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
             ),
-            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.primary))
+            focusedBorder = Border(BorderStroke(0.dp, Color.Transparent))
         ),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.onSurface,
-            focusedContentColor = MaterialTheme.colorScheme.onTertiary,
+            focusedContainerColor = Color(0x3D2FD57C),
+            focusedContentColor = Color.White,
         ),
         modifier = modifier
             .height(64.dp)

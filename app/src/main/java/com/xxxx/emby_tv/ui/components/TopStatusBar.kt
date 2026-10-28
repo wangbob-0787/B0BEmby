@@ -1,6 +1,7 @@
 package com.xxxx.emby_tv.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -46,8 +47,14 @@ import com.xxxx.emby_tv.data.local.PreferencesManager
 @Composable
 fun TopStatusBar(
     currentVersion: String,
-    newVersion: String,
-    needUpdate: Boolean,
+    newVersion: String = "",
+    needUpdate: Boolean = false,
+    // 更新状态（照 VR：点版本号就是更新；失败/取消的话跟在版本号后面）
+    updatePhase: com.xxxx.emby_tv.ui.viewmodel.UpdatePhase =
+        com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Idle,
+    updateProgress: Int = 0,
+    updateNote: String = "",
+    onVersionClick: (() -> Unit)? = null,
     showSearchButton: Boolean = false,
     userInfo: String? = null,
     onMenuClick: (() -> Unit)? = null,
@@ -103,21 +110,29 @@ fun TopStatusBar(
                     Spacer(modifier = Modifier.width(8.dp))
                 }
 
-                Text(
-                    text ="B0BEmby "+ currentVersion,
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                if (needUpdate) {
-                    Text(
-                        text = " ( ${stringResource(R.string.new_version_available, newVersion)} )",
-                        color = MaterialTheme.colorScheme.secondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                // 版本号 = 更新入口（照 VR 2026-10-26 的口径）：
+                //   有新版 → 点它开始下载；下载中 → 显示百分比，再点是取消；失败 → 显示原因，点它重试
+                val updateSuffix = when (updatePhase) {
+                    com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Available -> "（有新版本，点此更新）"
+                    com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Downloading -> "（正在下载 " + updateProgress + "%）"
+                    com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Installing -> "（正在安装…）"
+                    com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Failed ->
+                        if (updateNote.isNotEmpty()) "（" + updateNote + "）" else "（更新失败，点此重试）"
+                    com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Idle -> ""
                 }
+                val versionClickable = updatePhase == com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Available ||
+                    updatePhase == com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Failed ||
+                    updatePhase == com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Downloading
+                val versionColor = if (versionClickable) MaterialTheme.colorScheme.secondary else Color.White
+                Text(
+                    text = "B0BEmby " + currentVersion + updateSuffix,
+                    color = versionColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = if (onVersionClick != null) {
+                        Modifier.clickable(enabled = versionClickable) { onVersionClick() }
+                    } else Modifier
+                )
 
                 if (proxyEnabled) {
                     Spacer(modifier = Modifier.width(8.dp))

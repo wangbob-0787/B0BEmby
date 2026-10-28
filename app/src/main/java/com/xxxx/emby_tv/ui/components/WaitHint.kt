@@ -57,7 +57,7 @@ fun WaitHint(
         Text(
             text = if (timedOut) "请检查网络连接" else "正在加载…",
             color = if (timedOut) Color.White.copy(alpha = 0.86f) else Color.White.copy(alpha = 0.7f),
-            fontSize = 21.sp,
+            fontSize = 16.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 60.dp)
         )

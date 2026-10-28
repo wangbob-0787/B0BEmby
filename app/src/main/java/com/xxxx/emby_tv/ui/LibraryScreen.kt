@@ -128,7 +128,7 @@ fun LibraryScreen(
         modifier = Modifier
             .fillMaxSize()
             // 页边距照 VR 统一成 40dp（父亲 2026-10-28）
-            .padding(start = 40.dp, end = 40.dp, top = 16.dp, bottom = 16.dp)
+            .padding(40.dp)
     ) {
         Row(
             modifier = Modifier

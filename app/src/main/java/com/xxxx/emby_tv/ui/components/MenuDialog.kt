@@ -43,14 +43,11 @@ import com.xxxx.emby_tv.ui.theme.ThemeColor
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MenuDialog(
-    needUpdate: Boolean,
     onDismiss: () -> Unit,
     onLogout: () -> Unit,
-    onUpdate: () -> Unit,
     onThemeChange: (ThemeColor) -> Unit,
     onSwitchAccount: (() -> Unit)? = null,
     onSearch: (() -> Unit)? = null,
-    onProxySettings: (() -> Unit)? = null,
     isShowLogout: Boolean = true
 ) {
     val showThemeSelection = remember { mutableStateOf(false) }
@@ -161,29 +158,8 @@ fun MenuDialog(
                             )
                         }
 
-                        // 代理设置项
-                        if (onProxySettings != null) {
-                            menuItems.add {
-                                MenuListItem(
-                                    text = stringResource(R.string.proxy_settings),
-                                    icon = Icons.Filled.Settings,
-                                    onClick = { onProxySettings(); onDismiss() },
-                                    primaryColor = currentPrimaryColor
-                                )
-                            }
-                        }
-
-                        // 更新项
-                        if (needUpdate) {
-                            menuItems.add {
-                                MenuListItem(
-                                    text = stringResource(R.string.download_latest_version),
-                                    icon = Icons.Filled.SystemUpdate,
-                                    onClick = { onUpdate(); onDismiss() },
-                                    primaryColor = currentPrimaryColor
-                                )
-                            }
-                        }
+                        // 代理设置与「下载最新版本」两项已取消（父亲 2026-10-28）：
+                        // 代理不再单独成页，更新改成点顶栏版本号一步完成。
 
                         // 渲染列表并添加间距
                         menuItems.forEachIndexed { index, item ->

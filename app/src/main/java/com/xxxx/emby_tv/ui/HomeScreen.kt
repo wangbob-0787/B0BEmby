@@ -96,16 +96,10 @@ fun HomeScreen(
     // 菜单对话框
     if (showMenu) {
         MenuDialog(
-            needUpdate = mainViewModel.needUpdate,
             onDismiss = { showMenu = false },
             onLogout = {
                 mainViewModel.logout()
                 showMenu = false
-            },
-            onUpdate = {
-                mainViewModel.checkUpdate()
-                showMenu = false
-                navController.navigate("update")
             },
             onThemeChange = { themeColor ->
                 mainViewModel.saveThemeId(themeColor.id)
@@ -117,10 +111,6 @@ fun HomeScreen(
             onSearch = {
                 showMenu = false
                 navController.navigate("search")
-            },
-            onProxySettings = {
-                showMenu = false
-                navController.navigate("proxy_settings")
             }
         )
     }
@@ -217,8 +207,11 @@ fun HomeScreen(
         // 顶部状态栏
         TopStatusBar(
             currentVersion = mainViewModel.currentVersion,
-            newVersion = mainViewModel.newVersion,
             needUpdate = mainViewModel.needUpdate,
+            updatePhase = mainViewModel.updatePhase,
+            updateProgress = mainViewModel.updateProgress,
+            updateNote = mainViewModel.updateNote,
+            onVersionClick = { mainViewModel.onVersionClick() },
             showSearchButton = true,
             userInfo = userInfo,
             onMenuClick = { showMenu = true },
@@ -405,7 +398,7 @@ private fun MediaSection(
             // 层级按 VR 收成三档：大片头剧名 28 > 行标题 18 > 卡片标题 16（父亲 2026-10-28）
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 32.dp, top = 20.dp, bottom = 16.dp)
+            modifier = Modifier.padding(start = 24.dp, top = 12.dp, bottom = 8.dp)
         )
 
         if (items.isEmpty()) {

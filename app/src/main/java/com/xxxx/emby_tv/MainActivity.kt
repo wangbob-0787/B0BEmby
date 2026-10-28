@@ -29,8 +29,7 @@ import androidx.navigation.navArgument
 import com.xxxx.emby_tv.ui.AccountScreen
 import com.xxxx.emby_tv.ui.MediaDetailScreen
 import com.xxxx.emby_tv.ui.HomeScreen
-import com.xxxx.emby_tv.ui.UpdateScreen
-import com.xxxx.emby_tv.ui.ProxySettingsScreen
+
 import com.xxxx.emby_tv.ui.SearchScreen
 import com.xxxx.emby_tv.ui.components.BuildGradientBackground
 import com.xxxx.emby_tv.ui.components.ExitConfirmDialog
@@ -364,20 +363,8 @@ fun EmbyTvApp() {
                         )
                     }
 
-                    // 代理设置页面
-                    composable("proxy_settings") {
-                        ProxySettingsScreen(
-                            mainViewModel = mainViewModel,
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
-
-                    // 更新页面
-                    composable("update") {
-                        UpdateScreen(
-                            mainViewModel = mainViewModel
-                        )
-                    }
+                    // 代理设置页与更新页已取消（父亲 2026-10-28）：代理并入登录页的去处，
+                    // 更新改成顶栏版本号上的一步式更新，不再单独占一页。
 
                     // 搜索页面
                     composable("search") {

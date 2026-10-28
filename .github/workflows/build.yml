@@ -41,7 +41,8 @@ jobs:
       - name: 编译 APK（debug + release）
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace --build-cache
+          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace --build-cache \
+            -PbuildRun=${{ github.run_number }}
 
       - name: 收集 APK
         run: |
