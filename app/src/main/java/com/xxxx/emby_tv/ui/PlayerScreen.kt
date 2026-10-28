@@ -2144,12 +2144,10 @@ fun PlayerScreen(
                             PlayerMenuItem.SUBTITLE -> SubtitleSheet(
                                 tracks = subtitleTracks,
                                 selectedIndex = selectedSubtitleIndex,
-                                timeOffsetMs = subtitleTimeOffsetMs,
                                 onSelect = { index ->
                                     changeTrack(selectedAudioIndex, index)
                                     activeItem = null
                                 },
-                                onTimeOffsetChange = { subtitleTimeOffsetMs = it },
                                 firstFocus = sheetFirstFocus
                             )
 

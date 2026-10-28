@@ -91,7 +91,7 @@ import java.util.Locale
 /** 播放控制面板上的一级菜单项（名称与顺序照 VR 版，父亲 2026-10-28 定） */
 enum class PlayerMenuItem(val label: String) {
     SUBTITLE("字幕"),
-    DANMAKU("弹幕"),
+    DANMAKU("弹幕设置"),
     SPEED("播放速度"),
     EPISODES("选集"),
     PICK("选片"),
@@ -1109,32 +1109,25 @@ fun BufferPresetSheet(
 }
 
 /**
- * 字幕菜单（照官方客户端与 VR，父亲 2026-10-28 定）
+ * 字幕菜单（与 VR 完全一致，父亲 2026-10-29 00:11 定）
  *
- * · 第 0 行「关」；其余是这台播放器实际可选的轨道；
+ * · **没有「关」这一行**，也没有弹幕开关 —— 弹幕开关在「弹幕设置」菜单第一项；
+ * · 点已经勾上的那一条 = 取消勾选，等于关闭字幕（VR 2026-10-06 晚就是这么定的）；
  * · 每行两行文字：主行 Emby 的 DisplayTitle，副行母语名 Title；
- * · **内封在前、外挂在后**，组内按流序号升序；
+ * · 内封在前、外挂在后，组内按流序号升序；
  * · 一条字幕都没有时给一行占位「（这部片没有字幕）」，避免菜单整块空白；
- * · 弹幕不进这个菜单（弹幕有自己的菜单项）。
+ * · 字幕时间偏移在 VR 侧没有入口，这里也一并去掉（要校准先按 VR 的口径定，不各写一套）。
  */
 @Composable
 fun SubtitleSheet(
     tracks: List<MediaStreamDto>,
     selectedIndex: Int,
-    timeOffsetMs: Long,
     onSelect: (Int) -> Unit,
-    onTimeOffsetChange: (Long) -> Unit,
     firstFocus: FocusRequester,
 ) {
     // 内封在前、外挂在后（sortedWith 稳定排序，同组保持服务端给的顺序）
     val sorted = tracks.sortedWith(compareBy({ it.isExternal == true }, { it.index ?: Int.MAX_VALUE }))
     Column {
-        SheetRow(
-            label = "关",
-            selected = selectedIndex < 0,
-            onClick = { onSelect(-1) },
-            firstFocus = firstFocus
-        )
         if (sorted.isEmpty()) {
             Text(
                 text = "（这部片没有字幕）",
@@ -1143,7 +1136,7 @@ fun SubtitleSheet(
                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 10.dp)
             )
         }
-        sorted.forEach { track ->
+        sorted.forEachIndexed { i, track ->
             val index = track.index ?: -1
             val label = track.displayTitle?.takeIf { it.isNotBlank() }
                 ?: track.language?.takeIf { it.isNotBlank() }
@@ -1152,29 +1145,12 @@ fun SubtitleSheet(
             SheetRow(
                 label = label,
                 selected = selectedIndex == index,
-                onClick = { onSelect(index) },
+                // 点已勾上的那条 = 取消（关字幕），不再单列「关」
+                onClick = { onSelect(if (selectedIndex == index) -1 else index) },
+                firstFocus = if (i == 0) firstFocus else null,
                 sub = track.title?.takeIf { it.isNotBlank() && it != label }
             )
         }
-        SheetRow(
-            label = "字幕提前 0.5 秒",
-            selected = false,
-            onClick = { onTimeOffsetChange(timeOffsetMs - 500L) },
-            showCheckbox = false
-        )
-        SheetRow(
-            label = "字幕延后 0.5 秒",
-            selected = false,
-            onClick = { onTimeOffsetChange(timeOffsetMs + 500L) },
-            showCheckbox = false
-        )
-        SheetRow(
-            label = "偏移复位",
-            selected = timeOffsetMs == 0L,
-            onClick = { onTimeOffsetChange(0L) },
-            trailing = String.format("%.1fs", timeOffsetMs / 1000f),
-            showCheckbox = false
-        )
     }
 }
 
