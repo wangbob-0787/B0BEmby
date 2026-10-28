@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.util.pixelScrollRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -66,6 +67,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.TextStyle
@@ -1095,7 +1097,7 @@ fun CastListSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(250.dp)
-                .then(Modifier.com.xxxx.emby_tv.util.pixelScrollRow(listState))
+                .then(Modifier.pixelScrollRow(listState))
                 .focusRequester(rowFocus)
                 .focusGroup()
                 .focusable()

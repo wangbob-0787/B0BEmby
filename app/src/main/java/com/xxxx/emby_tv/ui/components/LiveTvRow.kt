@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.util.pixelScrollRow
 import androidx.tv.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -82,7 +83,7 @@ fun LiveTvRow(
 
         LazyRow(
             state = rowState,
-            modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(rowState),
+            modifier = Modifier.pixelScrollRow(rowState),
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {

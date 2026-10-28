@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui
 
+import com.xxxx.emby_tv.util.pixelScrollRow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyColumn
@@ -424,7 +425,7 @@ private fun MediaSection(
                  * 横向滚动目标 = 当前有焦点的那一行（摇杆左右拨时由 MainActivity 调回来）。
                  * 只有焦点落在这一行里时才注册，避免多行抢同一个横向入口。
                  */
-                modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(rowState),
+                modifier = Modifier.pixelScrollRow(rowState),
                 contentPadding = PaddingValues(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {

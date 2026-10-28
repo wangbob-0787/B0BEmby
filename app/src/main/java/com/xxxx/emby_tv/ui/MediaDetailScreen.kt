@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui
 
+import com.xxxx.emby_tv.util.pixelScrollRow
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
@@ -411,7 +412,7 @@ fun MediaDetailScreen(
                     val seasonRowState = rememberLazyListState()
                     LazyRow(
                         state = seasonRowState,
-                        modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(seasonRowState),
+                        modifier = Modifier.pixelScrollRow(seasonRowState),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         // 上下留出焦点放大（1.03x + 白描边）需要的余量，别被容器裁掉
                         contentPadding = PaddingValues(
@@ -466,7 +467,7 @@ fun MediaDetailScreen(
                         val episodeRowState = rememberLazyListState()
                         LazyRow(
                             state = episodeRowState,
-                            modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(episodeRowState),
+                            modifier = Modifier.pixelScrollRow(episodeRowState),
                             contentPadding = PaddingValues(
                                 start = 40.dp, end = 40.dp, top = 16.dp, bottom = 26.dp
                             ),
@@ -799,7 +800,7 @@ private fun PersonRow(
     val castRowState = rememberLazyListState()
     LazyRow(
         state = castRowState,
-        modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(castRowState),
+        modifier = Modifier.pixelScrollRow(castRowState),
         contentPadding = PaddingValues(start = 40.dp, end = 40.dp, top = 16.dp, bottom = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(22.dp),
     ) {
