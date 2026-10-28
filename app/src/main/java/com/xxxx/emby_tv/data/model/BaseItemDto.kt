@@ -26,6 +26,11 @@ data class BaseItemDto(
     @SerializedName("CanDownload") val canDownload: Boolean? = null,
     @SerializedName("PresentationUniqueKey") val presentationUniqueKey: String? = null,
     @SerializedName("SupportsSync") val supportsSync: Boolean? = null,
+    /**
+     * 媒体源（含各自的音轨/字幕清单）。只在请求时明确点名 Fields=MediaSources 才会有 ——
+     * 详情页靠它做「版本」选择（父亲 2026-10-28），一部片的多个文件 = 多个 MediaSource。
+     */
+    @SerializedName("MediaSources") val mediaSources: List<MediaSourceInfoDto>? = null,
     @SerializedName("Container") val container: String? = null,
     @SerializedName("SortName") val sortName: String? = null,
     @SerializedName("ForcedSortName") val forcedSortName: String? = null,

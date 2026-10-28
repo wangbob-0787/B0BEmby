@@ -3,11 +3,11 @@ package com.xxxx.emby_tv.util
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerInput
 
 /**
  * 遥控器 + 手柄 + 指针（PICO 头显的光标）三套输入的统一桥。
@@ -120,8 +120,14 @@ object InputBridge {
  *
  * 遥控器场景不会触发（没有指针悬停），所以对电视端行为零影响。
  */
-@OptIn(ExperimentalComposeUiApi::class)
 fun Modifier.hoverToFocus(focusRequester: FocusRequester): Modifier =
-    this.onPointerEvent(PointerEventType.Enter) {
-        runCatching { focusRequester.requestFocus() }
+    this.pointerInput(focusRequester) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.type == PointerEventType.Enter) {
+                    runCatching { focusRequester.requestFocus() }
+                }
+            }
+        }
     }
