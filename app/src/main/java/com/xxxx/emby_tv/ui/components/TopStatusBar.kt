@@ -43,6 +43,7 @@ import androidx.tv.material3.Text
 import com.xxxx.emby_tv.R
 import com.xxxx.emby_tv.data.local.PreferencesManager
 import com.xxxx.emby_tv.util.hoverToFocus
+import com.xxxx.emby_tv.util.pointerTarget
 
 
 @Composable
@@ -64,6 +65,7 @@ fun TopStatusBar(
     val context = LocalContext.current
     val searchFocusRequester = remember { FocusRequester() }
     val userInfoFocusRequester = remember { FocusRequester() }
+    val versionFocusRequester = remember { FocusRequester() }
     val proxyEnabled = remember { PreferencesManager(context).proxyEnabled }
 
     Box(
@@ -100,9 +102,22 @@ fun TopStatusBar(
                     color = versionColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = if (onVersionClick != null) {
+                    // 版本号也是更新入口：可聚焦 + 登记坐标表，光标能选中、扳机能触发
+                    modifier = (if (onVersionClick != null) {
                         Modifier.clickable(enabled = versionClickable) { onVersionClick() }
-                    } else Modifier
+                    } else Modifier)
+                        .then(
+                            if (onVersionClick != null && versionClickable) {
+                                Modifier
+                                    .focusRequester(versionFocusRequester)
+                                    .hoverToFocus(versionFocusRequester)
+                                    .pointerTarget(
+                                        key = "top:version",
+                                        focusRequester = versionFocusRequester,
+                                        activate = { onVersionClick() }
+                                    )
+                            } else Modifier
+                        )
                 )
 
                 if (proxyEnabled) {

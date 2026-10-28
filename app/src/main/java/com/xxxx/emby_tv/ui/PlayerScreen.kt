@@ -1556,6 +1556,9 @@ fun PlayerScreen(
 
     // 监听按键显示菜单
     val focusRequester = remember { FocusRequester() }
+    // 播放页根容器的焦点：进页面就拿到，手柄按键才有落点
+    val playerRootFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(120); runCatching { playerRootFocus.requestFocus() } }
 
     // UI 结构 - 最外层纯黑背景
     // 左上角片名 Logo 的地址：剧集/单集用所属剧集的 ClearLogo，电影用条目自己的 Logo。
@@ -1592,6 +1595,10 @@ fun PlayerScreen(
                 // 二级菜单打开时禁止左右键:Preview 阶段(父→子)先吃掉,
                 // 否则横向列表/滚动容器会先消费掉,变成焦点乱跳;
                 // 一级控制条内仍交给焦点系统左右移动;演职人员是横排头像卡片,保留左右
+                // 根容器自身可聚焦：手柄的方向键与确认键必须有落点才能进到下面的事件处理，
+                // 播放页没有可聚焦控件时按键会直接丢掉（父亲 2026-10-28 实测「手柄完全没反应」）
+                .focusRequester(playerRootFocus)
+                .focusable()
                 .onPreviewKeyEvent { event ->
                     /*
                      * 光点决定语义（父亲 2026-10-28）：
