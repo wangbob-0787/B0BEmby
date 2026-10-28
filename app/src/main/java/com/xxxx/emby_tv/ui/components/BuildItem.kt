@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.Dp
 import com.xxxx.emby_tv.R
 import com.xxxx.emby_tv.Utils
 import com.xxxx.emby_tv.data.model.BaseItemDto
+import androidx.compose.foundation.BorderStroke
+import androidx.tv.material3.Border
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -110,7 +112,9 @@ fun BuildItem(
         onClick = onItemClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
         // 焦点态照 VR：不描边，只铺一层白色 14% 的光块（VrHoverBg），选中态才用绿色
-        border = null,
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(0.dp, Color.Transparent)),
+        ),
         // 放大倍数收到 1.06：1.1 时会被所在行裁掉边缘（父亲 2026-10-02）
         scale = ClickableSurfaceDefaults
             .scale(focusedScale = 1.06f),
