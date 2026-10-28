@@ -100,7 +100,7 @@ fun TopStatusBar(
                 Text(
                     text = "B0BEmby " + currentVersion + updateSuffix,
                     color = versionColor,
-                    fontSize = 12.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     // 版本号也是更新入口：可聚焦 + 登记坐标表，光标能选中、扳机能触发
                     modifier = (if (onVersionClick != null) {
@@ -110,6 +110,7 @@ fun TopStatusBar(
                             if (onVersionClick != null) {
                                 Modifier
                                     .focusRequester(versionFocusRequester)
+                                    .focusable()
                                     .hoverToFocus(versionFocusRequester)
                                     .pointerTarget(
                                         key = "top:version",

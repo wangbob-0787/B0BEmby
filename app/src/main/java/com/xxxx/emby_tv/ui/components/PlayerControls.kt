@@ -131,7 +131,7 @@ enum class PlayerMenuItem(val label: String) {
  *
  *   左组：字幕 · 弹幕
  *   中组：快退10 · 播放/暂停 · 快进10（动作键，不在枚举里）
- *   右组：倍速 · 选集 · 选片 · 信息 · 演职人员 · 更多
+ *   右组：倍速 · 选集 · 信息 · 演职人员 · 更多
  */
 val PLAYER_LEFT_MENU = listOf(
     PlayerMenuItem.SUBTITLE,
@@ -142,7 +142,6 @@ val PLAYER_LEFT_MENU = listOf(
 val PLAYER_RIGHT_MENU = listOf(
     PlayerMenuItem.SPEED,
     PlayerMenuItem.EPISODES,
-    PlayerMenuItem.PICK,
     PlayerMenuItem.INFO,
     PlayerMenuItem.CAST,
     PlayerMenuItem.MORE
@@ -183,6 +182,9 @@ val SpecClockText = Color(0xFFA6A6A6)    // 顶部时钟/次要文字
 val SpecAccent = Color(0xFF2FD57C)
 /** 选中/活动底色：绿 24%（VR 同值 0x3D2FD57C） */
 val SpecSelected = Color(0x3D2FD57C)
+
+/** 光点扫到（得焦点）的底色，照 VR：白色 14%；与「已选中」的绿块区分开 */
+val SpecHover = Color(0x24FFFFFF)
 /** 焦点容器边长：官方实测 56px @1080p = 28dp；父亲要求图标更醒目，容器放大到 40dp */
 val SpecFocusBox = 84.dp
 /**
@@ -315,7 +317,7 @@ fun PlayerControlPanel(
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onPlayPause: () -> Unit,
-    // 「选片」（回海报墙）与「退出」（关掉播放页）—— 照 VR 控制条右组末尾两颗
+
     onPick: () -> Unit = {},
     onExitPlayer: () -> Unit = {},
     // 左上角剧集片名 Logo（官方播放界面左上角就是这张 ClearLogo，实测 x231-306, y60-146）
@@ -589,7 +591,7 @@ private fun PanelMenuButton(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) SpecSelected else Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecSelected,
+            focusedContainerColor = SpecHover,
             focusedContentColor = Color.White
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
@@ -631,7 +633,7 @@ private fun PanelIcon(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecSelected,
+            focusedContainerColor = SpecHover,
             focusedContentColor = Color.White
         ),
         modifier = Modifier
@@ -738,7 +740,7 @@ fun SheetRow(
             // 选中（当前生效项）与焦点（光标所在）都用 VR 的绿 24%，未选中透明
             containerColor = if (selected) Color(0x3D2FD57C) else Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = Color(0x3D2FD57C),
+            focusedContainerColor = SpecHover,
             focusedContentColor = Color.White
         ),
         modifier = Modifier

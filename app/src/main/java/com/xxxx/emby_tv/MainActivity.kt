@@ -87,6 +87,8 @@ class MainActivity : ComponentActivity() {
     private var scrollAccumY = 0f
     private var scrollAccumX = 0f
     private var lastScrollAt = 0L
+    // 上一次移动的时间：算光点速度用（决定滚动快慢）
+    private var lastMoveAt = 0L
 
 
     /** 光标位置是否新鲜（3 秒内动过）；新鲜才认为「用户在指东西」，否则按遥控器处理 */
@@ -204,7 +206,15 @@ class MainActivity : ComponentActivity() {
                         scrollAccumX += dx
                         pressX = event.x
                         pressY = event.y
-                        val step = 40f
+                        /*
+                         * 滚动快慢按光点速度走（照 VR）：摇杆没有力度值，只能拿光点每秒移动多少像素换算。
+                         * 猛推时光点速度快 → 触发一轮滚动所需的位移更少 → 滚得更密；轻推则一格一格慢慢挪。
+                         */
+                        val moveNow = SystemClock.uptimeMillis()
+                        val moveDt = if (lastMoveAt > 0L) (moveNow - lastMoveAt).coerceIn(8L, 100L) else 16L
+                        lastMoveAt = moveNow
+                        val cursorSpeed = kotlin.math.max(kotlin.math.abs(dx), kotlin.math.abs(dy)) * 1000f / moveDt
+                        val step = (60f - cursorSpeed / 25f).coerceIn(16f, 60f)
                         // 方向口径（父亲 2026-10-28 实机）：摇杆往下 = 往下滚，往右 = 往右滚。
                         // 上一版按指针位移原样发键，头显上实测是反向的，这里取反。
                         if (kotlin.math.abs(scrollAccumY) >= step) {
