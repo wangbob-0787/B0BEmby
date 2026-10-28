@@ -8,7 +8,7 @@
 
 [![Android](https://img.shields.io/badge/Android-6.0%2B-3DDC84?logo=android&style=flat-square)](https://www.android.com)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-e85d4f?style=flat-square)](https://creativecommons.org/licenses/by-nc/4.0/)
-![Repo](https://img.shields.io/badge/repo-private-lightgrey?style=flat-square)
+![Repo](https://img.shields.io/badge/repo-public-brightgreen?style=flat-square)
 
 [简体中文](#简介--introduction) · [English](#introduction)
 
@@ -18,14 +18,14 @@
 
 ## 📌 关于本仓库 / About This Repository
 
-**本仓库是 [shareven/OpenEmby TV](https://github.com/shareven/openemby_tv) 的个人自用改造版（私有仓库），仅供本人与家庭内部使用，不作商业用途，也不对外提供任何形式的服务或技术支持。**
+**本仓库是 [shareven/OpenEmby TV](https://github.com/shareven/openemby_tv) 的个人自用改造版（公开仓库，源码与 Release 资产可直接查看/下载），仅供本人与家庭内部使用，不作商业用途，也不对外提供任何形式的服务或技术支持。**
 
 - **上游来源 / Upstream**：基于 [shareven/openemby_tv](https://github.com/shareven/openemby_tv)（快照 **v2.0.20**）改造，原作者为 **shareven**，本仓库沿用其 **CC BY-NC 4.0** 许可。
 - **改动规模 / Scale**：仓库首个提交 `2e63190 import: openemby_tv v2.0.20 上游 main 快照` 是上游代码的原样导入，其后所有提交均为本仓库改动（截至本次整理：后续提交 130+ 个，涉及 54 个文件，约 +4800 / −730 行）。
 - **包名 / Package**：仍沿用上游 `com.xxxx.emby_tv`（保证覆盖升级不丢数据）；应用名、客户端上报标识、图标与桌面横幅已改为 B0BEmby。
 - **用途声明 / Usage**：个人与家庭自用（自建 Emby 服务器 + 投影 / 电视设备），非面向公众分发的项目。
 
-> This repository is a **private, home-use fork** of [shareven/OpenEmby TV](https://github.com/shareven/openemby_tv) based on the **v2.0.20** snapshot. **No commercial use.** All credit for the original project goes to its author **shareven**; this fork stays under the same **CC BY-NC 4.0** license, and every change we made is listed below.
+> This repository is a **public, home-use fork** of [shareven/OpenEmby TV](https://github.com/shareven/openemby_tv) based on the **v2.0.20** snapshot. **No commercial use.** All credit for the original project goes to its author **shareven**; this fork stays under the same **CC BY-NC 4.0** license, and every change we made is listed below.
 
 ### 🔧 本仓库的改动 / Changes in This Fork
 
@@ -129,7 +129,7 @@
 | 发布位置 | Release 标签形如 `build-<run_number>`（例：`build-136`），同时保留 14 天的 Actions artifact |
 | 装机用哪个 | **一律用 `app-release.apk`**。同一份代码、同一台电视实测：debug 包每帧 650ms、卡顿率 80%；release 包每帧 32ms、卡顿率 35%（debug 变体不跑 AOT 编译，界面线程被解释执行拖死） |
 | 安装命令 | `adb install -r -i com.android.packageinstaller <app-release.apk>`，装完 `adb shell am force-stop com.xxxx.emby_tv` 再启动。**必须带 `-i com.android.packageinstaller`**：裸 `adb install` 不带来源参数，系统会把应用标成「未知来源」 |
-| 下载注意 | 本仓库为私有仓库，Release 资产需要带访问令牌走 GitHub API 下载，公开镜像（gh-proxy 等）不适用 |
+| 下载注意 | 本仓库为公开仓库，Release 资产可匿名下载；国内网络可直接走公开镜像（ghfast.top / gh-proxy.com 前缀拼 GitHub 下载地址），比带令牌走 GitHub API 快，令牌方式保留作兜底 |
 
 | 最低 Android 版本 | 目标版本 |
 |:------------------:|:--------:|
@@ -243,10 +243,10 @@
 ## ⚠️ 已知限制 / Known Limitations
 
 - **版本号与上游脱钩**：`versionName` 已改为 `1.0.0`、`versionCode` 为 `1000`，不再跟随上游版本号。
-- **应用内更新检查关闭**：如需恢复，需在 `EmbyApi.getNewVersion()` 内重新实现（私有仓库下匿名接口不可用，须带令牌）。
+- **应用内更新检查关闭**：当前是代码事实（`EmbyApi.getNewVersion()` 为空实现，直接返回空对象），仓库转公开后也没恢复——重新打开更新检查等于把上游版本拉进来覆盖本机改造，要恢复需另做判断。
 - **装机必须用 release 包**：debug 变体在电视端性能不可接受（见「下载与安装」）。
 - **界面截图暂缺**：上游带来的旧界面截图已删除，仓库内不再收录界面截图。
-- **动态徽章不可用**：本仓库为私有仓库，shields.io 等第三方动态徽章无法读取私有仓库数据，故只保留静态徽章。
+- **动态徽章暂未启用**：仓库已转公开，shields.io 这类动态徽章技术上可用了，但当前仍只保留静态徽章（避免徽章服务不可用时 README 出现裂图）。
 - **弹幕依赖服务端**：客户端只解析与渲染，弹幕是否完整取决于服务器侧外挂 ASS 字幕轨的入库情况。
 
 ---
