@@ -13,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.xxxx.emby_tv.util.hoverToFocus
+import com.xxxx.emby_tv.util.pointerTarget
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
@@ -48,6 +50,9 @@ fun TvInputDialog(
 ) {
     var inputText by remember { mutableStateOf(initialValue) }
     val fieldFocus = remember { FocusRequester() }
+    // 取消/确认两个按钮的焦点锚点：弹窗里的按钮也要能被光标与扳机找到
+    val confirmFocus = remember { FocusRequester() }
+    val cancelFocus = remember { FocusRequester() }
 
     // 打开就聚焦输入框：系统输入法会跟着弹出来，用户可以直接打字
     LaunchedEffect(Unit) {
@@ -88,6 +93,14 @@ fun TvInputDialog(
         confirmButton = {
             Button(
                 onClick = { commit() },
+                modifier = Modifier
+                    .focusRequester(confirmFocus)
+                    .hoverToFocus(confirmFocus)
+                    .pointerTarget(
+                        key = "dialog:confirm",
+                        focusRequester = confirmFocus,
+                        activate = { commit() }
+                    ),
                 colors = ButtonDefaults.colors(
                     focusedContainerColor = androidx.compose.ui.graphics.Color(0x3D2FD57C),
                     focusedContentColor = androidx.compose.ui.graphics.Color.White,
@@ -101,6 +114,14 @@ fun TvInputDialog(
         dismissButton = {
             Button(
                 onClick = onDismiss,
+                modifier = Modifier
+                    .focusRequester(cancelFocus)
+                    .hoverToFocus(cancelFocus)
+                    .pointerTarget(
+                        key = "dialog:cancel",
+                        focusRequester = cancelFocus,
+                        activate = { onDismiss() }
+                    ),
                 colors = ButtonDefaults.colors(
                     focusedContainerColor = androidx.compose.ui.graphics.Color(0x3D2FD57C),
                     focusedContentColor = androidx.compose.ui.graphics.Color.White,
