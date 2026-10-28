@@ -272,11 +272,15 @@ class MainActivity : ComponentActivity() {
         val now = SystemClock.uptimeMillis()
         if (now - lastStickKeyAt < 90L) return
         lastStickKeyAt = now
-        val code = when {
-            dx > 0f -> KeyEvent.KEYCODE_DPAD_RIGHT
-            dx < 0f -> KeyEvent.KEYCODE_DPAD_LEFT
-            dy > 0f -> KeyEvent.KEYCODE_DPAD_DOWN
-            else -> KeyEvent.KEYCODE_DPAD_UP
+        /*
+         * 先比大小再看方向：斜着往下拨时 dx 常有一点残余，按「先看 x」的顺序会被判成左右，
+         * 表现就是往下拨唤不出控制条、反而在快进快退（父亲 2026-10-29 报的现象）。
+         * 竖向占优就算竖向，横向明显过半才算横向。
+         */
+        val code = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+            if (dy > 0f) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_UP
+        } else {
+            if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
         }
         fireScroll(code)
     }
