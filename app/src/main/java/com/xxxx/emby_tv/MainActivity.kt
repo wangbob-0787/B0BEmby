@@ -395,7 +395,13 @@ class MainActivity : ComponentActivity() {
          * 事件频率也因设备而异，滚动手感时快时慢。
          */
         if (InputBridge.hasStickData(ev)) {
-            InputBridge.keyDispatcher = { synthetic -> super.dispatchKeyEvent(synthetic) }
+            /*
+             * 摇杆走滚动，不发方向键（父亲 2026-10-29 报"TV 滚动没 VR 丝滑"）。
+             * 方向键由焦点系统消费：一步一格卡、跳完列表再把那张卡拉进视野，天生一格一格；
+             * 滚轮是容器自己按像素滚、焦点不动 —— 和光点那条路同一套实现，也有加减速。
+             */
+            InputBridge.scrollDispatcher = { dx, dy -> doScroll(dx, dy) }
+            InputBridge.onRelease = { startScrollInertia() }
             InputBridge.onStick(ev)
         }
         return super.dispatchGenericMotionEvent(ev)

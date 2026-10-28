@@ -32,14 +32,14 @@ object InputBridge {
     private const val AXIS_DEAD_ZONE = 0.35f
 
     /** 摇杆按住后，第一次重复之前的等待（毫秒）。短一点手感才跟手 */
-    private const val AXIS_FIRST_DELAY_MS = 260L
+    private const val AXIS_FIRST_DELAY_MS = 200L
 
     /** 按住期间的基础重复间隔（毫秒） */
-    private const val AXIS_REPEAT_MS = 110L
+    private const val AXIS_REPEAT_MS = 45L
 
     /** 按住超过这个时长后加快到 [AXIS_FAST_MS]，长列表才滚得动 */
-    private const val AXIS_ACCEL_AFTER_MS = 700L
-    private const val AXIS_FAST_MS = 60L
+    private const val AXIS_ACCEL_AFTER_MS = 500L
+    private const val AXIS_FAST_MS = 25L
 
     /** 连按保险：一直推着不松最多走这么久，防止手柄丢"回中"事件导致焦点一路飞走 */
     private const val AXIS_RUNAWAY_MS = 8000L
@@ -50,8 +50,20 @@ object InputBridge {
     private var axisNextAt = 0L
     private val axisTimer = android.os.Handler(android.os.Looper.getMainLooper())
 
-    /** 主线程把合成出来的方向键交给 Activity 派发（Activity 注入；为空则不派发） */
-    var keyDispatcher: ((KeyEvent) -> Unit)? = null
+    /**
+     * 主线程把"一次滚动格"交给 Activity（Activity 注入；为空则不派发）。
+     *
+     * 参数是方向与幅度：(dx, dy) 各取 -1.5..1.5，正 = 右/下。
+     * Activity 侧先用滚轮派发给光点底下的容器（列表按像素滚、焦点不动），
+     * 没人接才退化成方向键 —— 摇杆与光点两条路因此走同一套滚动实现。
+     */
+    var scrollDispatcher: ((Float, Float) -> Unit)? = null
+
+    /** 摇杆回中时回调（Activity 用来接滚动惯性） */
+    var onRelease: (() -> Unit)? = null
+
+    private var axisX = 0f
+    private var axisY = 0f
 
     /**
      * 手柄按键 → 遥控器语义。
@@ -113,22 +125,28 @@ object InputBridge {
      * 回中（轴值回到死区内）才停 —— 这样节奏稳定，按住也一定在动。
      */
     fun onStick(event: MotionEvent) {
+        axisX = event.getAxisValue(MotionEvent.AXIS_X)
+            .takeIf { kotlin.math.abs(it) > 0.01f } ?: event.getAxisValue(MotionEvent.AXIS_HAT_X)
+        axisY = event.getAxisValue(MotionEvent.AXIS_Y)
+            .takeIf { kotlin.math.abs(it) > 0.01f } ?: event.getAxisValue(MotionEvent.AXIS_HAT_Y)
         val key = directionOf(event)
         val now = SystemClock.uptimeMillis()
         if (key == 0) {
+            val was = axisKey != 0
             stopStick()
+            if (was) onRelease?.invoke()
             return
         }
         if (key != axisKey) {
             axisKey = key
             axisKeyAt = now
             axisHeldFrom = now
-            emit(key, now)            // 换方向：立刻走一格，手感才跟手
+            emit(now)                 // 换方向：立刻走一格，手感才跟手
             schedule(AXIS_FIRST_DELAY_MS)
         } else if (axisKeyAt == 0L) {
             axisKeyAt = now
             axisHeldFrom = now
-            emit(key, now)
+            emit(now)
             schedule(AXIS_FIRST_DELAY_MS)
         }
     }
@@ -160,8 +178,22 @@ object InputBridge {
         return if (h != 0) h else v
     }
 
-    private fun emit(key: Int, now: Long) {
-        keyDispatcher?.invoke(KeyEvent(now, now, KeyEvent.ACTION_DOWN, key, 0))
+    /**
+     * 走一格滚动。幅度按推杆深浅算（0.5..1.5 倍），推得深就走得快，
+     * 这样同一个重复节拍下也有快慢层次，不像开关一样只有"一格/空格"。
+     */
+    private fun emit(now: Long) {
+        val dx: Float
+        val dy: Float
+        when (axisKey) {
+            KeyEvent.KEYCODE_DPAD_RIGHT -> { dx = 1f; dy = 0f }
+            KeyEvent.KEYCODE_DPAD_LEFT -> { dx = -1f; dy = 0f }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { dx = 0f; dy = 1f }
+            else -> { dx = 0f; dy = -1f }
+        }
+        val push = if (dx != 0f) kotlin.math.abs(axisX) else kotlin.math.abs(axisY)
+        val scale = (0.5f + push.coerceIn(0f, 1f)).coerceIn(0.5f, 1.5f)
+        scrollDispatcher?.invoke(dx * scale, dy * scale)
     }
 
     private fun schedule(delay: Long) {
@@ -179,7 +211,7 @@ object InputBridge {
                 stopStick()
                 return
             }
-            emit(key, now)
+            emit(now)
             val held = now - axisHeldFrom
             schedule(if (held > AXIS_ACCEL_AFTER_MS) AXIS_FAST_MS else AXIS_REPEAT_MS)
         }
