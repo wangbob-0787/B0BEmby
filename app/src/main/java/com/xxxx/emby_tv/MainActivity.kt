@@ -343,9 +343,9 @@ class MainActivity : ComponentActivity() {
                         if (scrollAccumY >= 1f) {
                             // 方向口径（父亲 2026-10-28 实机）：摇杆往下 = 往下滚，往右 = 往右滚。
                             if (vertical) {
-                                doScroll(0f, if (dy > 0) -1f else 1f)
+                                doScroll(0f, if (dy > 0) -1f else 1f, 0.16f)
                             } else {
-                                doScroll(if (dx > 0) -1f else 1f, 0f)
+                                doScroll(if (dx > 0) -1f else 1f, 0f, 0.16f)
                             }
                             scrollAccumY = 0f
                         }

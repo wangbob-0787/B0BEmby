@@ -1479,7 +1479,7 @@ fun PlayerScreen(
                  */
                 val reason = when {
                     causeMsg.isNotBlank() -> causeMsg
-                    error.message.isNotBlank() -> error.message
+                    !error.message.isNullOrBlank() -> error.message.orEmpty()
                     else -> error.errorCodeName
                 }
                 hudText = if (hasTriedTranscodeFallback) {
