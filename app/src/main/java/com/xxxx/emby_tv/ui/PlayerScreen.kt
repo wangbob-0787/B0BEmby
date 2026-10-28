@@ -1050,12 +1050,12 @@ fun PlayerScreen(
             danmakuTrack = null
             return@LaunchedEffect
         }
-        val isEpisode = !media.seriesName.isNullOrBlank()
-        val title = if (isEpisode) media.seriesName!! else (media.name ?: "")
-        val ep = if (isEpisode) (media.indexNumber ?: 1) else 0
+        val isEpisode = !mediaInfo.seriesName.isNullOrBlank()
+        val title = if (isEpisode) (mediaInfo.seriesName ?: "") else (mediaInfo.name ?: "")
+        val ep = if (isEpisode) (mediaInfo.indexNumber ?: 1) else 0
         val kind = if (isEpisode) "tv" else "movie"
-        val year = media.productionYear
-        val season = if (isEpisode) media.parentIndexNumber else null
+        val year = mediaInfo.productionYear
+        val season = if (isEpisode) mediaInfo.parentIndexNumber else null
         val fetched = withContext(Dispatchers.IO) {
             runCatching { LiveDanmakuApi.fetch(title, ep, year, kind, season) }.getOrNull()
         }
