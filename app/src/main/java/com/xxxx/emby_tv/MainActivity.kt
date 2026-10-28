@@ -183,10 +183,6 @@ class MainActivity : ComponentActivity() {
                 if (remaining <= 0) return
                 remaining--
                 if (dragMoved) return                      // 用户又拨动了：交给实时逻辑
-                val key = when (lastScrollAxis) {
-                    1 -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
-                    else -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
-                }
                 doScroll(
                     if (lastScrollAxis == 1) 0f else (if (lastScrollSign > 0) -1f else 1f),
                     if (lastScrollAxis == 1) (if (lastScrollSign > 0) -1f else 1f) else 0f,
@@ -237,23 +233,12 @@ class MainActivity : ComponentActivity() {
         if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) return
         if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) return
         /*
-         * 最后兜底才是方向键：这类页面（详情页、设置页）本来就没有可滚区域，
-         * 摇杆的作用是挪焦点。节拍放到 260ms，避免一帧一格把焦点甩飞。
+         * 到此为止，不再退化成方向键（父亲 2026-10-29 01:25 明确：焦点移动全部取消，
+         * 摇杆只按像素滚）。方向键由焦点系统消费，一旦发出去就是「焦点走一格」，
+         * 与像素滚动的手感互相打架，所以这一路彻底不接。
          */
-        val nowFallback = SystemClock.uptimeMillis()
-        if (nowFallback - lastFallbackKeyAt < 260L) return
-        lastFallbackKeyAt = nowFallback
-        DiagLog.w(this, "input", "滚轮与像素滚动都没接住 → 退化为方向键")
-        when {
-            dy < 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_UP)
-            dy > 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
-            dx < 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_LEFT)
-            dx > 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
-        }
+        DiagLog.w(this, "input", "滚轮与像素滚动都没接住 → 本次不动（不发方向键）")
     }
-
-    /** 方向键兜底的节拍闸门（与滚轮/像素滚动分开，互不影响）。 */
-    private var lastFallbackKeyAt = 0L
 
     private fun fireWheel(dx: Float, dy: Float, x: Float, y: Float): Boolean {
         val now = SystemClock.uptimeMillis()
