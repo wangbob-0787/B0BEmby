@@ -315,16 +315,6 @@ fun PlayerScreen(
             com.xxxx.emby_tv.util.InputBridge.playerTapToggle = null
         }
     }
-    /*
-     * 点画面 = 播放/暂停（父亲 2026-10-29：光点在播放区扣扳机，画面暂停的同时还触发了
-     * 焦点所在的那个按钮）。现在点画面的动作由播放页自己接：扳机落在控制条以外就只切
-     * 播放/暂停，不再补发确认键去激活按钮。
-     */
-    androidx.compose.runtime.LaunchedEffect(player) {
-        com.xxxx.emby_tv.util.InputBridge.playerTapToggle = {
-            runCatching { if (player.isPlaying) player.pause() else player.play() }
-        }
-    }
     val subtitleOffsetController = remember { SubtitleOffsetController() }
     val overlaySubtitleView = remember { mutableStateOf<SubtitleView?>(null) }
     // 独立弹幕层:自解析 ASS 的 \move 定位,逐帧绘制(不依赖 Media3 的 SSA 解析,后者不支持 \move)
@@ -630,6 +620,17 @@ fun PlayerScreen(
     }
 
     var player by remember { mutableStateOf(buildPlayer()) }
+
+    /*
+     * 点画面 = 播放/暂停（父亲 2026-10-29：光点在播放区扣扳机，画面暂停的同时还触发了
+     * 焦点所在的那个按钮）。现在点画面的动作由播放页自己接：扳机落在控制条以外就只切
+     * 播放/暂停，不再补发确认键去激活按钮。
+     */
+    androidx.compose.runtime.LaunchedEffect(player) {
+        com.xxxx.emby_tv.util.InputBridge.playerTapToggle = {
+            runCatching { if (player.isPlaying) player.pause() else player.play() }
+        }
+    }
 
     // 缓冲参数只能在建播放器时注入(LoadControl 不可运行时替换),
     // 所以改完缓冲设置必须重建播放器 —— 保留当前位置、媒体项、轨道与播放状态
