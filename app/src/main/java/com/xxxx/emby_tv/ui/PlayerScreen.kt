@@ -1826,11 +1826,12 @@ fun PlayerScreen(
                             } else {
                                 // 上键：面板收起时调大音量（原来上键被吃掉却什么也不做，父亲 2026-10-29 报）
                                 runCatching {
-                                    audioManager.adjustStreamVolume(
-                                        AudioManager.STREAM_MUSIC,
-                                        AudioManager.ADJUST_RAISE,
-                                        AudioManager.FLAG_SHOW_UI
-                                    )
+                                    (context.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
+                                        .adjustStreamVolume(
+                                            AudioManager.STREAM_MUSIC,
+                                            AudioManager.ADJUST_RAISE,
+                                            AudioManager.FLAG_SHOW_UI
+                                        )
                                 }
                             }
                             return@onKeyEvent true
