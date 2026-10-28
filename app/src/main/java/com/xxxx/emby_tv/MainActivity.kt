@@ -97,6 +97,8 @@ class MainActivity : ComponentActivity() {
         cursorX = ev.x
         cursorY = ev.y
         cursorAt = SystemClock.uptimeMillis()
+        // 光标指哪儿，焦点就落到哪儿：查控件坐标表（VR 同款机制）
+        com.xxxx.emby_tv.util.PointerTargets.focusAt(cursorX, cursorY)
     }
 
     /** 原始事件取证：DOWN/UP 必记，MOVE/HOVER 限流，避免刷屏（父亲要求先证明事件在不在） */
@@ -136,6 +138,14 @@ class MainActivity : ComponentActivity() {
         val now = SystemClock.uptimeMillis()
         if (now - lastInjectAt < 150L) return      // 防抖：同一次扳机不重复触发
         lastInjectAt = now
+        /*
+         * 触发只能有一次：先查控件坐标表——命中就直接执行控件动作并返回，**不再**补发确认键；
+         * 只有查不到（空白处或没登记的控件）才退回遥控器语义。两个分支同时跑就是一次扳机点两下。
+         */
+        if (com.xxxx.emby_tv.util.PointerTargets.activateAt(cursorX, cursorY)) {
+            DiagLog.w(this, "input", "扳机命中坐标表，已直接触发（来源=" + source + "）")
+            return
+        }
         val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0)
         val up = KeyEvent(now, now + 40L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0)
         super.dispatchKeyEvent(down)
@@ -194,11 +204,13 @@ class MainActivity : ComponentActivity() {
                         pressX = event.x
                         pressY = event.y
                         val step = 40f
+                        // 方向口径（父亲 2026-10-28 实机）：摇杆往下 = 往下滚，往右 = 往右滚。
+                        // 上一版按指针位移原样发键，头显上实测是反向的，这里取反。
                         if (kotlin.math.abs(scrollAccumY) >= step) {
-                            fireScroll(if (scrollAccumY > 0) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_UP)
+                            fireScroll(if (scrollAccumY > 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN)
                             scrollAccumY = 0f
                         } else if (kotlin.math.abs(scrollAccumX) >= step) {
-                            fireScroll(if (scrollAccumX > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+                            fireScroll(if (scrollAccumX > 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
                             scrollAccumX = 0f
                         }
                         return true

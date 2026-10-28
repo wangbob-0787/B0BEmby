@@ -139,13 +139,18 @@ object InputBridge {
  * 遥控器场景不会触发（没有指针悬停），所以对电视端行为零影响。
  */
 fun Modifier.hoverToFocus(focusRequester: FocusRequester): Modifier =
-    this.pointerInput(focusRequester) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent(PointerEventPass.Initial)
-                if (event.type == PointerEventType.Enter) {
-                    runCatching { focusRequester.requestFocus() }
+    this
+        // 登记进控件坐标表：指针事件未必落到控件自己的命中区（例如大片头只覆盖左半屏、
+        // 浮层压在内容上），查表这条路能兜住，且随每次排版刷新坐标（列表滚动也准）。
+        // activate 留空 = 扣扳机时退回"给当前焦点补一次确认键"，与控件原本的 onClick 一致。
+        .pointerTarget(key = focusRequester, focusRequester = focusRequester)
+        .pointerInput(focusRequester) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.type == PointerEventType.Enter) {
+                        runCatching { focusRequester.requestFocus() }
+                    }
                 }
             }
         }
-    }

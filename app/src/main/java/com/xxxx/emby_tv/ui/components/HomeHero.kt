@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import com.xxxx.emby_tv.util.pointerTarget
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -144,6 +145,13 @@ fun HomeHeroCarousel(
                 .fillMaxHeight()
                 .onFocusChanged { onFocusChanged(it.isFocused) }
                 .focusRequester(heroFocus)
+                // 登记进坐标表：光标指到大片头就移焦点，扣扳机直接续播
+                //（原先只有焦点、没有点击处理，指针扫上去也点不动）
+                .pointerTarget(
+                    key = "hero",
+                    focusRequester = heroFocus,
+                    activate = { onOpenItem(list[index.coerceIn(0, list.lastIndex)]) }
+                )
                 .focusable()
                 .onPreviewKeyEvent { e ->
                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
