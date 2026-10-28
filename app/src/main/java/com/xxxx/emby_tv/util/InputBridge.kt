@@ -56,12 +56,17 @@ object InputBridge {
     /**
      * 播放页标记（PlayerScreen 进出时切换）。
      *
-     * 播放页的摇杆语义是"下=唤控制条、上=音量、左右=快退快进"，不是滚列表，
+     * 播放页的摇杆语义是"下=唤控制条、上交焦点系统、左右=快退快进"，不是滚列表，
      * 所以这里走方向键；其余页面才走滚轮。父亲 2026-10-29 报"往下要扫一下才出控制条"，
      * 就是播放页也被当成滚列表、键被滚轮吃掉的表现。
      */
     @Volatile
     var playerScreenActive = false
+
+    /** 播放页：控制条是否可见、它的上边缘（像素），以及「点画面 = 播放/暂停」的回调。 */
+    @Volatile var playerPanelVisible = false
+    @Volatile var playerPanelTopPx = 0f
+    @Volatile var playerTapToggle: (() -> Unit)? = null
 
     private val choreographer = android.view.Choreographer.getInstance()
     private var frameScheduled = false

@@ -153,6 +153,23 @@ class MainActivity : ComponentActivity() {
             DiagLog.w(this, "input", "扳机命中坐标表，已直接触发（来源=" + source + "）")
             return
         }
+        /*
+         * 播放页：扳机落在控制条以外 = 点画面（只切播放/暂停）。
+         * 到这儿说明坐标表没命中（画面不是控件），若再补发确认键就会顺带激活焦点所在的按钮
+         * —— 父亲 2026-10-29 报「暂停了，同时还触发了按钮区的按钮」就是这个。
+         */
+        if (com.xxxx.emby_tv.util.InputBridge.playerScreenActive) {
+            val top = com.xxxx.emby_tv.util.InputBridge.playerPanelTopPx
+            val inPanel = com.xxxx.emby_tv.util.InputBridge.playerPanelVisible &&
+                top > 0f && cursorY >= top
+            if (!inPanel) {
+                com.xxxx.emby_tv.util.InputBridge.playerTapToggle?.let {
+                    DiagLog.w(this, "input", "扳机落在播放区 → 直接切播放/暂停")
+                    it()
+                    return
+                }
+            }
+        }
         val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0)
         val up = KeyEvent(now, now + 40L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0)
         super.dispatchKeyEvent(down)
@@ -198,7 +215,16 @@ class MainActivity : ComponentActivity() {
                  * 只认「往下」，一次推只发一次，往上与左右什么都不做。
                  */
                 if (com.xxxx.emby_tv.util.InputBridge.playerScreenActive) {
-                    if (dy > 0f && kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+                    // 播放页也可能有可滚区域（一级/二级菜单、字幕菜单、演职人员横排）：
+                    // 先按像素滚它，滚不动才把「往下」当成唤出控制条。
+                    val pxPerNotchP = 56f * resources.displayMetrics.density
+                    val notchesP = 0.16f
+                    val scrolled = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+                        com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notchesP * pxPerNotchP * 4f)
+                    } else {
+                        com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notchesP * pxPerNotchP * 4f)
+                    }
+                    if (!scrolled && dy > 0f && kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
                         val nowKey = SystemClock.uptimeMillis()
                         if (nowKey - lastPlayerKeyAt > 400L) {
                             lastPlayerKeyAt = nowKey

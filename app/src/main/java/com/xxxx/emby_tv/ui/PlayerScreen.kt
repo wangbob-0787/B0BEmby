@@ -23,6 +23,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -307,7 +309,21 @@ fun PlayerScreen(
      */
     androidx.compose.runtime.DisposableEffect(Unit) {
         com.xxxx.emby_tv.util.InputBridge.playerScreenActive = true
-        onDispose { com.xxxx.emby_tv.util.InputBridge.playerScreenActive = false }
+        onDispose {
+            com.xxxx.emby_tv.util.InputBridge.playerScreenActive = false
+            com.xxxx.emby_tv.util.InputBridge.playerPanelVisible = false
+            com.xxxx.emby_tv.util.InputBridge.playerTapToggle = null
+        }
+    }
+    /*
+     * 点画面 = 播放/暂停（父亲 2026-10-29：光点在播放区扣扳机，画面暂停的同时还触发了
+     * 焦点所在的那个按钮）。现在点画面的动作由播放页自己接：扳机落在控制条以外就只切
+     * 播放/暂停，不再补发确认键去激活按钮。
+     */
+    androidx.compose.runtime.LaunchedEffect(player) {
+        com.xxxx.emby_tv.util.InputBridge.playerTapToggle = {
+            runCatching { if (player.isPlaying) player.pause() else player.play() }
+        }
     }
     val subtitleOffsetController = remember { SubtitleOffsetController() }
     val overlaySubtitleView = remember { mutableStateOf<SubtitleView?>(null) }
@@ -983,8 +999,13 @@ fun PlayerScreen(
 
             val source = mediaResult.mediaSources.firstOrNull()
             val streams = source?.mediaStreams ?: emptyList()
+            /*
+             * 字幕菜单里不列弹幕文件（父亲 2026-10-29）。
+             * 我们自己的弹幕是外挂 ASS，文件名/标题带「弹幕」（早期也有 danmaku / danmu 写法）；
+             * 它走专门的弹幕菜单，混进字幕列表只会让人选错。
+             */
             subtitleTracks = streams.filter { s ->
-                s.type == "Subtitle"
+                s.type == "Subtitle" && !isDanmakuSubtitle(s)
             }
 
             audioTracks = streams.filter { s ->
@@ -2014,6 +2035,11 @@ fun PlayerScreen(
                 // 信息/演职人员打开时整排控制收起,整屏只留内容(照官方排版)
                 if (activeItem != PlayerMenuItem.INFO && activeItem != PlayerMenuItem.CAST) {
                 PlayerControlPanel(
+                    modifier = Modifier.onGloballyPositioned { coords ->
+                        com.xxxx.emby_tv.util.InputBridge.playerPanelTopPx =
+                            coords.boundsInWindow().top
+                        com.xxxx.emby_tv.util.InputBridge.playerPanelVisible = showPanel
+                    },
                     title = panelTitle(),
                     subtitle = panelSubtitle(),
                     // 官方副行没有"播放方式"这一项，传空即不显示
@@ -2366,3 +2392,13 @@ fun PlayerScreen(
     } // 最外层纯黑背景 Box 闭合
 }
 
+
+/**
+ * 这个字幕流是不是弹幕文件。
+ * 判据照 VR：标题/显示名里带「弹幕」，或带 danmaku / danmu（不区分大小写）。
+ */
+private fun isDanmakuSubtitle(stream: com.xxxx.emby_tv.data.model.MediaStreamDto): Boolean {
+    val text = (stream.displayTitle ?: "") + " " + (stream.title ?: "")
+    val lower = text.lowercase()
+    return text.contains("弹幕") || lower.contains("danmaku") || lower.contains("danmu")
+}

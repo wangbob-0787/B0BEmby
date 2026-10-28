@@ -731,7 +731,10 @@ fun SheetShell(
             Modifier.width(contentWidth).heightIn(max = 240.dp)
         }
         if (scrollable) {
-            Column(modifier = boxModifier.verticalScroll(rememberScrollState())) {
+            // 二级菜单/字幕菜单/弹幕菜单：选项多时摇杆推住就按像素滚（父亲 2026-10-29）
+            val menuScroll = rememberScrollState()
+            com.xxxx.emby_tv.util.RegisterVerticalScroll(menuScroll)
+            Column(modifier = boxModifier.verticalScroll(menuScroll)) {
                 content()
             }
         } else {
@@ -1080,6 +1083,7 @@ fun CastListSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(250.dp)
+                .then(Modifier.com.xxxx.emby_tv.util.pixelScrollRow(listState))
                 .focusRequester(rowFocus)
                 .focusGroup()
                 .focusable()
