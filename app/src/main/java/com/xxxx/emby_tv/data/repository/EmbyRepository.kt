@@ -295,7 +295,8 @@ class EmbyRepository private constructor(private val context: Context) {
         selectedAudioIndex: Int? = null,
         selectedSubtitleIndex: Int? = null,
         disableHevc: Boolean = false,
-        maxStreamingBitrate: Int = 200_000_000
+        maxStreamingBitrate: Int = 200_000_000,
+        mediaSourceId: String? = null
     ): MediaDto {
         requireLoggedIn()
         return EmbyApi.getPlaybackInfo(
@@ -309,7 +310,8 @@ class EmbyRepository private constructor(private val context: Context) {
             selectedAudioIndex,
             selectedSubtitleIndex,
             disableHevc,
-            maxStreamingBitrate
+            maxStreamingBitrate,
+            mediaSourceId
         )
     }
 

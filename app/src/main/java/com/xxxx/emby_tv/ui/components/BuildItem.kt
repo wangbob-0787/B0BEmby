@@ -39,6 +39,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.delay
 import com.xxxx.emby_tv.ui.FocusMemory
 import com.xxxx.emby_tv.util.DiagLog
+import com.xxxx.emby_tv.util.hoverToFocus
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Icon
@@ -152,6 +153,8 @@ fun BuildItem(
                 }
             }
             .focusRequester(focusAnchor)
+            // 光标指到这张卡就拿焦点（PICO 手柄光标、电视插鼠标时用；遥控器没有指针，不受影响）
+            .hoverToFocus(focusAnchor)
             .focusProperties {
                 if (upFocus != null) up = upFocus
                 if (downFocus != null) down = downFocus
@@ -305,9 +308,10 @@ fun BuildItem(
 
                 Text(
                     text = title,
+                    // 字号口径与 VR 统一（父亲 2026-10-28）：卡片标题 16sp、副标题 14sp
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 16.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -326,7 +330,7 @@ fun BuildItem(
                     }
                     Text(
                         text = subTitle,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
                         maxLines = 1
                     )
                 }

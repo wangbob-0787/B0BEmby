@@ -96,18 +96,14 @@ import com.xxxx.emby_tv.ui.components.DanmakuSheet
 import com.xxxx.emby_tv.ui.components.SpeedSheet
 import com.xxxx.emby_tv.ui.components.QualitySheet
 import com.xxxx.emby_tv.ui.components.PlayModeSheet
-import com.xxxx.emby_tv.ui.components.CorrectionSheet
-import com.xxxx.emby_tv.ui.components.IntroSheet
 import com.xxxx.emby_tv.ui.components.EpisodeListSheet
 import com.xxxx.emby_tv.ui.components.CastListSheet
 import com.xxxx.emby_tv.ui.components.BufferPresetSheet
 import com.xxxx.emby_tv.ui.components.SheetRow
 import com.xxxx.emby_tv.ui.components.qualityLabel
 import com.xxxx.emby_tv.ui.components.playModeName
-import com.xxxx.emby_tv.ui.components.correctionName
 import com.xxxx.emby_tv.ui.components.playMethodLabel
 import com.xxxx.emby_tv.ui.components.techLineOf
-import com.xxxx.emby_tv.ui.components.SkipIntroButton
 import com.xxxx.emby_tv.ui.components.getAudioTrack
 import com.xxxx.emby_tv.ui.components.getVideoTrack
 
@@ -120,7 +116,6 @@ import com.xxxx.emby_tv.danmaku.DanmakuView
 import com.xxxx.emby_tv.ui.viewmodel.PlayerViewModel
 import com.xxxx.emby_tv.util.ErrorHandler
 import com.xxxx.emby_tv.util.DiagLog
-import com.xxxx.emby_tv.util.IntroSkipHelper
 import com.xxxx.emby_tv.data.local.PreferencesManager
 import com.xxxx.emby_tv.data.remote.EmbyApi
 import com.xxxx.emby_tv.data.remote.EmbyApi.CLIENT_VERSION
@@ -281,13 +276,13 @@ fun PlayerScreen(
     var hasTriedTranscodeFallback by remember { mutableStateOf(false) }
     var currentTracks by remember { mutableStateOf<Tracks?>(null) }
 
-    // 片头跳过相关状态
     val preferencesManager = remember { PreferencesManager(context) }
-    var introStartMs by remember { mutableStateOf<Long?>(null) }
-    var introEndMs by remember { mutableStateOf<Long?>(null) }
-    var showSkipIntroButton by remember { mutableStateOf(false) }
-    var autoSkipIntro by remember { mutableStateOf(preferencesManager.autoSkipIntro) }
-    var hasAutoSkipped by remember { mutableStateOf(false) }
+    // 详情页选过的「版本」（Emby MediaSource id）。键名与 VR 共用：ver_choice_<itemId>
+    val savedVersionSourceId = remember(mediaId) {
+        preferencesManager.getString("ver_choice" + "_" + mediaId)?.takeIf { it.isNotBlank() }
+    }
+    // 画面上那一行"人话"提示（播放失败原因等）。父亲口径：不加重试按钮，重新点海报就是重试
+    var hudText by remember { mutableStateOf<String?>(null) }
 
     // 缓冲设置 - 从 PreferencesManager 加载保存的值，使用 preferencesManager 作为 key 确保重新加载
     var minBufferMs by remember(preferencesManager.minBufferMs) { mutableIntStateOf(preferencesManager.minBufferMs) }
@@ -310,6 +305,8 @@ fun PlayerScreen(
     // 弹幕设置(记忆到本地)
     val danmakuPrefs = remember { context.getSharedPreferences("emby_tv_prefs", Context.MODE_PRIVATE) }
     var danmakuScale by remember { mutableFloatStateOf(danmakuPrefs.getFloat("danmaku_scale", 1.0f)) }
+    // 弹幕时间偏移（正 = 提前），与 VR 同一个口径，只对本次播放生效
+    var danmakuOffsetMs by remember { mutableLongStateOf(0L) }
     // 右上角实时网速(父亲 2026-09-19 要求)
     var showSpeed by remember { mutableStateOf(danmakuPrefs.getBoolean("show_speed", true)) }
     var danmakuEnabled by remember { mutableStateOf(danmakuPrefs.getBoolean("danmaku_enabled", true)) }
@@ -662,13 +659,7 @@ fun PlayerScreen(
                 p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
                     .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
                     .build()
-                scope.launch {
-                    android.widget.Toast.makeText(
-                        context,
-                        context.getString(R.string.audio_output_degraded),
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                }
+                hudText = context.getString(R.string.audio_output_degraded)
             }
         }
     }
@@ -809,7 +800,8 @@ fun PlayerScreen(
                     requestAudioIndex,
                     requestSubtitleIndex,
                     true,
-                    maxStreamingBitrate
+                    maxStreamingBitrate,
+                    mediaSourceId = savedVersionSourceId
                 )
 
                 if (mediaResult.mediaSources.isNullOrEmpty()) {
@@ -957,17 +949,16 @@ fun PlayerScreen(
                 // 首次播放不要因为"以前某次失败过"就降级成 h264(会把 4K/HDR 一起丢掉);
                 // 只有用户显式设置(playbackCorrection==1)才降级,失败后的回退仍走下面的专用分支
                 playbackCorrection == 1,
-                maxStreamingBitrate
+                maxStreamingBitrate,
+                // 详情页选过的版本（MediaSourceId），没选过就交给服务端按默认挑
+                mediaSourceId = savedVersionSourceId
             )
 
             if (mediaResult.mediaSources.isNullOrEmpty()) {
                 DiagLog.w(context, "playerNoSources", "mediaId=$mediaId PlaybackInfo 无 MediaSources")
                 withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    android.widget.Toast.makeText(
-                        context,
-                        playbackInfoFailText,
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    // 系统 Toast 在电视/头显上经常看不见；改成画面上写人话，不加重试按钮
+                    hudText = playbackInfoFailText
                 }
                 return@LaunchedEffect
             }
@@ -982,19 +973,6 @@ fun PlayerScreen(
 
             val source = mediaResult.mediaSources.firstOrNull()
             val streams = source?.mediaStreams ?: emptyList()
-            // 检测片头信息
-            val introRange = IntroSkipHelper.detectIntroRange(source?.chapters)
-            if (introRange != null) {
-                introStartMs = introRange.first
-                introEndMs = introRange.second
-                hasAutoSkipped = false // 重置自动跳过标志
-            } else {
-                introStartMs = null
-                introEndMs = null
-                showSkipIntroButton = false
-                hasAutoSkipped = false
-            }
-
             subtitleTracks = streams.filter { s ->
                 s.type == "Subtitle"
             }
@@ -1003,11 +981,25 @@ fun PlayerScreen(
                 s.type == "Audio"
             }
 
+            /*
+             * 音轨 / 字幕的初始选择：优先用详情页在这一版上选过的（VR 同名键
+             * aud_choice_<条目>_<版本>、sub_choice_<条目>_<版本>，"序号|是否图形字幕"），
+             * 没选过才落回服务端的默认轨。
+             */
+            val savedAud = savedVersionSourceId
+                ?.let { preferencesManager.getInt("aud_choice" + "_" + mediaId + "_" + it, -1) }
+                ?: -1
+            val savedSub = savedVersionSourceId?.let {
+                preferencesManager.getString("sub_choice" + "_" + mediaId + "_" + it)
+                    ?.substringBefore('|')?.toIntOrNull()
+            } ?: -1
             if (selectedAudioIndex == -1) {
-                selectedAudioIndex = source?.defaultAudioStreamIndex ?: -1
+                selectedAudioIndex = savedAud.takeIf { v -> streams.any { it.type == "Audio" && it.index == v } }
+                    ?: source?.defaultAudioStreamIndex ?: -1
             }
             if (selectedSubtitleIndex == -99) {
-                selectedSubtitleIndex = source?.defaultSubtitleStreamIndex ?: -1
+                selectedSubtitleIndex = savedSub.takeIf { v -> streams.any { it.type == "Subtitle" && it.index == v } }
+                    ?: source?.defaultSubtitleStreamIndex ?: -1
             }
 
             // 构建 URL (参考 Flutter 逻辑)
@@ -1314,33 +1306,6 @@ fun PlayerScreen(
         }
     }
 
-    // 片头检测和自动跳过逻辑
-    LaunchedEffect(isPlaying, position, introStartMs, introEndMs, autoSkipIntro, hasAutoSkipped) {
-        if (introStartMs != null && introEndMs != null && isPlaying) {
-            // 检查是否在片头范围内
-            val inIntroRange = position >= introStartMs!! && position < introEndMs!!
-
-            if (inIntroRange) {
-                // 如果启用了自动跳过且还未跳过，则自动跳过
-                if (autoSkipIntro && !hasAutoSkipped) {
-                    player.seekTo(introEndMs!!)
-                    hasAutoSkipped = true
-                    showSkipIntroButton = false
-                } else if (!autoSkipIntro) {
-                    // 如果未启用自动跳过，显示跳过按钮
-                    showSkipIntroButton = true
-                }
-            } else {
-                // 不在片头范围内，隐藏跳过按钮
-                if (position >= introEndMs!!) {
-                    showSkipIntroButton = false
-                }
-            }
-        } else {
-            showSkipIntroButton = false
-        }
-    }
-
     // 播放器监听
     DisposableEffect(player) {
         val p = player
@@ -1473,11 +1438,7 @@ fun PlayerScreen(
                     causeMsg.contains("Malformed reply", ignoreCase = true)
                 ) {
                     scope.launch {
-                        android.widget.Toast.makeText(
-                            context,
-                            context.getString(R.string.error_proxy_connection),
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
+                        hudText = context.getString(R.string.error_proxy_connection)
                     }
                     return
                 }
@@ -1833,8 +1794,11 @@ fun PlayerScreen(
             AndroidView(
                 factory = { ctx ->
                     DanmakuView(ctx).apply {
-                        // 弹幕跟随字幕的"提前/延后"偏移(字幕时间轴一动,弹幕一起动)
-                        setPositionProvider { player.currentPosition - subtitleTimeOffsetMs }
+                        // 弹幕跟字幕偏移一起动（字幕时间轴一动，弹幕一起动），
+                        // 再叠加弹幕自己的偏移：正数=提前，所以加。
+                        setPositionProvider {
+                            player.currentPosition - subtitleTimeOffsetMs + danmakuOffsetMs
+                        }
                         danmakuViewRef.value = this
                         start()
                     }
@@ -1893,6 +1857,25 @@ fun PlayerScreen(
                 )
             }
 
+            // 1.95 页面内提示条（替代系统 Toast，父亲 2026-10-13 口径：错误只在页面里说）
+            hudText?.let { msg ->
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 96.dp)
+                        .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 28.dp, vertical = 16.dp)
+                ) {
+                    Text(text = msg, color = Color.White, fontSize = 18.sp)
+                }
+            }
+            LaunchedEffect(hudText) {
+                if (hudText != null) {
+                    delay(5000)
+                    hudText = null
+                }
+            }
+
             // 2. 播放控制面板(按 ↓ 唤出):整块无底色,二级菜单浮在上方
             if (showPanel) {
                 val mainMenu = PLAYER_MAIN_MENU.filter { item ->
@@ -1910,27 +1893,9 @@ fun PlayerScreen(
                     subtitle = panelSubtitle(),
                     // 官方副行没有"播放方式"这一项，传空即不显示
                     playMethodLabel = "",
-                    // 下一集：与自动连播同一套取数（剧集列表里找当前集的下一个）
-                    onNextEpisode = {
-                        scope.launch {
-                            val sid = mediaInfo.seriesId
-                            if (sid.isNullOrEmpty()) {
-                                DiagLog.w(context, "nextEpisode", "没有 seriesId，无法切下一集")
-                            } else {
-                                runCatching {
-                                    val list = repository.getSeriesList(sid)
-                                    val idx = list.indexOfFirst { it.id == mediaId }
-                                    if (idx >= 0 && idx < list.size - 1) {
-                                        onNavigateToPlayer(list[idx + 1])
-                                    } else {
-                                        DiagLog.w(context, "nextEpisode", "已是最后一集(idx=$idx/${list.size})")
-                                    }
-                                }.onFailure {
-                                    ErrorHandler.logError("PlayerScreen", "切下一集失败", it)
-                                }
-                            }
-                        }
-                    },
+                    // 「选片」回海报墙、「退出」关掉播放页（父亲 2026-10-28：与 VR 控制条同名同序）
+                    onPick = onExit,
+                    onExitPlayer = onExit,
                     // 左上角片名 Logo 已改为常显图层（见上面的 1.85），这里传空避免重复画
                     logoUrl = null,
                     position = position,
@@ -1955,6 +1920,12 @@ fun PlayerScreen(
                                 activeItem = null
                             }
 
+                            // 「选片」不是菜单，是动作键：直接回海报墙（与 VR 同名同位）
+                            PlayerMenuItem.PICK -> {
+                                activeItem = null
+                                onExit()
+                            }
+
                             else -> activeItem = if (activeItem == item) null else item
                         }
                     },
@@ -1977,10 +1948,13 @@ fun PlayerScreen(
                     ) {
                         PLAYER_MORE_MENU.forEachIndexed { index, item ->
                             val label = when (item) {
+                                PlayerMenuItem.AUDIO ->
+                                    "音频选择：" + (
+                                        audioTracks.firstOrNull { it.index == selectedAudioIndex }
+                                            ?.displayTitle ?: "默认"
+                                        )
                                 PlayerMenuItem.QUALITY -> "视频质量：" + qualityLabel(maxStreamingBitrate)
                                 PlayerMenuItem.PLAY_MODE -> "播放模式：" + playModeName(playMode)
-                                PlayerMenuItem.CORRECTION -> "播放校正：" + correctionName(playbackCorrection)
-                                PlayerMenuItem.BUFFER -> "缓冲设置"
                                 else -> item.label
                             }
                             SheetRow(
@@ -2035,7 +2009,7 @@ fun PlayerScreen(
                         modifier = run {
                             val anchor = when (item) {
                                 PlayerMenuItem.QUALITY, PlayerMenuItem.PLAY_MODE,
-                                PlayerMenuItem.BUFFER, PlayerMenuItem.INTRO -> PlayerMenuItem.MORE
+                                PlayerMenuItem.BUFFER -> PlayerMenuItem.MORE
                                 else -> item
                             }
                             val pos = btnPositions[anchor]
@@ -2104,6 +2078,8 @@ fun PlayerScreen(
                                     danmakuScale = it
                                     danmakuPrefs.edit().putFloat("danmaku_scale", it).apply()
                                 },
+                                offsetMs = danmakuOffsetMs,
+                                onOffsetChange = { danmakuOffsetMs = it },
                                 firstFocus = sheetFirstFocus
                             )
 
@@ -2129,16 +2105,6 @@ fun PlayerScreen(
                                 firstFocus = sheetFirstFocus
                             )
 
-                            PlayerMenuItem.INTRO -> IntroSheet(
-                                enabled = autoSkipIntro,
-                                hasIntro = introEndMs != null,
-                                onEnabledChange = {
-                                    autoSkipIntro = it
-                                    preferencesManager.autoSkipIntro = it
-                                },
-                                firstFocus = sheetFirstFocus
-                            )
-
                             PlayerMenuItem.QUALITY -> QualitySheet(
                                 current = maxStreamingBitrate,
                                 onChange = { maxStreamingBitrate = it },
@@ -2155,27 +2121,13 @@ fun PlayerScreen(
                                 firstFocus = sheetFirstFocus
                             )
 
-                            PlayerMenuItem.CORRECTION -> CorrectionSheet(
-                                current = playbackCorrection,
-                                onChange = { playbackCorrection = it },
-                                firstFocus = sheetFirstFocus
-                            )
-
                             PlayerMenuItem.BUFFER -> BufferPresetSheet(
                                 currentMinBufferMs = minBufferMs,
-                                onApplyPreset = { value ->
-                                    minBufferMs = value
-                                    preferencesManager.minBufferMs = value
-                                    rebuildPlayerKeepingPosition()
-                                },
-                                onResetDefaults = {
-                                    val defaults = preferencesManager.getBufferDefaults()
-                                    minBufferMs = defaults.minBufferMs
-                                    maxBufferMs = defaults.maxBufferMs
-                                    playbackBufferMs = defaults.playbackBufferMs
-                                    rebufferMs = defaults.rebufferMs
-                                    bufferSizeBytes = defaults.bufferSizeBytes
-                                    preferencesManager.resetBufferDefaults()
+                                onApplyPreset = { minMs, maxMs ->
+                                    minBufferMs = minMs
+                                    maxBufferMs = maxMs
+                                    preferencesManager.minBufferMs = minMs
+                                    preferencesManager.maxBufferMs = maxMs
                                     rebuildPlayerKeepingPosition()
                                 },
                                 firstFocus = sheetFirstFocus
@@ -2267,21 +2219,6 @@ fun PlayerScreen(
                         }
                     }
                 }
-            }
-
-            // 4.5. Skip Intro Button (跳过片头)
-            if (showSkipIntroButton && introEndMs != null) {
-                SkipIntroButton(
-                    introEndMs = introEndMs!!,
-                    onSkip = {
-                        showSkipIntroButton = false
-                        player.seekTo(introEndMs!!)
-                    },
-                    onTimeout = {
-                        showSkipIntroButton = false
-                    },
-                    countdownSeconds = 5
-                )
             }
 
 

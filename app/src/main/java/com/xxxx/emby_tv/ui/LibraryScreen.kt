@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.*
@@ -142,9 +143,10 @@ fun LibraryScreen(
 
             if (libraryItems != null && totalCount > 0) {
                 Text(
-                    text = "${libraryItems.size}/$totalCount",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f)
+                    text = "共 " + totalCount + " 部",
+                    // 计数照 VR 口径写成「共 N 部」16sp / 85% 白（原来是「已加载/总数」的斜杠式）
+                    fontSize = 16.sp,
+                    color = Color.White.copy(alpha = 0.85f)
                 )
             }
         }

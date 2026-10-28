@@ -23,10 +23,13 @@ import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.MovieCreation
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -77,85 +80,86 @@ import com.xxxx.emby_tv.data.model.MediaSourceInfoDto
 import com.xxxx.emby_tv.data.model.MediaStreamDto
 import com.xxxx.emby_tv.data.model.PersonInfo
 import com.xxxx.emby_tv.ui.PersonCard
+import com.xxxx.emby_tv.util.hoverToFocus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** 播放控制面板上的一级菜单项 */
+/** 播放控制面板上的一级菜单项（名称与顺序照 VR 版，父亲 2026-10-28 定） */
 enum class PlayerMenuItem(val label: String) {
-    INFO("信息"),
-    EPISODES("选集"),
-    CAST("演职人员"),
     SUBTITLE("字幕"),
     DANMAKU("弹幕"),
     SPEED("播放速度"),
-    INTRO("跳过片头"),
-    AUDIO("声音"),
+    EPISODES("选集"),
+    PICK("选片"),
+    INFO("信息"),
+    CAST("演职人员"),
     MORE("更多"),
+    AUDIO("音频选择"),
     QUALITY("视频质量"),
     PLAY_MODE("播放模式"),
-    CORRECTION("播放校正"),
     BUFFER("缓冲设置"),
     BACK("返回");
 
     /** 二级菜单标题(与一级文字一致,除"返回") */
     val sheetTitle: String get() = label
 
-    /** 图标行使用的图标 */
+    /** 图标行使用的图标（与 VR 控制条同一套 Material 图标） */
     val icon: ImageVector
         get() = when (this) {
-            INFO -> Icons.Default.Info
-            EPISODES -> Icons.Default.ViewList
-            CAST -> Icons.Default.Person
             SUBTITLE -> Icons.Default.ClosedCaption
             DANMAKU -> Icons.Default.Chat
             SPEED -> Icons.Default.Speed
-            INTRO -> Icons.Default.SkipNext
-            AUDIO -> Icons.Default.VolumeUp
+            EPISODES -> Icons.Default.ViewList
+            PICK -> Icons.Default.MovieCreation
+            INFO -> Icons.Default.Info
+            CAST -> Icons.Default.Groups
             MORE -> Icons.Default.MoreHoriz
+            AUDIO -> Icons.Default.VolumeUp
             QUALITY -> Icons.Default.HighQuality
             PLAY_MODE -> Icons.Default.Repeat
-            CORRECTION -> Icons.Default.Tune
             BUFFER -> Icons.Default.Memory
             BACK -> Icons.Default.ArrowBack
         }
 }
 
 /**
- * 按钮行左组（靠左，播放类）—— 父亲 2026-09-30 定：
- * 快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
- * （快退/播放/快进/下一集是动作键，不走菜单项枚举）
+ * 控制条分组（父亲 2026-10-28 11:07 定：TV 内容与 VR 完全一致，
+ * 只去掉 VR 影院三项与跳过片头，交互形态按遥控器保留）。
+ *
+ *   左组：字幕 · 弹幕
+ *   中组：快退10 · 播放/暂停 · 快进10（动作键，不在枚举里）
+ *   右组：倍速 · 选集 · 选片 · 信息 · 演职人员 · 更多 · 退出（退出是动作键）
  */
-val PLAYER_PLAY_MENU = listOf(
-    PlayerMenuItem.SPEED,
-    PlayerMenuItem.EPISODES
+val PLAYER_LEFT_MENU = listOf(
+    PlayerMenuItem.SUBTITLE,
+    PlayerMenuItem.DANMAKU
 )
 
-/**
- * 按钮行右组（靠右，信息类）—— 父亲 2026-09-30 定：
- * 字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
- */
-val PLAYER_INFO_MENU = listOf(
-    PlayerMenuItem.SUBTITLE,
-    PlayerMenuItem.DANMAKU,
-    PlayerMenuItem.AUDIO,
+/** 右组菜单项（「退出」是动作键，不在列表里，画在最后） */
+val PLAYER_RIGHT_MENU = listOf(
+    PlayerMenuItem.SPEED,
+    PlayerMenuItem.EPISODES,
+    PlayerMenuItem.PICK,
     PlayerMenuItem.INFO,
     PlayerMenuItem.CAST,
     PlayerMenuItem.MORE
 )
 
-/** 主菜单 = 左组 + 右组（调用方按内容有无过滤） */
-val PLAYER_MAIN_MENU = PLAYER_PLAY_MENU + PLAYER_INFO_MENU
+/** 主菜单 = 左组 + 右组（调用方按内容有无过滤；焦点下标表按这个顺序建） */
+val PLAYER_MAIN_MENU = PLAYER_LEFT_MENU + PLAYER_RIGHT_MENU
 
-/** 「更多」页（播放校正与视频质量功能重复已去掉；返回靠遥控器返回键；
- *  跳过片头不在按钮行分组里，收到这里） */
+/**
+ * 「更多」二级菜单：四项，与 VR 完全一致（音频选择 · 视频质量 · 播放模式 · 缓冲设置）。
+ * VR 的选座 / 座椅调节 / 影厅亮度 / 播放版本是影院专属，TV 不做。
+ */
 val PLAYER_MORE_MENU = listOf(
+    PlayerMenuItem.AUDIO,
     PlayerMenuItem.QUALITY,
     PlayerMenuItem.PLAY_MODE,
-    PlayerMenuItem.BUFFER,
-    PlayerMenuItem.INTRO
+    PlayerMenuItem.BUFFER
 )
 
 /** 白字黑描边:底部区域没有底衬,靠阴影保证亮画面上可读 */
@@ -172,17 +176,28 @@ val OverlayTextStyle = TextStyle(
 val SpecIconIdle = Color(0xFFA4A3A3)     // 图标 · 非焦点
 val SpecIconFocus = Color(0xFFC6C6C6)    // 图标 · 焦点态
 // val SpecBarPlayed = Color(0xFF45913D)  // 2026-10-03 同上（进度条已播色统一主题色）
-val SpecBarRest = Color(0xFF262626)      // 进度条 · 未播
+val SpecBarRest = Color(0x3DFFFFFF)      // 进度条 · 未播（与 VR 同值）
 val SpecPanelBg = Color(0xFF303030)      // 二级菜单面板底色（不透明）
 val SpecClockText = Color(0xFFA6A6A6)    // 顶部时钟/次要文字
+/** 强调色：全站只留这一个绿（VR 侧口径 #2FD57C） */
+val SpecAccent = Color(0xFF2FD57C)
+/** 选中/活动底色：绿 24%（VR 同值 0x3D2FD57C） */
+val SpecSelected = Color(0x3D2FD57C)
 /** 焦点容器边长：官方实测 56px @1080p = 28dp；父亲要求图标更醒目，容器放大到 40dp */
-val SpecFocusBox = 40.dp
+val SpecFocusBox = 84.dp
 /**
  * 按钮图标边长：官方图标可见高度 38–46px（19–23dp）。
  * 注意 Compose Material 图标自带内边距（24dp viewport 里图形只占约 18dp），
  * 直接给 20dp 只会画出约 30px —— 父亲实测"还是小"。给 26dp（≈52px viewport、可见约 39px）才对得上官方。
  */
-val SpecIconSize = 26.dp
+/**
+ * 图标 46dp、按钮盒 84dp、按钮缝 4dp、组间 40dp —— 照 VR 控制条换算
+ * （VR 像素 159/87/5/75 ÷ PX_PER_DP 1.5 = 106/58/3.3/50；12 颗在 1280dp 屏上塞不下
+ *  106dp，按屏宽反算成 84dp，见 notes/b0bemby-vr-tv-diff-2026-10-28.md §6.2）。
+ */
+val SpecIconSize = 46.dp
+val SpecButtonGap = 4.dp
+val SpecGroupGap = 40.dp
 
 val OverlayTextStyleSoft = TextStyle(
     shadow = Shadow(color = Color.Black, offset = Offset(1.5f, 1.5f), blurRadius = 5f)
@@ -300,8 +315,9 @@ fun PlayerControlPanel(
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onPlayPause: () -> Unit,
-    // 下一集（右侧动作键，父亲 2026-09-30 定）
-    onNextEpisode: () -> Unit = {},
+    // 「选片」（回海报墙）与「退出」（关掉播放页）—— 照 VR 控制条右组末尾两颗
+    onPick: () -> Unit = {},
+    onExitPlayer: () -> Unit = {},
     // 左上角剧集片名 Logo（官方播放界面左上角就是这张 ClearLogo，实测 x231-306, y60-146）
     logoUrl: String? = null,
     // 上报一级按钮的屏幕坐标（px：左边缘 x 与宽度）——二级菜单要锚定在"按钮正上方"
@@ -312,7 +328,6 @@ fun PlayerControlPanel(
 ) {
     val playKeyFocus = remember { List(3) { FocusRequester() } } // 0 后退 / 1 播放暂停 / 2 前进
     val itemFocus = remember { List(PLAYER_MAIN_MENU.size) { FocusRequester() } }
-    val nextEpisodeFocus = remember { FocusRequester() }
     val btnPositions = remember { mutableStateMapOf<PlayerMenuItem, Pair<Int, Int>>() }
     androidx.compose.runtime.SideEffect { onButtonPositions(btnPositions.toMap()) }
     var lastIconIndex by remember { mutableIntStateOf(initialFocusIndex.coerceAtLeast(0)) }
@@ -365,8 +380,9 @@ fun PlayerControlPanel(
                     .size(width = 140.dp, height = 60.dp)
             )
         }
-        // 底部渐变遮罩：白色图标/文字直接压在亮画面上会糊成一团（父亲 2026-09-30 实测）。
-        // 官方在满屏内容时同样靠 scrim 压暗底部；高度 260dp 覆盖到进度条上方。
+        // 底部遮罩：亮画面上白字白图标会糊（父亲 2026-09-30 实测）。
+        // 2026-10-28 按 VR 控制条改：上透明渐入，底下压一层 VR 的玻璃渐变 + 顶部细高光描边，
+        // 色值取 VR panel/PlayerOsd.kt（0xF0252830 → 0xE6131518，描边 0x3DFFFFFF/0x08FFFFFF）。
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -374,7 +390,12 @@ fun PlayerControlPanel(
                 .align(Alignment.BottomStart)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.35f),
+                            Color(0xE6131518)
+                        ),
+                        startY = 0f
                     )
                 )
         )
@@ -462,7 +483,7 @@ fun PlayerControlPanel(
                                     .fillMaxWidth(
                                         (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                                     )
-                                    .background(MaterialTheme.colorScheme.secondary)
+                                    .background(SpecAccent)
                             )
                         }
                     }
@@ -479,71 +500,19 @@ fun PlayerControlPanel(
 
             Spacer(modifier = Modifier.height(20.dp))  // 官方：段间距 39px ≈ 19.5dp
 
-            // 第四行:按钮行 —— 分组由父亲 2026-09-30 定
-            //   左组(靠左,播放类):快退10秒 · 播放/暂停 · 快进10秒 · 倍速 · 下一集 · 选集
-            //   右组(靠右,信息类):字幕 · 弹幕 · 声音 · 信息 · 演员 · 更多
+            // 第四行:按钮行 —— 内容与顺序照 VR 控制条（父亲 2026-10-28 11:07 定）
+            //   左组:字幕 · 弹幕
+            //   中组:快退10 · 播放/暂停 · 快进10
+            //   右组:倍速 · 选集 · 选片 · 信息 · 演职人员 · 更多 · 退出
+            // 尺寸按 VR 规格换算（按钮盒 84dp、图标 46dp、按钮缝 4dp、组间 40dp、左右 56dp），
+            // 12 颗在 1280dp 宽的电视屏上正好放下。
+            val shownMenu = menuItems
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ── 左组:播放类 ──
-                PanelIcon(
-                    icon = Icons.Default.Replay10,
-                    description = "后退10秒",
-                    focusRequester = playKeyFocus[0],
-                    onClick = onSeekBack
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                PanelIcon(
-                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    description = "播放暂停",
-                    focusRequester = playKeyFocus[1],
-                    onClick = onPlayPause,
-                    downFocus = itemFocus[0]
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                PanelIcon(
-                    icon = Icons.Default.Forward10,
-                    description = "前进10秒",
-                    focusRequester = playKeyFocus[2],
-                    onClick = onSeekForward
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                PanelMenuButton(
-                    item = PlayerMenuItem.SPEED,
-                    selected = activeItem == PlayerMenuItem.SPEED,
-                    focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceIn(0, itemFocus.lastIndex)],
-                    onClick = {
-                        lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.SPEED).coerceAtLeast(0)
-                        onMenuSelect(PlayerMenuItem.SPEED)
-                    },
-                    onPositioned = { x, w -> btnPositions[PlayerMenuItem.SPEED] = x to w }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                PanelIcon(
-                    icon = Icons.Default.SkipNext,
-                    description = "下一集",
-                    focusRequester = nextEpisodeFocus,
-                    onClick = onNextEpisode
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                PanelMenuButton(
-                    item = PlayerMenuItem.EPISODES,
-                    selected = activeItem == PlayerMenuItem.EPISODES,
-                    focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceIn(0, itemFocus.lastIndex)],
-                    onClick = {
-                        lastIconIndex = PLAYER_MAIN_MENU.indexOf(PlayerMenuItem.EPISODES).coerceAtLeast(0)
-                        onMenuSelect(PlayerMenuItem.EPISODES)
-                    },
-                    onPositioned = { x, w -> btnPositions[PlayerMenuItem.EPISODES] = x to w }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // 中间留空,把右组推到最右
-                Spacer(modifier = Modifier.weight(1f))
-
-                // ── 右组:信息类 ──
-                menuItems.filter { it in PLAYER_INFO_MENU }.forEach { item ->
+                // ── 左组 ──
+                shownMenu.filter { it in PLAYER_LEFT_MENU }.forEach { item ->
                     PanelMenuButton(
                         item = item,
                         selected = activeItem == item,
@@ -554,8 +523,55 @@ fun PlayerControlPanel(
                         },
                         onPositioned = { x, w -> btnPositions[item] = x to w }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(SpecButtonGap))
                 }
+
+                Spacer(modifier = Modifier.width(SpecGroupGap))
+
+                // ── 中组:三颗动作键 ──
+                PanelIcon(
+                    icon = Icons.Default.Replay10,
+                    description = "后退10秒",
+                    focusRequester = playKeyFocus[0],
+                    onClick = onSeekBack
+                )
+                Spacer(modifier = Modifier.width(SpecButtonGap))
+                PanelIcon(
+                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    description = "播放暂停",
+                    focusRequester = playKeyFocus[1],
+                    onClick = onPlayPause,
+                    downFocus = itemFocus[0]
+                )
+                Spacer(modifier = Modifier.width(SpecButtonGap))
+                PanelIcon(
+                    icon = Icons.Default.Forward10,
+                    description = "前进10秒",
+                    focusRequester = playKeyFocus[2],
+                    onClick = onSeekForward
+                )
+
+                Spacer(modifier = Modifier.width(SpecGroupGap))
+
+                // ── 右组 ──
+                shownMenu.filter { it in PLAYER_RIGHT_MENU }.forEach { item ->
+                    PanelMenuButton(
+                        item = item,
+                        selected = activeItem == item,
+                        focusRequester = itemFocus[PLAYER_MAIN_MENU.indexOf(item).coerceIn(0, itemFocus.lastIndex)],
+                        onClick = {
+                            lastIconIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
+                            onMenuSelect(item)
+                        },
+                        onPositioned = { x, w -> btnPositions[item] = x to w }
+                    )
+                    Spacer(modifier = Modifier.width(SpecButtonGap))
+                }
+                PanelIcon(
+                    icon = Icons.Default.Logout,
+                    description = "退出",
+                    onClick = onExitPlayer
+                )
             }
         }
 
@@ -570,20 +586,22 @@ private fun PanelMenuButton(
     onClick: () -> Unit,
     onPositioned: ((Int, Int) -> Unit)? = null,
 ) {
-    // 与三个播放键同构：同一个 40dp 容器、同一种居中方式、下划线画在容器内部底边
+    // 形态照 VR 控制条：按钮盒 84dp 圆角，焦点/菜单开着时铺绿 24%，图标白色；
+    // 焦点不放大（VR 那侧也是纯换底色，放大在电视上会让相邻按钮抖动）。
     Surface(
         onClick = onClick,
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f) else Color.Transparent,
+            containerColor = if (selected) SpecSelected else Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = MaterialTheme.colorScheme.secondary,
-            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+            focusedContainerColor = SpecSelected,
+            focusedContentColor = Color.White
         ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         modifier = Modifier
             .size(SpecFocusBox)
             .focusRequester(focusRequester)
+            .hoverToFocus(focusRequester)
             .then(
                 if (onPositioned != null) {
                     Modifier.onGloballyPositioned { c ->
@@ -592,25 +610,13 @@ private fun PanelMenuButton(
                 } else Modifier
             )
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = item.label,
                 tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(SpecIconSize)
+                modifier = Modifier.size(SpecIconSize)
             )
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 3.dp)
-                        .width(24.dp)
-                        .height(3.dp)
-                        .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(4.dp))
-                )
-            }
         }
     }
 }
@@ -619,23 +625,27 @@ private fun PanelMenuButton(
 private fun PanelIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     description: String,
-    focusRequester: FocusRequester,
+    focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
     downFocus: FocusRequester? = null,
 ) {
-    // 官方形态：28dp 圆角方块，焦点时整块填充 #428A39、图标提亮；无缩放、无描边
+    // 与菜单按钮同构：同一尺寸盒、同一种焦点底色（绿 24%），焦点不放大
     Surface(
         onClick = onClick,
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = MaterialTheme.colorScheme.secondary,
-            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+            focusedContainerColor = SpecSelected,
+            focusedContentColor = Color.White
         ),
         modifier = Modifier
             .size(SpecFocusBox)
-            .focusRequester(focusRequester)
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester).hoverToFocus(focusRequester)
+                } else Modifier
+            )
             .then(
                 if (downFocus != null) {
                     Modifier.focusProperties { down = downFocus }
@@ -643,7 +653,7 @@ private fun PanelIcon(
                     Modifier
                 }
             ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f)
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Icon(
@@ -710,6 +720,9 @@ fun SheetRow(
     // 操作型条目(如"字幕提前/延后")不要勾选框:它们不是可选项,方框看着像"取消按钮"
     showCheckbox: Boolean = true,
     externalBringIntoView: BringIntoViewRequester? = null,
+    // 副行（字幕菜单用）：主行 Emby 的 DisplayTitle，副行母语名 Title。
+    // 只有一行时中文轨认不出来，看着像全是英文字幕（VR 侧同款，父亲 2026-10-28 定）
+    sub: String? = null,
 ) {
     LaunchedEffect(firstFocus) {
         if (firstFocus != null) {
@@ -747,13 +760,23 @@ fun SheetRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = label,
-                fontSize = 15.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
-            )
+            Column(modifier = Modifier.weight(1f, fill = false)) {
+                Text(
+                    text = label,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!sub.isNullOrBlank()) {
+                    Text(
+                        text = sub,
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.72f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!selected && !trailing.isNullOrEmpty()) {
                     Text(text = trailing, fontSize = 14.sp, color = Color(0xFFBDBDBD))
@@ -1050,37 +1073,40 @@ fun CastListSheet(
     }
 }
 
-/** 缓冲设置:几档预设 + 重置(细节参数不进遥控器菜单) */
+/** 缓冲设置：三档预设，与 VR 同口径（标准 15s 起播 · 50s 上限 / 较大 30 · 90 / 最大 60 · 180） */
 @Composable
 fun BufferPresetSheet(
     currentMinBufferMs: Int,
-    onApplyPreset: (Int) -> Unit,
-    onResetDefaults: () -> Unit,
+    onApplyPreset: (Int, Int) -> Unit,
     firstFocus: FocusRequester,
 ) {
     val presets = listOf(
-        20_000 to "小（20 秒·省内存）",
-        40_000 to "标准（40 秒）",
-        80_000 to "大（80 秒·网络差时稳）"
+        Triple("标准", 15_000, 50_000),
+        Triple("较大", 30_000, 90_000),
+        Triple("最大", 60_000, 180_000)
     )
     Column {
-        presets.forEachIndexed { i, (value, label) ->
+        presets.forEachIndexed { i, (label, minMs, maxMs) ->
             SheetRow(
                 label = label,
-                selected = currentMinBufferMs == value,
-                onClick = { onApplyPreset(value) },
-                firstFocus = if (i == 0) firstFocus else null
+                selected = currentMinBufferMs == minMs,
+                onClick = { onApplyPreset(minMs, maxMs) },
+                firstFocus = if (i == 0) firstFocus else null,
+                trailing = "起播 " + (minMs / 1000) + " 秒 · 上限 " + (maxMs / 1000) + " 秒"
             )
         }
-        SheetRow(
-            label = "恢复默认缓冲参数",
-            selected = false,
-            onClick = onResetDefaults
-        )
     }
 }
 
-/** 字幕 */
+/**
+ * 字幕菜单（照官方客户端与 VR，父亲 2026-10-28 定）
+ *
+ * · 第 0 行「关」；其余是这台播放器实际可选的轨道；
+ * · 每行两行文字：主行 Emby 的 DisplayTitle，副行母语名 Title；
+ * · **内封在前、外挂在后**，组内按流序号升序；
+ * · 一条字幕都没有时给一行占位「（这部片没有字幕）」，避免菜单整块空白；
+ * · 弹幕不进这个菜单（弹幕有自己的菜单项）。
+ */
 @Composable
 fun SubtitleSheet(
     tracks: List<MediaStreamDto>,
@@ -1090,19 +1116,34 @@ fun SubtitleSheet(
     onTimeOffsetChange: (Long) -> Unit,
     firstFocus: FocusRequester,
 ) {
+    // 内封在前、外挂在后（sortedWith 稳定排序，同组保持服务端给的顺序）
+    val sorted = tracks.sortedWith(compareBy({ it.isExternal == true }, { it.index ?: Int.MAX_VALUE }))
     Column {
         SheetRow(
-            label = "关闭字幕",
-            selected = selectedIndex == -1,
+            label = "关",
+            selected = selectedIndex < 0,
             onClick = { onSelect(-1) },
             firstFocus = firstFocus
         )
-        tracks.forEach { track ->
+        if (sorted.isEmpty()) {
+            Text(
+                text = "（这部片没有字幕）",
+                color = Color(0xFFBDBDBD),
+                fontSize = 14.sp,
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 10.dp)
+            )
+        }
+        sorted.forEach { track ->
             val index = track.index ?: -1
+            val label = track.displayTitle?.takeIf { it.isNotBlank() }
+                ?: track.language?.takeIf { it.isNotBlank() }
+                ?: track.codec?.uppercase()
+                ?: "字幕"
             SheetRow(
-                label = track.displayTitle ?: track.language ?: "未知轨道",
+                label = label,
                 selected = selectedIndex == index,
-                onClick = { onSelect(index) }
+                onClick = { onSelect(index) },
+                sub = track.title?.takeIf { it.isNotBlank() && it != label }
             )
         }
         SheetRow(
@@ -1127,7 +1168,7 @@ fun SubtitleSheet(
     }
 }
 
-/** 声音(音轨) */
+/** 音频选择（从「更多」进）：主行 DisplayTitle，副行编码 + 声道 */
 @Composable
 fun AudioSheet(
     tracks: List<MediaStreamDto>,
@@ -1147,55 +1188,101 @@ fun AudioSheet(
         }
         tracks.forEachIndexed { i, track ->
             val index = track.index ?: -1
+            val label = track.displayTitle?.takeIf { it.isNotBlank() }
+                ?: track.language?.takeIf { it.isNotBlank() }
+                ?: track.codec?.uppercase()
+                ?: "音轨"
+            val extra = listOfNotNull(
+                track.codec?.uppercase(),
+                track.channels?.let { it.toString() + " 声道" }
+            ).joinToString(" · ")
             SheetRow(
-                label = track.displayTitle ?: track.language ?: "未知轨道",
+                label = label,
                 selected = selectedIndex == index,
                 onClick = { onSelect(index) },
-                firstFocus = if (i == 0) firstFocus else null
+                firstFocus = if (i == 0) firstFocus else null,
+                sub = extra.takeIf { it.isNotBlank() && it != label }
             )
         }
     }
 }
 
-/** 弹幕 */
+/** 弹幕设置：开关 · 字号 · 时间偏移（照 VR 七段，父亲 2026-10-28） */
 @Composable
 fun DanmakuSheet(
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     scale: Float,
     onScaleChange: (Float) -> Unit,
+    offsetMs: Long,
+    onOffsetChange: (Long) -> Unit,
     firstFocus: FocusRequester,
 ) {
     val options = listOf(0.8f to "小", 1.0f to "标准", 1.3f to "大", 1.6f to "特大")
     Column {
         SheetRow(
-            label = if (enabled) "显示弹幕:开" else "显示弹幕:关",
+            label = if (enabled) "显示弹幕：开" else "显示弹幕：关",
             selected = enabled,
             onClick = { onEnabledChange(!enabled) },
             firstFocus = firstFocus
         )
         options.forEach { (value, label) ->
             SheetRow(
-                label = "字号:$label",
+                label = "字号：" + label,
                 selected = kotlin.math.abs(scale - value) < 0.01f,
                 onClick = { onScaleChange(value) }
             )
         }
+        val secs = offsetMs / 1000f
+        SheetRow(
+            label = "弹幕偏移：" + when {
+                offsetMs > 0 -> String.format("+%.1f 秒（提前）", secs)
+                offsetMs < 0 -> String.format("%.1f 秒（推后）", secs)
+                else -> "无"
+            },
+            selected = offsetMs != 0L,
+            onClick = { onOffsetChange(0L) },
+            showCheckbox = false
+        )
+        SheetRow(
+            label = "弹幕提前 0.5 秒",
+            selected = false,
+            onClick = { onOffsetChange(offsetMs + 500L) },
+            showCheckbox = false
+        )
+        SheetRow(
+            label = "弹幕推后 0.5 秒",
+            selected = false,
+            onClick = { onOffsetChange(offsetMs - 500L) },
+            showCheckbox = false
+        )
+        SheetRow(
+            label = "弹幕提前 10 秒",
+            selected = false,
+            onClick = { onOffsetChange(offsetMs + 10_000L) },
+            showCheckbox = false
+        )
+        SheetRow(
+            label = "弹幕推后 10 秒",
+            selected = false,
+            onClick = { onOffsetChange(offsetMs - 10_000L) },
+            showCheckbox = false
+        )
     }
 }
 
-/** 播放速度 */
+/** 播放速度：四档，与 VR 一致（0.5 / 1.0 / 1.5 / 2.0） */
 @Composable
 fun SpeedSheet(
     current: Float,
     onChange: (Float) -> Unit,
     firstFocus: FocusRequester,
 ) {
-    val options = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+    val options = listOf(0.5f, 1.0f, 1.5f, 2.0f)
     Column {
         options.forEachIndexed { i, value ->
             SheetRow(
-                label = if (value == 1.0f) "正常 (1.0x)" else String.format("%.2fx", value),
+                label = if (value == 1.0f) "1.0x（正常）" else "" + value + "x",
                 selected = kotlin.math.abs(current - value) < 0.01f,
                 onClick = { onChange(value) },
                 firstFocus = if (i == 0) firstFocus else null
@@ -1204,7 +1291,12 @@ fun SpeedSheet(
     }
 }
 
-/** 视频质量(服务端按码率上限决定是否转码与分辨率) */
+const val QUALITY_ORIGINAL = 200_000_000
+
+/**
+ * 视频质量：标签与 VR 统一成「原画 / 1080 / 1024 / 768」，
+ * 行尾写清这一档的真实含义（原画=直推不转码，其余=服务端转码到该码率上限）。
+ */
 @Composable
 fun QualitySheet(
     current: Int,
@@ -1212,24 +1304,23 @@ fun QualitySheet(
     firstFocus: FocusRequester,
 ) {
     val options = listOf(
-        QUALITY_ORIGINAL to "原画（不转码）",
-        10_000_000 to "1080p（10 兆）",
-        5_000_000 to "1080p（5 兆）",
-        1_000_000 to "1080p（1 兆·省流）"
+        Triple(QUALITY_ORIGINAL, "原画", "直推不转码"),
+        Triple(10_000_000, "1080", "转码 ≈10 兆"),
+        Triple(5_000_000, "1024", "转码 ≈5 兆"),
+        Triple(1_000_000, "768", "转码 ≈1 兆")
     )
     Column {
-        options.forEachIndexed { i, (value, label) ->
+        options.forEachIndexed { i, (value, label, note) ->
             SheetRow(
                 label = label,
                 selected = current == value,
                 onClick = { onChange(value) },
-                firstFocus = if (i == 0) firstFocus else null
+                firstFocus = if (i == 0) firstFocus else null,
+                trailing = note
             )
         }
     }
 }
-
-const val QUALITY_ORIGINAL = 200_000_000
 
 /** 播放模式 */
 @Composable
@@ -1246,54 +1337,6 @@ fun PlayModeSheet(
                 selected = current == value,
                 onClick = { onChange(value) },
                 firstFocus = if (i == 0) firstFocus else null
-            )
-        }
-    }
-}
-
-/** 播放校正 */
-@Composable
-fun CorrectionSheet(
-    current: Int,
-    onChange: (Int) -> Unit,
-    firstFocus: FocusRequester,
-) {
-    Column {
-        SheetRow(
-            label = "关闭（保持原画质）",
-            selected = current == 0,
-            onClick = { onChange(0) },
-            firstFocus = firstFocus
-        )
-        SheetRow(
-            label = "服务端转码（画面异常时用）",
-            selected = current == 1,
-            onClick = { onChange(1) }
-        )
-    }
-}
-
-/** 跳过片头 */
-@Composable
-fun IntroSheet(
-    enabled: Boolean,
-    hasIntro: Boolean,
-    onEnabledChange: (Boolean) -> Unit,
-    firstFocus: FocusRequester,
-) {
-    Column {
-        SheetRow(
-            label = if (enabled) "自动跳过片头:开" else "自动跳过片头:关",
-            selected = enabled,
-            onClick = { onEnabledChange(!enabled) },
-            firstFocus = firstFocus
-        )
-        if (!hasIntro) {
-            Text(
-                text = "本集没有识别到片头区间",
-                color = Color(0xFFAFAFAF),
-                fontSize = 13.sp,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
             )
         }
     }
@@ -1322,9 +1365,9 @@ fun techLineOf(source: MediaSourceInfoDto?, videoLabel: String): String {
 /** 视频质量档位显示名 */
 fun qualityLabel(bitrate: Int): String = when (bitrate) {
     QUALITY_ORIGINAL -> "原画"
-    10_000_000 -> "1080p 10 兆"
-    5_000_000 -> "1080p 5 兆"
-    else -> "1080p 1 兆"
+    10_000_000 -> "1080"
+    5_000_000 -> "1024"
+    else -> "768"
 }
 
 /** 播放模式显示名 */
@@ -1334,5 +1377,3 @@ fun playModeName(mode: Int): String = when (mode) {
     else -> "播完停止"
 }
 
-/** 播放校正显示名 */
-fun correctionName(value: Int): String = if (value == 1) "服务端转码" else "关闭"

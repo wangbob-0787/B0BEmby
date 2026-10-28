@@ -57,6 +57,32 @@ class MainActivity : ComponentActivity() {
             EmbyTvApp()
         }
     }
+
+    /**
+     * 手柄按键 → 遥控器语义（A/扳机 = OK、B = 返回、START = 菜单）。
+     *
+     * 不这么转的话，A 键在 Android 上是 KEYCODE_BUTTON_A，Compose 只认 DPAD_CENTER，
+     * 表现就是「手柄能移动焦点但按 A 没反应」。
+     */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val mapped = com.xxxx.emby_tv.util.InputBridge.mapGamepadKey(event)
+        return super.dispatchKeyEvent(mapped ?: event)
+    }
+
+    /**
+     * 摇杆 → 方向键。
+     *
+     * 只在事件源确实是手柄/摇杆/十字键时才转换（鼠标与头显光标的事件不能当方向键，
+     * 否则光标一动焦点就乱跳）。
+     */
+    override fun dispatchGenericMotionEvent(ev: android.view.MotionEvent): Boolean {
+        if (com.xxxx.emby_tv.util.InputBridge.hasStickData(ev)) {
+            com.xxxx.emby_tv.util.InputBridge.axisToDpadKey(ev)?.let { synthetic ->
+                super.dispatchKeyEvent(synthetic)
+            }
+        }
+        return super.dispatchGenericMotionEvent(ev)
+    }
 }
 
 @Composable

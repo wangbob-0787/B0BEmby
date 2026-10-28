@@ -61,6 +61,8 @@ fun MediaDetailScreen(
 ) {
     val context = LocalContext.current
     val repository = remember { EmbyRepository.getInstance(context) }
+    // 与播放页共用同一份偏好文件（版本 / 音轨 / 字幕记忆）
+    val preferencesManager = remember { com.xxxx.emby_tv.data.local.PreferencesManager(context) }
     val serverUrl = repository.serverUrl ?: ""
     
     val mediaInfo = detailViewModel.mediaInfo
@@ -244,9 +246,11 @@ fun MediaDetailScreen(
                     ) {
                         Text(
                             text = mediaInfo.name ?: "",
+                            // 剧名 28sp：与 VR 大片头同一档（原为 displaySmall 默认 36sp）
                             style = MaterialTheme.typography.displaySmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Color.White,
+                                fontSize = 28.sp
                             )
                         )
 
@@ -297,6 +301,15 @@ fun MediaDetailScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
+
+                        // ── 版本 / 视频 / 音频 / 字幕（照官方客户端四行，父亲 2026-10-28 定）──
+                        // 版本只在库里有多个文件时出现；后三行跟着所选版本走，
+                        // 选过的项按「条目 + 版本」记在本地，播放页按同一份记忆取流。
+                        DetailMediaRows(
+                            itemId = mediaInfo.id ?: "",
+                            sources = mediaInfo.mediaSources.orEmpty(),
+                            prefs = preferencesManager,
+                        )
 
                         // 动作按钮（父亲 2026-10-02 定：只要两个，方块图标 + 下方文字）
                         //   续播 —— 从上次看到的位置接着播
@@ -990,4 +1003,251 @@ private fun EpisodeRow(
             }
         }
     }
+}
+
+/**
+ * 详情页「版本 / 视频 / 音频 / 字幕」四行（父亲 2026-10-28 定，照官方客户端）。
+ *
+ * 数据来自 `/Users/{userId}/Items/{id}?fields=ShareLevel,MediaSources`：
+ * 同一部片的多个文件 = 多个 MediaSource，各自带自己的音轨与字幕清单。
+ * 选择结果写到 PreferencesManager（文件名 emby_tv），键名与 VR 侧一致：
+ *   ver_choice_<itemId>、aud_choice_<itemId>_<sourceId>、sub_choice_<itemId>_<sourceId>
+ * 播放页读同一套键，取流时把版本 id 作为 MediaSourceId 发出去。
+ */
+@Composable
+private fun DetailMediaRows(
+    itemId: String,
+    sources: List<com.xxxx.emby_tv.data.model.MediaSourceInfoDto>,
+    prefs: com.xxxx.emby_tv.data.local.PreferencesManager,
+) {
+    if (itemId.isBlank()) return
+    val labelColor = Color.White.copy(alpha = 0.72f)
+
+    var versionIndex by remember(itemId, sources.size) {
+        val saved = prefs.getString("ver_choice" + "_" + itemId)
+        mutableIntStateOf(sources.indexOfFirst { it.id == saved }.takeIf { it >= 0 } ?: 0)
+    }
+    var versionOpen by remember(itemId) { mutableStateOf(false) }
+    val curSource = sources.getOrNull(versionIndex)
+    val versionKey = curSource?.id.orEmpty()
+    val streams = curSource?.mediaStreams.orEmpty()
+    val videoStream = streams.firstOrNull { it.type.equals("Video", true) }
+    val audioList = streams.filter { it.type.equals("Audio", true) }
+    val subList = streams.filter { it.type.equals("Subtitle", true) }
+
+    var audioIndex by remember(itemId, versionKey, audioList.size) {
+        val saved = prefs.getInt("aud_choice" + "_" + itemId + "_" + versionKey, -1)
+        mutableIntStateOf(
+            saved.takeIf { v -> audioList.any { it.index == v } }
+                ?: audioList.firstOrNull { it.isDefault == true }?.index
+                ?: (audioList.firstOrNull()?.index ?: -1)
+        )
+    }
+    var subIndex by remember(itemId, versionKey, subList.size) {
+        val raw = prefs.getString("sub_choice" + "_" + itemId + "_" + versionKey)
+        mutableIntStateOf(raw?.substringBefore('|')?.toIntOrNull() ?: -1)
+    }
+    var audioOpen by remember(itemId) { mutableStateOf(false) }
+    var subOpen by remember(itemId) { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // ── 版本（多个文件才有）──
+        if (sources.size > 1) {
+            DetailRowShell(
+                label = "版本",
+                labelColor = labelColor,
+                chipText = (curSource?.name ?: "默认版本"),
+                expanded = versionOpen,
+                onToggle = { versionOpen = !versionOpen },
+            ) {
+                sources.forEachIndexed { vi, src ->
+                    val vh = src.mediaStreams?.firstOrNull { it.type.equals("Video", true) }?.height
+                    val vsubs = src.mediaStreams?.count { it.type.equals("Subtitle", true) } ?: 0
+                    val vlangs = src.mediaStreams
+                        ?.filter { it.type.equals("Audio", true) }
+                        ?.mapNotNull { it.language }
+                        ?.distinct()?.take(4)?.joinToString("/")
+                        .orEmpty()
+                    DetailOptionRow(
+                        selected = vi == versionIndex,
+                        text = (src.name ?: "版本 " + (vi + 1)) + buildString {
+                            if ((vh ?: 0) > 0) append("　" + vh + "p")
+                            if (vlangs.isNotBlank()) append("　" + vlangs)
+                            append("　字幕 " + vsubs + " 条")
+                        },
+                        onClick = {
+                            versionIndex = vi
+                            versionOpen = false
+                            prefs.putString("ver_choice" + "_" + itemId, src.id)
+                        }
+                    )
+                }
+            }
+        }
+
+        // ── 视频（只读：分辨率 + 编码）──
+        videoStream?.let { vs ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(text = "视频", color = labelColor, fontSize = 15.sp)
+                Text(
+                    text = buildString {
+                        if ((vs.height ?: 0) > 0) append(vs.height).append("p")
+                        vs.codec?.takeIf { it.isNotBlank() }?.let {
+                            if (isNotEmpty()) append(" ")
+                            append(it.uppercase())
+                        }
+                    },
+                    color = Color.White,
+                    fontSize = 15.sp
+                )
+            }
+        }
+
+        // ── 音频（下拉）──
+        if (audioList.isNotEmpty()) {
+            val curAudio = audioList.firstOrNull { it.index == audioIndex } ?: audioList.firstOrNull()
+            DetailRowShell(
+                label = "音频",
+                labelColor = labelColor,
+                chipText = curAudio?.displayTitle ?: curAudio?.language ?: "默认",
+                expanded = audioOpen,
+                onToggle = { audioOpen = !audioOpen },
+            ) {
+                audioList.forEach { st ->
+                    DetailOptionRow(
+                        selected = st.index == audioIndex,
+                        text = (st.displayTitle ?: st.language ?: "音轨") +
+                                (st.title?.takeIf { t -> t.isNotBlank() && t != st.displayTitle }
+                                    ?.let { "　" + it } ?: ""),
+                        onClick = {
+                            audioIndex = st.index ?: -1
+                            audioOpen = false
+                            prefs.putInt("aud_choice" + "_" + itemId + "_" + versionKey, audioIndex)
+                        }
+                    )
+                }
+            }
+        }
+
+        // ── 字幕（下拉，首项「关」）──
+        if (subList.isNotEmpty()) {
+            val curSub = subList.firstOrNull { it.index == subIndex }
+            DetailRowShell(
+                label = "字幕",
+                labelColor = labelColor,
+                chipText = curSub?.title ?: curSub?.displayTitle ?: "关",
+                expanded = subOpen,
+                onToggle = { subOpen = !subOpen },
+            ) {
+                DetailOptionRow(
+                    selected = subIndex < 0,
+                    text = "关",
+                    onClick = {
+                        subIndex = -1
+                        subOpen = false
+                        prefs.putString("sub_choice" + "_" + itemId + "_" + versionKey, "-1|false")
+                    }
+                )
+                subList.forEach { st ->
+                    DetailOptionRow(
+                        selected = st.index == subIndex,
+                        text = (st.displayTitle ?: st.language ?: "字幕") +
+                                (st.title?.takeIf { t -> t.isNotBlank() && t != st.displayTitle }
+                                    ?.let { "　" + it } ?: ""),
+                        onClick = {
+                            subIndex = st.index ?: -1
+                            subOpen = false
+                            val isImage = isImageSubtitleCodec(st.codec)
+                            prefs.putString(
+                                "sub_choice" + "_" + itemId + "_" + versionKey,
+                                subIndex.toString() + "|" + isImage
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 一行「标签 + 下拉胶囊」，展开时下面列出选项 */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun DetailRowShell(
+    label: String,
+    labelColor: Color,
+    chipText: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    options: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(text = label, color = labelColor, fontSize = 15.sp)
+            Surface(
+                onClick = onToggle,
+                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(18.dp)),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = Color(0x1AFFFFFF),
+                    contentColor = Color.White,
+                    focusedContainerColor = Color(0x3D2FD57C),
+                    focusedContentColor = Color.White
+                ),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+            ) {
+                Text(
+                    text = chipText + (if (expanded) "  ▴" else "  ▾"),
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                )
+            }
+        }
+        if (expanded) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { options() }
+        }
+    }
+}
+
+/** 下拉里的一个选项：选中态用唯一强调绿 #2FD57C */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun DetailOptionRow(
+    selected: Boolean,
+    text: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) Color(0x3D2FD57C) else Color(0x14FFFFFF),
+            contentColor = Color.White,
+            focusedContainerColor = Color(0x3D2FD57C),
+            focusedContentColor = Color.White
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+    ) {
+        Text(
+            text = (if (selected) "✓ " else "　") + text,
+            color = if (selected) Color(0xFF2FD57C) else Color.White.copy(alpha = 0.86f),
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(vertical = 6.dp, horizontal = 10.dp)
+        )
+    }
+}
+/** 图形字幕（PGS / VOBSUB / DVD 等）：不是文字轨，只影响播放页要不要走内核，这里存进记忆 */
+private fun isImageSubtitleCodec(codec: String?): Boolean {
+    val c = codec?.lowercase() ?: return false
+    return c in setOf("pgssub", "pgs", "dvdsub", "vobsub", "dvbsub", "hdmv_pgs_subtitle")
 }

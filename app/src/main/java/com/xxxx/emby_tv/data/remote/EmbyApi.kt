@@ -320,7 +320,10 @@ object EmbyApi {
     ): BaseItemDto {
         return httpAsBaseItemDto(
             context, serverUrl, apiKey, deviceId,
-            "/Users/$userId/Items/$mediaId?fields=ShareLevel&ExcludeFields=VideoChapters,VideoMediaSources,MediaStreams&X-Emby-Token=$apiKey"
+            // 带回 MediaSources（父亲 2026-10-28）：详情页要按「版本」选片，
+            // 每份源自带自己的音轨/字幕清单
+            "/Users/$userId/Items/$mediaId?fields=ShareLevel,MediaSources" +
+                    "&ExcludeFields=VideoChapters&X-Emby-Token=$apiKey"
         )
     }
 
@@ -390,7 +393,10 @@ object EmbyApi {
         selectedAudioIndex: Int? = null,
         selectedSubtitleIndex: Int? = null,
         disableHevc: Boolean = false,
-        maxStreamingBitrate: Int = 200_000_000
+        maxStreamingBitrate: Int = 200_000_000,
+        // 详情页选过的「版本」= 这部片的某个 MediaSource。不带它服务端自己挑第一个文件，
+        // 会出现「详情页写着 1080p HEVC，实放的是 4K 那份」的错位
+        mediaSourceId: String? = null
     ): MediaDto = withContext(Dispatchers.IO) {
         var targetId = mediaId
         try {
@@ -433,7 +439,8 @@ object EmbyApi {
                     "&X-Emby-Language=zh-cn" +
                     "&reqformat=json" +
                     (selectedAudioIndex?.let { "&AudioStreamIndex=$it" } ?: "") +
-                    (selectedSubtitleIndex?.let { "&SubtitleStreamIndex=$it" } ?: "")
+                    (selectedSubtitleIndex?.let { "&SubtitleStreamIndex=$it" } ?: "") +
+                    (mediaSourceId?.takeIf { it.isNotBlank() }?.let { "&MediaSourceId=$it" } ?: "")
 
             val result = httpAsJsonObject(context, serverUrl, apiKey, deviceId, url, "POST", body)
             val dto = gson.fromJson(result, MediaDto::class.java)
