@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import com.xxxx.emby_tv.util.hoverToFocus
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,8 @@ fun AccountScreen(
     onAddAccount: () -> Unit
 ) {
     val firstItemFocusRequester = remember { FocusRequester() }
+    // 添加账号按钮自己的焦点锚点（光标悬停用）
+    val addFocus = remember { FocusRequester() }
 
     // 删除确认对话框状态
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -151,6 +154,8 @@ fun AccountScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(52.dp)
+                            .focusRequester(addFocus)
+                            .hoverToFocus(addFocus)
                             .then(
                                 if (savedAccounts.isEmpty()) Modifier.focusRequester(firstItemFocusRequester)
                                 else Modifier
@@ -213,11 +218,15 @@ private fun AccountListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 账号信息卡片（可点击切换）
+        // 指针悬停也拿焦点（PICO 光标）：账户卡与删除按钮都能被光标选中
+        val cardFocus = remember { FocusRequester() }
         Surface(
             onClick = onSelect,
             modifier = Modifier
                 .weight(1f)
                 .height(72.dp)
+                .focusRequester(cardFocus)
+                .hoverToFocus(cardFocus)
                 .then(if (isFirst) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),

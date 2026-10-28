@@ -488,6 +488,13 @@ fun EmbyTvApp() {
                                 val nextPos = newPosition * 10000
                                 navController.popBackStack()
                                 navController.navigate("player/$nextId?position=$nextPos")
+                            },
+                            // 选片 = 回打开这部片的那张海报墙（退一层，通常就是库页/首页）
+                            onPickPoster = { navController.popBackStack() },
+                            // 退出 = 直接回首页，不是退出应用（父亲 2026-10-28 口径）
+                            onExit = {
+                                navController.popBackStack("home", inclusive = false)
+                                Unit
                             }
                         )
                     }

@@ -439,7 +439,8 @@ fun LoginScreen(
                 password = it
                 showPasswordDialog = false
             },
-            onDismiss = { showPasswordDialog = false }
+            onDismiss = { showPasswordDialog = false },
+            isSecret = true
         )
     }
 }

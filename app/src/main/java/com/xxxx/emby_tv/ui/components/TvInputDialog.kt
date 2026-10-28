@@ -17,6 +17,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -40,7 +42,9 @@ fun TvInputDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    isNumber: Boolean = false
+    isNumber: Boolean = false,
+    // 密码这类内容显示成圆点（父亲 2026-10-28：弹窗里不能明文）
+    isSecret: Boolean = false
 ) {
     var inputText by remember { mutableStateOf(initialValue) }
     val fieldFocus = remember { FocusRequester() }
@@ -73,6 +77,8 @@ fun TvInputDialog(
                         keyboardType = if (isNumber) KeyboardType.Number else KeyboardType.Text
                     ),
                     keyboardActions = KeyboardActions(onDone = { commit() }),
+                    visualTransformation = if (isSecret) PasswordVisualTransformation()
+                    else VisualTransformation.None,
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(fieldFocus)

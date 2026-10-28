@@ -207,7 +207,8 @@ fun PlayerScreen(
     onPlaybackStateChanged: (isPlaying: Boolean) -> Unit = {},
     onNavigateToPlayer: (BaseItemDto) -> Unit = {},
     onRePlayer: (BaseItemDto, Long) -> Unit = { _, _ -> },
-    onExit: () -> Unit = {},  // 添加退出回调
+    onExit: () -> Unit = {},  // 退出：回首页（不是退出应用）
+    onPickPoster: () -> Unit = {},  // 选片：回打开这部片的那张海报墙
 ) {
     val context = LocalContext.current
     val view = LocalView.current
@@ -1894,7 +1895,7 @@ fun PlayerScreen(
                     // 官方副行没有"播放方式"这一项，传空即不显示
                     playMethodLabel = "",
                     // 「选片」回海报墙、「退出」关掉播放页（父亲 2026-10-28：与 VR 控制条同名同序）
-                    onPick = onExit,
+                    onPick = onPickPoster,
                     onExitPlayer = onExit,
                     // 左上角片名 Logo 已改为常显图层（见上面的 1.85），这里传空避免重复画
                     logoUrl = null,
@@ -1920,10 +1921,11 @@ fun PlayerScreen(
                                 activeItem = null
                             }
 
-                            // 「选片」不是菜单，是动作键：直接回海报墙（与 VR 同名同位）
+                            // 「选片」不是菜单，是动作键：回打开这部片的那张海报墙
+                            // （与「退出」区分：退出是直接回首页，见 onExitPlayer）
                             PlayerMenuItem.PICK -> {
                                 activeItem = null
-                                onExit()
+                                onPickPoster()
                             }
 
                             else -> activeItem = if (activeItem == item) null else item

@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import com.xxxx.emby_tv.util.hoverToFocus
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -271,6 +273,8 @@ fun SearchScreen(
                         account.serverUrl
                     }
                     val displayText = "${account.username}@$domain"
+                    // 侧栏每一项也接光标悬停，手柄/光标都能切账号
+                    val accountFocus = remember { FocusRequester() }
 
                     Surface(
                         onClick = {
@@ -278,12 +282,10 @@ fun SearchScreen(
                         },
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(
-                                alpha = 0.2f
-                            ) else Color.White.copy(alpha = 0.05f),
-                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                            containerColor = if (isSelected) Color(0x3D2FD57C) else Color.White.copy(alpha = 0.05f),
+                            focusedContainerColor = Color(0x3D2FD57C),
                             contentColor = Color.White,
-                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                            focusedContentColor = Color.White
                         ),
                         border = ClickableSurfaceDefaults.border(
                             border = if (isSelected) Border(
@@ -303,6 +305,8 @@ fun SearchScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(60.dp)
+                            .focusRequester(accountFocus)
+                            .hoverToFocus(accountFocus)
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused) {
                                     searchViewModel.setAccountFilter(account)
