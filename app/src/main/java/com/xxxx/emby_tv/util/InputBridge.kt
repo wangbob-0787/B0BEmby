@@ -28,10 +28,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 object InputBridge {
 
     /** 摇杆死区：PS/Xbox 手柄轻推的抖动不该当成方向键 */
-    private const val AXIS_DEAD_ZONE = 0.55f
+    // 死区照 VR 版（0.35）：太大导致摇杆轻拨没反应，太小会漂移误触
+    private const val AXIS_DEAD_ZONE = 0.35f
 
     /** 摇杆按住不放时的重复间隔（毫秒）：与遥控器连按的节奏接近，列表能滚、又不至于飞掉 */
-    private const val AXIS_REPEAT_MS = 220L
+    private const val AXIS_REPEAT_MS = 200L   // 与 VR 的 REPEAT_MS 一致
 
     private var lastAxisKey = 0
     private var lastAxisAt = 0L

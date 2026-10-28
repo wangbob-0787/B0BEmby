@@ -46,6 +46,7 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import com.xxxx.emby_tv.util.DiagLog
 import com.xxxx.emby_tv.util.InputBridge
 
@@ -81,6 +82,12 @@ class MainActivity : ComponentActivity() {
     private var lastInjectAt = 0L
     private var traceAt = 0L
     private var motionPressed = false
+    // 摇杆/拖动：按下后挪得超过阈值就算「拖动＝滚动」，抬手不再算点击
+    private var dragMoved = false
+    private var scrollAccumY = 0f
+    private var scrollAccumX = 0f
+    private var lastScrollAt = 0L
+
 
     /** 光标位置是否新鲜（3 秒内动过）；新鲜才认为「用户在指东西」，否则按遥控器处理 */
     private fun cursorFresh(): Boolean =
@@ -139,6 +146,21 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    /**
+     * 把拖动转成方向键：电视列表的滚动方式就是「焦点往下走一格」，
+     * 所以一步一个 DPAD_UP/DOWN/LEFT/RIGHT，列表自己会跟着滚。
+     * 节流保证一次拖动不会把列表甩飞。
+     */
+    private fun fireScroll(keyCode: Int) {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastScrollAt < 80L) return
+        lastScrollAt = now
+        val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0)
+        val up = KeyEvent(now, now + 40L, KeyEvent.ACTION_UP, keyCode, 0)
+        super.dispatchKeyEvent(down)
+        super.dispatchKeyEvent(up)
+    }
+
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         traceTouch(event)
         when (event.actionMasked) {
@@ -148,19 +170,53 @@ class MainActivity : ComponentActivity() {
                     // 用光标的落点当按点：头显上「看着指哪」才是用户的本意
                     pressX = cursorX
                     pressY = cursorY
+                    dragMoved = false
+                    scrollAccumX = 0f
+                    scrollAccumY = 0f
                     pressPending = true
                     return true
+                }
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (pressPending) {
+                    // 摇杆拨动在头显上就是「按下 + 移动 + 抬起」。
+                    // 挪过阈值 = 用户想滚页面，不是想点：这一步开始就按滚动处理，抬手也不再补确认键。
+                    val slop = ViewConfiguration.get(this).scaledTouchSlop
+                    val dx = event.x - pressX
+                    val dy = event.y - pressY
+                    if (!dragMoved && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) {
+                        dragMoved = true
+                        DiagLog.w(this, "input", "开始拖动→按滚动处理")
+                    }
+                    if (dragMoved) {
+                        scrollAccumY += dy
+                        scrollAccumX += dx
+                        pressX = event.x
+                        pressY = event.y
+                        val step = 40f
+                        if (kotlin.math.abs(scrollAccumY) >= step) {
+                            fireScroll(if (scrollAccumY > 0) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_UP)
+                            scrollAccumY = 0f
+                        } else if (kotlin.math.abs(scrollAccumX) >= step) {
+                            fireScroll(if (scrollAccumX > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+                            scrollAccumX = 0f
+                        }
+                        return true
+                    }
                 }
             }
             MotionEvent.ACTION_UP -> {
                 if (pressPending) {
                     pressPending = false
-                    fireConfirm("触摸抬起")
+                    // 拖动过的手抬起来 = 滚完了，不当作点击
+                    if (!dragMoved) fireConfirm("触摸抬起")
+                    dragMoved = false
                     return true
                 }
             }
             MotionEvent.ACTION_CANCEL -> if (pressPending) {
                 pressPending = false
+                dragMoved = false
                 return true
             }
         }
