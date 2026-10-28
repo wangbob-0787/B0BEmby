@@ -131,7 +131,7 @@ enum class PlayerMenuItem(val label: String) {
  *
  *   左组：字幕 · 弹幕
  *   中组：快退10 · 播放/暂停 · 快进10（动作键，不在枚举里）
- *   右组：倍速 · 选集 · 选片 · 信息 · 演职人员 · 更多 · 退出（退出是动作键）
+ *   右组：倍速 · 选集 · 选片 · 信息 · 演职人员 · 更多
  */
 val PLAYER_LEFT_MENU = listOf(
     PlayerMenuItem.SUBTITLE,
@@ -567,11 +567,6 @@ fun PlayerControlPanel(
                     )
                     Spacer(modifier = Modifier.width(SpecButtonGap))
                 }
-                PanelIcon(
-                    icon = Icons.Default.Logout,
-                    description = "退出",
-                    onClick = onExitPlayer
-                )
             }
         }
 

@@ -1558,6 +1558,14 @@ fun PlayerScreen(
     val focusRequester = remember { FocusRequester() }
     // 播放页根容器的焦点：进页面就拿到，手柄按键才有落点
     val playerRootFocus = remember { FocusRequester() }
+    // 面板收起/二级菜单关闭后把焦点还给根容器：控制条按钮消失时焦点会一起丢，
+    // 之后摇杆与扳机就再也没有落点（父亲 2026-10-28：第一次能唤出，播起来就失灵）
+    LaunchedEffect(showPanel, activeItem, inMoreMenu) {
+        if (!showPanel && activeItem == null && !inMoreMenu) {
+            kotlinx.coroutines.delay(80)
+            runCatching { playerRootFocus.requestFocus() }
+        }
+    }
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(120); runCatching { playerRootFocus.requestFocus() } }
 
     // UI 结构 - 最外层纯黑背景

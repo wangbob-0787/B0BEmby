@@ -104,10 +104,10 @@ fun TopStatusBar(
                     fontWeight = FontWeight.Bold,
                     // 版本号也是更新入口：可聚焦 + 登记坐标表，光标能选中、扳机能触发
                     modifier = (if (onVersionClick != null) {
-                        Modifier.clickable(enabled = versionClickable) { onVersionClick() }
+                        Modifier.clickable { onVersionClick() }
                     } else Modifier)
                         .then(
-                            if (onVersionClick != null && versionClickable) {
+                            if (onVersionClick != null) {
                                 Modifier
                                     .focusRequester(versionFocusRequester)
                                     .hoverToFocus(versionFocusRequester)
