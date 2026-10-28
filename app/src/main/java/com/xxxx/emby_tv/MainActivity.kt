@@ -169,6 +169,61 @@ class MainActivity : ComponentActivity() {
      * 节流保证一次拖动不会把列表甩飞。
      */
 
+    /*
+     * 按住不动也要滚（2026-10-29 父亲实测：首页往下拨按住，页面完全不动，松手才滚一点）。
+     *
+     * 电视上的摇杆是以「按下 + 拖动 + 抬起」送进来的，推住时不再有新事件，
+     * 所以不能等事件来驱动。这里在按下期间每 16ms 自己跑一次：
+     * 用「当前落点相对按下点的偏移」当力度（拨得越远滚得越快），照 VR 的物理，
+     * 抬起时把当时的速度交给惯性滑行。
+     */
+    private var holdAnchorX = 0f
+    private var holdAnchorY = 0f
+    private var holdLastX = 0f
+    private var holdLastY = 0f
+    private var holdRate = 0f
+    private var holdTicking = false
+
+    private val holdTick = object : Runnable {
+        override fun run() {
+            if (!holdTicking) return
+            val dx = holdLastX - holdAnchorX
+            val dy = holdLastY - holdAnchorY
+            val mag = kotlin.math.max(kotlin.math.abs(dx), kotlin.math.abs(dy))
+            if (mag > ViewConfiguration.get(this@MainActivity).scaledTouchSlop) {
+                dragMoved = true
+                val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
+                val dirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
+                val dirY = if (vertical) (if (dy > 0f) 1f else -1f) else 0f
+                // 偏移 120px 记 1 格/秒，封顶 20 格/秒；按帧折算成这一帧该滚多少
+                holdRate = (mag / 120f).coerceIn(1f, 20f)
+                lastScrollAxis = if (vertical) 1 else 0
+                lastScrollSign = if (vertical) (if (dy > 0f) 1 else -1) else (if (dx > 0f) 1 else -1)
+                lastCursorSpeedPxPerSec = holdRate * 120f
+                doScroll(dirX, dirY, (holdRate * 16f / 1000f).coerceIn(0.02f, 1.5f))
+            }
+            holdHandler.postDelayed(this, 16L)
+        }
+    }
+
+    private val holdHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private fun startHoldScroll(x: Float, y: Float) {
+        holdAnchorX = x
+        holdAnchorY = y
+        holdLastX = x
+        holdLastY = y
+        holdRate = 0f
+        if (holdTicking) return
+        holdTicking = true
+        holdHandler.postDelayed(holdTick, 16L)
+    }
+
+    private fun stopHoldScroll() {
+        holdTicking = false
+        holdHandler.removeCallbacks(holdTick)
+    }
+
     /**
      * 滚动惯性：摇杆松手后按残速继续发方向键，间隔逐渐拉长、约 0.8 秒停住。
      * 与「按光点速度决定步频」配套，合起来就是先加速、松手再减速的手感。
@@ -311,56 +366,22 @@ class MainActivity : ComponentActivity() {
                     scrollAccumX = 0f
                     scrollAccumY = 0f
                     pressPending = true
+                    startHoldScroll(cursorX, cursorY)
                     return true
                 }
             }
             MotionEvent.ACTION_MOVE -> {
                 if (pressPending) {
-                    // 摇杆拨动在头显上就是「按下 + 移动 + 抬起」。
-                    // 挪过阈值 = 用户想滚页面，不是想点：这一步开始就按滚动处理，抬手也不再补确认键。
-                    val slop = ViewConfiguration.get(this).scaledTouchSlop
-                    val dx = event.x - pressX
-                    val dy = event.y - pressY
-                    if (!dragMoved && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) {
-                        dragMoved = true
-                        DiagLog.w(this, "input", "开始拖动→按滚动处理")
-                    }
-                    if (dragMoved) {
-                        scrollAccumY += dy
-                        scrollAccumX += dx
-                        pressX = event.x
-                        pressY = event.y
-                        /*
-                         * 滚动快慢跟光点速度走（照 VR）：摇杆没有力度值，只能拿光点每秒移动多少像素换算。
-                         * 每 120 像素/秒记 1 格/秒，封顶 20 格/秒 —— 轻推慢滚、猛推快滚。
-                         * 攒够一格才滚一次，所以慢推时格与格之间自然拉得开。
-                         */
-                        val moveNow = SystemClock.uptimeMillis()
-                        val moveDt = if (lastMoveAt > 0L) (moveNow - lastMoveAt).coerceIn(8L, 100L) else 16L
-                        lastMoveAt = moveNow
-                        val cursorSpeed = kotlin.math.max(kotlin.math.abs(dx), kotlin.math.abs(dy)) * 1000f / moveDt
-                        lastCursorSpeedPxPerSec = cursorSpeed
-                        val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
-                        lastScrollAxis = if (vertical) 1 else 0
-                        lastScrollSign = if (vertical) (if (dy > 0) 1 else -1) else (if (dx > 0) 1 else -1)
-                        val rate = (cursorSpeed / 120f).coerceIn(1f, 20f)   // 格/秒
-                        scrollAccumY += rate * moveDt / 1000f
-                        pressX = event.x
-                        pressY = event.y
-                        if (scrollAccumY >= 1f) {
-                            // 方向口径（父亲 2026-10-28 实机）：摇杆往下 = 往下滚，往右 = 往右滚。
-                            if (vertical) {
-                                doScroll(0f, if (dy > 0) -1f else 1f, 0.16f)
-                            } else {
-                                doScroll(if (dx > 0) -1f else 1f, 0f, 0.16f)
-                            }
-                            scrollAccumY = 0f
-                        }
-                        return true
-                    }
+                    // 只记最新落点：滚多少、往哪滚由按住期间的定时器每 16ms 算一次。
+                    // 原写法要到下一个 MOVE 事件才补一格，推住不动就完全静止 ——
+                    // 父亲 2026-10-29 实测「按住不动页面不滚，松手才滚一点」就是这条。
+                    holdLastX = event.x
+                    holdLastY = event.y
+                    return true
                 }
             }
             MotionEvent.ACTION_UP -> {
+                stopHoldScroll()
                 // 松手后按最后一段的速度继续滑一小段（线性减速，约 0.8 秒），推得猛滑得远、轻推立刻停
                 if (dragMoved) startScrollInertia()
                 if (pressPending) {
@@ -372,6 +393,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             MotionEvent.ACTION_CANCEL -> if (pressPending) {
+                stopHoldScroll()
                 pressPending = false
                 dragMoved = false
                 return true
