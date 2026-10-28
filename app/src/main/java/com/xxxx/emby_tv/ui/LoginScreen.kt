@@ -191,8 +191,7 @@ fun LoginScreen(
             updatePhase = mainViewModel.updatePhase,
             updateProgress = mainViewModel.updateProgress,
             updateNote = mainViewModel.updateNote,
-            onVersionClick = { mainViewModel.onVersionClick() },
-            onMenuClick = { showMenu = true }
+            onVersionClick = { mainViewModel.onVersionClick() }
         )
         Row(
             modifier = Modifier.fillMaxSize(),

@@ -8,6 +8,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -203,7 +207,17 @@ fun HomeScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    // 顶栏菜单按钮取消后，菜单改由手柄 START / 遥控器菜单键打开（页面级接住，任何焦点位置都行）
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Menu) {
+                    showMenu = true
+                    true
+                } else false
+            }
+    ) {
         // 顶部状态栏
         TopStatusBar(
             currentVersion = mainViewModel.currentVersion,
@@ -214,7 +228,6 @@ fun HomeScreen(
             onVersionClick = { mainViewModel.onVersionClick() },
             showSearchButton = true,
             userInfo = userInfo,
-            onMenuClick = { showMenu = true },
             onSearchClick = {
                 navController.navigate("search")
             },

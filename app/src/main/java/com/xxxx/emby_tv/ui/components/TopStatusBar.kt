@@ -16,7 +16,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
@@ -57,12 +56,10 @@ fun TopStatusBar(
     onVersionClick: (() -> Unit)? = null,
     showSearchButton: Boolean = false,
     userInfo: String? = null,
-    onMenuClick: (() -> Unit)? = null,
     onSearchClick: (() -> Unit)? = null,
     onUserInfoClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val menuFocusRequester = remember { FocusRequester() }
     val searchFocusRequester = remember { FocusRequester() }
     val userInfoFocusRequester = remember { FocusRequester() }
     val proxyEnabled = remember { PreferencesManager(context).proxyEnabled }
@@ -79,36 +76,8 @@ fun TopStatusBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onMenuClick != null) {
-                    Surface(
-                        onClick = onMenuClick,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .focusRequester(menuFocusRequester),
-                        shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.CircleShape),
-                        // 父亲 2026-10-02：聚焦 = 绿底白图标
-                        colors = ClickableSurfaceDefaults.colors(
-                            containerColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = Color.White,
-                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.menu),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
+                // 左上角的菜单按钮已取消（父亲 2026-10-28，照 VR 首页：左组只留版本号）。
+                // 菜单改由手柄 START 键 / 遥控器菜单键打开，各页面自己接 Key.Menu。
 
                 // 版本号 = 更新入口（照 VR 2026-10-26 的口径）：
                 //   有新版 → 点它开始下载；下载中 → 显示百分比，再点是取消；失败 → 显示原因，点它重试
