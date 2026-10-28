@@ -131,7 +131,7 @@ enum class PlayerMenuItem(val label: String) {
  *
  *   左组：字幕 · 弹幕
  *   中组：快退10 · 播放/暂停 · 快进10（动作键，不在枚举里）
- *   右组：倍速 · 选集 · 信息 · 演职人员 · 更多
+ *   右组：倍速 · 选集 · 音轨 · 画质 · 信息 · 演职人员 · 更多
  */
 val PLAYER_LEFT_MENU = listOf(
     PlayerMenuItem.SUBTITLE,
@@ -142,6 +142,9 @@ val PLAYER_LEFT_MENU = listOf(
 val PLAYER_RIGHT_MENU = listOf(
     PlayerMenuItem.SPEED,
     PlayerMenuItem.EPISODES,
+    // 音轨与画质从「更多」里提到控制条上（父亲 2026-10-28：选片与退出撤掉后腾出位置）
+    PlayerMenuItem.AUDIO,
+    PlayerMenuItem.QUALITY,
     PlayerMenuItem.INFO,
     PlayerMenuItem.CAST,
     PlayerMenuItem.MORE
@@ -151,12 +154,10 @@ val PLAYER_RIGHT_MENU = listOf(
 val PLAYER_MAIN_MENU = PLAYER_LEFT_MENU + PLAYER_RIGHT_MENU
 
 /**
- * 「更多」二级菜单：四项，与 VR 完全一致（音频选择 · 视频质量 · 播放模式 · 缓冲设置）。
- * VR 的选座 / 座椅调节 / 影厅亮度 / 播放版本是影院专属，TV 不做。
+ * 「更多」二级菜单：播放模式 · 缓冲设置。
+ * 音频与画质已提到一级控制条；VR 的选座 / 座椅调节 / 影厅亮度 / 播放版本是影院专属，TV 不做。
  */
 val PLAYER_MORE_MENU = listOf(
-    PlayerMenuItem.AUDIO,
-    PlayerMenuItem.QUALITY,
     PlayerMenuItem.PLAY_MODE,
     PlayerMenuItem.BUFFER
 )
