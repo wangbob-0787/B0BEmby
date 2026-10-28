@@ -730,15 +730,27 @@ fun SheetShell(
         } else {
             Modifier.width(contentWidth).heightIn(max = 240.dp)
         }
+        /*
+         * 菜单矩形上报给播放页：扳机落点要做减法（控制条之外、菜单之外才算「点画面」）。
+         * 菜单是从控制条上方单独升起来的一块，所以它必须自己报一次，不能拿控制条的矩形代替。
+         */
+        val menuRectModifier = Modifier.onGloballyPositioned { coords ->
+            val b = coords.boundsInWindow()
+            com.xxxx.emby_tv.util.InputBridge.playerMenuRect =
+                android.graphics.RectF(b.left, b.top, b.right, b.bottom)
+        }
+        androidx.compose.runtime.DisposableEffect(Unit) {
+            onDispose { com.xxxx.emby_tv.util.InputBridge.playerMenuRect = null }
+        }
         if (scrollable) {
             // 二级菜单/字幕菜单/弹幕菜单：选项多时摇杆推住就按像素滚（父亲 2026-10-29）
             val menuScroll = rememberScrollState()
             com.xxxx.emby_tv.util.RegisterVerticalScroll(menuScroll)
-            Column(modifier = boxModifier.verticalScroll(menuScroll)) {
+            Column(modifier = boxModifier.then(menuRectModifier).verticalScroll(menuScroll)) {
                 content()
             }
         } else {
-            Column(modifier = boxModifier) {
+            Column(modifier = boxModifier.then(menuRectModifier)) {
                 content()
             }
         }

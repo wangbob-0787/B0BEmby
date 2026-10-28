@@ -66,6 +66,10 @@ object InputBridge {
     /** 播放页：控制条是否可见、它的上边缘（像素），以及「点画面 = 播放/暂停」的回调。 */
     @Volatile var playerPanelVisible = false
     @Volatile var playerPanelTopPx = 0f
+
+    /** 控制条与菜单的矩形（窗口坐标）。扳机落点做减法：两者之外才算「点画面」。 */
+    @Volatile var playerPanelRect: android.graphics.RectF? = null
+    @Volatile var playerMenuRect: android.graphics.RectF? = null
     @Volatile var playerTapToggle: (() -> Unit)? = null
 
     private val choreographer = android.view.Choreographer.getInstance()

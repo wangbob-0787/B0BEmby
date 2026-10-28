@@ -159,9 +159,14 @@ class MainActivity : ComponentActivity() {
          * —— 父亲 2026-10-29 报「暂停了，同时还触发了按钮区的按钮」就是这个。
          */
         if (com.xxxx.emby_tv.util.InputBridge.playerScreenActive) {
-            val top = com.xxxx.emby_tv.util.InputBridge.playerPanelTopPx
-            val inPanel = com.xxxx.emby_tv.util.InputBridge.playerPanelVisible &&
-                top > 0f && cursorY >= top
+            /*
+             * 减法判定（父亲 2026-10-29 01:47）：光点在播放区 = 既不在控制条矩形里、
+             * 也不在菜单矩形里。菜单是控制条上方单独升起的一块，所以两个矩形分别上报。
+             */
+            val panelRect = com.xxxx.emby_tv.util.InputBridge.playerPanelRect
+            val menuRect = com.xxxx.emby_tv.util.InputBridge.playerMenuRect
+            val inPanel = panelRect?.contains(cursorX, cursorY) == true ||
+                menuRect?.contains(cursorX, cursorY) == true
             if (!inPanel) {
                 com.xxxx.emby_tv.util.InputBridge.playerTapToggle?.let {
                     DiagLog.w(this, "input", "扳机落在播放区 → 直接切播放/暂停")

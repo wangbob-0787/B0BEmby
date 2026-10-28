@@ -2036,9 +2036,11 @@ fun PlayerScreen(
                 if (activeItem != PlayerMenuItem.INFO && activeItem != PlayerMenuItem.CAST) {
                 PlayerControlPanel(
                     modifier = Modifier.onGloballyPositioned { coords ->
-                        com.xxxx.emby_tv.util.InputBridge.playerPanelTopPx =
-                            coords.boundsInWindow().top
+                        val b = coords.boundsInWindow()
+                        com.xxxx.emby_tv.util.InputBridge.playerPanelTopPx = b.top
                         com.xxxx.emby_tv.util.InputBridge.playerPanelVisible = showPanel
+                        com.xxxx.emby_tv.util.InputBridge.playerPanelRect =
+                            android.graphics.RectF(b.left, b.top, b.right, b.bottom)
                     },
                     title = panelTitle(),
                     subtitle = panelSubtitle(),
