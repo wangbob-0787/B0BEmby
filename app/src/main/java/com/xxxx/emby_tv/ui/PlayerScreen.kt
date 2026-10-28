@@ -110,7 +110,7 @@ import com.xxxx.emby_tv.ui.components.getVideoTrack
 import com.xxxx.emby_tv.ui.player.PlayerTrackManager
 import com.xxxx.emby_tv.ui.player.SubtitleConfigBuilder
 import com.xxxx.emby_tv.ui.player.SubtitleOffsetController
-import com.xxxx.emby_tv.danmaku.AssDanmakuParser
+import com.xxxx.emby_tv.danmaku.LiveDanmakuApi
 import com.xxxx.emby_tv.danmaku.DanmakuTrack
 import com.xxxx.emby_tv.danmaku.DanmakuView
 import com.xxxx.emby_tv.ui.viewmodel.PlayerViewModel
@@ -1041,27 +1041,28 @@ fun PlayerScreen(
         }
     }
 
-    // 弹幕层:选中 ASS 字幕轨时,单独拉取字幕文件自行解析,交给独立弹幕 View 绘制
-    LaunchedEffect(selectedSubtitleIndex, videoUrl, subtitleTracks) {
-        danmakuTrack = null
-        val idx = selectedSubtitleIndex
-        if (idx < 0) return@LaunchedEffect
-        val st = subtitleTracks.firstOrNull { it.index == idx } ?: return@LaunchedEffect
-        val codec = (st.codec ?: "").lowercase()
-        if (codec != "ass" && codec != "ssa") return@LaunchedEffect
-        val srcId = media.mediaSources?.firstOrNull()?.id ?: return@LaunchedEffect
-        val url = "${serverUrl}/emby/Videos/$mediaId/$srcId/Subtitles/$idx/Stream.ass?api_key=$apiKey"
-        val raw = withContext(Dispatchers.IO) {
-            runCatching {
-                OkHttpClient().newCall(Request.Builder().url(url).build()).execute().use { r ->
-                    r.body?.string()
-                }
-            }.getOrNull()
-        } ?: return@LaunchedEffect
-        // 弹幕解析失败不能影响播放:任何异常都退化为"没有弹幕"
-        val parsed = runCatching { AssDanmakuParser.parse(raw) }.getOrNull() ?: return@LaunchedEffect
-        danmakuTrack = parsed
-        Log.i("PlayerScreen", "弹幕层加载完成: ${parsed.items.size} 条 / 画布 ${parsed.playResX}x${parsed.playResY}")
+    /*
+     * 弹幕层：不再读本地 ASS、也不占 Emby 字幕轨，改成向 .15 的现拉服务要一份
+     *（父亲 2026-10-28 口径，服务由乐乐维护）。拉不到就当没有弹幕，绝不影响出画面。
+     */
+    LaunchedEffect(danmakuEnabled, mediaId) {
+        if (!danmakuEnabled) {
+            danmakuTrack = null
+            return@LaunchedEffect
+        }
+        val isEpisode = !media.seriesName.isNullOrBlank()
+        val title = if (isEpisode) media.seriesName!! else (media.name ?: "")
+        val ep = if (isEpisode) (media.indexNumber ?: 1) else 0
+        val kind = if (isEpisode) "tv" else "movie"
+        val year = media.productionYear
+        val season = if (isEpisode) media.parentIndexNumber else null
+        val fetched = withContext(Dispatchers.IO) {
+            runCatching { LiveDanmakuApi.fetch(title, ep, year, kind, season) }.getOrNull()
+        }
+        danmakuTrack = fetched
+        if (fetched != null) {
+            Log.i("PlayerScreen", "弹幕层加载完成: " + fetched.items.size + " 条")
+        }
     }
 
     // 设置 MediaItem 和 字幕
