@@ -226,9 +226,24 @@ class MainActivity : ComponentActivity() {
         // 滚轮量竖向取负、横向取正（照 VR：向下推 = 列表往下走）
         val h = if (dx != 0f) dx * notches else 0f
         val v = if (dy != 0f) -dy * notches else 0f
-        val handled = fireWheel(h, v, px, py)
-        if (handled) return
-        DiagLog.w(this, "input", "滚轮没被接住 → 退化为方向键")
+        if (fireWheel(h, v, px, py)) return
+        /*
+         * 滚轮没人接时先自己按像素滚（2026-10-29 父亲实测：首页上下左右拨都是焦点在跳）。
+         * 界面把当前页的竖向列表和当前有焦点的那一行注册在 PixelScroll 上，
+         * 这里直接 scrollBy 一个像素量，焦点不动，跟 VR 的手感一致。
+         * 一格滚轮按 56dp 折算，与系统滚轮一格的观感接近。
+         */
+        val pxPerNotch = 56f * resources.displayMetrics.density
+        if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) return
+        if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) return
+        /*
+         * 最后兜底才是方向键：这类页面（详情页、设置页）本来就没有可滚区域，
+         * 摇杆的作用是挪焦点。节拍放到 260ms，避免一帧一格把焦点甩飞。
+         */
+        val nowFallback = SystemClock.uptimeMillis()
+        if (nowFallback - lastFallbackKeyAt < 260L) return
+        lastFallbackKeyAt = nowFallback
+        DiagLog.w(this, "input", "滚轮与像素滚动都没接住 → 退化为方向键")
         when {
             dy < 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_UP)
             dy > 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
@@ -236,6 +251,9 @@ class MainActivity : ComponentActivity() {
             dx > 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
         }
     }
+
+    /** 方向键兜底的节拍闸门（与滚轮/像素滚动分开，互不影响）。 */
+    private var lastFallbackKeyAt = 0L
 
     private fun fireWheel(dx: Float, dy: Float, x: Float, y: Float): Boolean {
         val now = SystemClock.uptimeMillis()

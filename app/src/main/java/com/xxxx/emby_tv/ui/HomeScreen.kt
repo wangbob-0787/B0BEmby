@@ -1,6 +1,7 @@
 package com.xxxx.emby_tv.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -181,6 +182,21 @@ fun HomeScreen(
     // 大片头在列表里占一行（有才占），算滚动目标时要加回去
     val heroRowOffset = if (heroItems.isNotEmpty()) 1 else 0
     val listState = rememberLazyListState()
+
+    /*
+     * 让摇杆能按像素滚这一页（2026-10-29 父亲实测：上下左右拨都是焦点在跳）。
+     * 摇杆派发的滚轮在首页常常没人接（大片头不是可滚容器），退化成方向键就成了跳格子。
+     */
+    val homeScrollScope = rememberCoroutineScope()
+    DisposableEffect(listState) {
+        com.xxxx.emby_tv.util.PixelScroll.setVertical { px ->
+            homeScrollScope.launch {
+                listState.scrollBy(px)
+            }
+            true
+        }
+        onDispose { com.xxxx.emby_tv.util.PixelScroll.setVertical(null) }
+    }
     val navEntry by navController.currentBackStackEntryAsState()
     val isCurrentScreen = navEntry?.destination?.route == "home"
     LaunchedEffect(isCurrentScreen) {
@@ -413,6 +429,18 @@ private fun MediaSection(
             }
             LazyRow(
                 state = rowState,
+                /*
+                 * 横向滚动目标 = 当前有焦点的那一行（摇杆左右拨时由 MainActivity 调回来）。
+                 * 只有焦点落在这一行里时才注册，避免多行抢同一个横向入口。
+                 */
+                modifier = Modifier.onFocusChanged { focusState ->
+                    if (focusState.hasFocus) {
+                        com.xxxx.emby_tv.util.PixelScroll.setHorizontal { px ->
+                            homeScrollScope.launch { rowState.scrollBy(px) }
+                            true
+                        }
+                    }
+                },
                 contentPadding = PaddingValues(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
