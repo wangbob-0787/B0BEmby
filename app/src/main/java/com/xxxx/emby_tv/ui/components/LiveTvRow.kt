@@ -124,13 +124,15 @@ private fun ChannelCard(
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        // 焦点态与其它行一致（父亲 2026-10-29：只有电视直播这一行还是绿框，跟别处不一样）：
+        // 不描边，只铺一层白色 14% 的光块，和海报卡同一套观感。
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+            focusedBorder = Border(BorderStroke(2.dp, Color.Transparent))
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
-            focusedContainerColor = Color.Black.copy(alpha = 0.35f),
+            focusedContainerColor = Color(0x24FFFFFF),
             contentColor = Color.White
         ),
         modifier = Modifier
