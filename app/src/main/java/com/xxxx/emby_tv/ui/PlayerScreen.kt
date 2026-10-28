@@ -1593,12 +1593,53 @@ fun PlayerScreen(
                 // 否则横向列表/滚动容器会先消费掉,变成焦点乱跳;
                 // 一级控制条内仍交给焦点系统左右移动;演职人员是横排头像卡片,保留左右
                 .onPreviewKeyEvent { event ->
+                    /*
+                     * 光点决定语义（父亲 2026-10-28）：
+                     *   光点在控制条按钮上 → 摇杆左右移焦点、扣扳机触发按钮；
+                     *   光点在播放画面 → 摇杆左右快退快进、扣扳机暂停/播放。
+                     * 判定依据是坐标表：落点命中已登记控件（且面板开着）就算在控制条上。
+                     * 菜单（二级面板）打开时，摇杆与扳机只服务菜单，不快进也不暂停。
+                    */
+                    val overBar = showPanel &&
+                        com.xxxx.emby_tv.util.PointerTargets.cursorActive() &&
+                        com.xxxx.emby_tv.util.PointerTargets.findAt(
+                            com.xxxx.emby_tv.util.PointerTargets.cursorX,
+                            com.xxxx.emby_tv.util.PointerTargets.cursorY
+                        ) != null
                     val secondaryOpen = inMoreMenu ||
                             (activeItem != null && activeItem != PlayerMenuItem.CAST)
                     if (secondaryOpen &&
                         (event.key == Key.DirectionLeft || event.key == Key.DirectionRight)
                     ) {
                         return@onPreviewKeyEvent true
+                    }
+                    if (event.type == KeyEventType.KeyDown && !secondaryOpen) {
+                        when (event.key) {
+                            // 菜单开着时扳机只给菜单，不暂停/播放
+                            Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                                if (!overBar && activeItem == null && !inMoreMenu) {
+                                    if (isPlaying) player.pause() else player.play()
+                                    interactionTick++
+                                    return@onPreviewKeyEvent true
+                                }
+                            }
+                            // 摇杆往下唤出控制条（父亲 2026-10-28）
+                            Key.DirectionDown -> {
+                                if (!showPanel && activeItem == null && !inMoreMenu) {
+                                    showPanel = true
+                                    interactionTick++
+                                    return@onPreviewKeyEvent true
+                                }
+                            }
+                            // 摇杆往上收起控制条（光标不在按钮上时才收，免得翻菜单时被收掉）
+                            Key.DirectionUp -> {
+                                if (showPanel && !overBar && activeItem == null && !inMoreMenu) {
+                                    showPanel = false
+                                    return@onPreviewKeyEvent true
+                                }
+                            }
+                            else -> {}
+                        }
                     }
                     false
                 }
@@ -1630,7 +1671,7 @@ fun PlayerScreen(
                     // 左右键:控制条未展开时快退/快进,并唤出进度条(seekHud);
                     // 一级控制条展开时交给焦点系统在条内移动焦点(二级菜单已被 Preview 拦掉)
                     if (event.key == Key.DirectionLeft) {
-                        if (showPanel || activeItem != null || inMoreMenu) return@onKeyEvent false
+                        if ((showPanel && com.xxxx.emby_tv.util.PointerTargets.cursorActive() && com.xxxx.emby_tv.util.PointerTargets.findAt(com.xxxx.emby_tv.util.PointerTargets.cursorX, com.xxxx.emby_tv.util.PointerTargets.cursorY) != null) || activeItem != null || inMoreMenu) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             // 每一次按键(含长按产生的重复 KeyDown)都重置进度条的隐退计时:
                             // 原先只在 leftKeyDownTime==0 时重置,长按期间不重置 → 用户还在操作,
@@ -1652,7 +1693,7 @@ fun PlayerScreen(
                         return@onKeyEvent true
                     }
                     if (event.key == Key.DirectionRight) {
-                        if (showPanel || activeItem != null || inMoreMenu) return@onKeyEvent false
+                        if ((showPanel && com.xxxx.emby_tv.util.PointerTargets.cursorActive() && com.xxxx.emby_tv.util.PointerTargets.findAt(com.xxxx.emby_tv.util.PointerTargets.cursorX, com.xxxx.emby_tv.util.PointerTargets.cursorY) != null) || activeItem != null || inMoreMenu) return@onKeyEvent false
                         if (event.type == KeyEventType.KeyDown) {
                             // 同左键:每次按键都重置隐退计时(父亲 2026-09-30 要求)
                             seekHudForward = true
@@ -1694,7 +1735,7 @@ fun PlayerScreen(
                         }
                         // 面板显示时,上下键全部交给焦点系统(二级菜单里才能移动焦点)
                         if (event.key == Key.DirectionDown || event.key == Key.DirectionUp) {
-                            if (showPanel) return@onKeyEvent false
+                            if (showPanel && com.xxxx.emby_tv.util.PointerTargets.cursorActive() && com.xxxx.emby_tv.util.PointerTargets.findAt(com.xxxx.emby_tv.util.PointerTargets.cursorX, com.xxxx.emby_tv.util.PointerTargets.cursorY) != null) return@onKeyEvent false
                             seekHud = false
                             if (event.key == Key.DirectionDown) {
                                 showPanel = true
@@ -1704,7 +1745,7 @@ fun PlayerScreen(
                             return@onKeyEvent true
                         }
                         if (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) {
-                            if (showPanel) return@onKeyEvent false
+                            if (showPanel && com.xxxx.emby_tv.util.PointerTargets.cursorActive() && com.xxxx.emby_tv.util.PointerTargets.findAt(com.xxxx.emby_tv.util.PointerTargets.cursorX, com.xxxx.emby_tv.util.PointerTargets.cursorY) != null) return@onKeyEvent false
                             seekHud = false
                             if (isPlaying) {
                                 player.pause()

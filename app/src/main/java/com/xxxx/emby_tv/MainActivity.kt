@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
         cursorY = ev.y
         cursorAt = SystemClock.uptimeMillis()
         // 光标指哪儿，焦点就落到哪儿：查控件坐标表（VR 同款机制）
+        com.xxxx.emby_tv.util.PointerTargets.noteCursor(cursorX, cursorY)
         com.xxxx.emby_tv.util.PointerTargets.focusAt(cursorX, cursorY)
     }
 

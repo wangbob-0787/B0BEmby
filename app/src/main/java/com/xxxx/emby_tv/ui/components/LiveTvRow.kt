@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import com.xxxx.emby_tv.util.hoverToFocus
+import com.xxxx.emby_tv.util.pointerTarget
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -135,6 +137,8 @@ private fun ChannelCard(
             .width(214.dp)
             .onFocusChanged { if (it.isFocused) FocusMemory.lastItemId = channel.id }
             .focusRequester(myFocusRequester)
+            .pointerTarget(key = myFocusRequester, focusRequester = myFocusRequester)
+            .hoverToFocus(myFocusRequester)
     ) {
         Column {
             // 台标区：16:9，台标居中留白（不裁切，免得把台标裁掉）

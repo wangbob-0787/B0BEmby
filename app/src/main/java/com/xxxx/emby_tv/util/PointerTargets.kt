@@ -38,6 +38,17 @@ object PointerTargets {
 
     private val targets = LinkedHashMap<Any, Target>()
 
+    /** 最近一次光标位置与时间：播放页据此判断「光点在控制条区还是播放区」 */
+    @Volatile var cursorX = 0f
+    @Volatile var cursorY = 0f
+    @Volatile var cursorAt = 0L
+
+    fun noteCursor(x: Float, y: Float) { cursorX = x; cursorY = y; cursorAt = System.currentTimeMillis() }
+
+    /** 光标 3 秒内动过 = 用户在指东西（此时摇杆/扳机才有区域语义） */
+    fun cursorActive(): Boolean =
+        cursorAt > 0L && System.currentTimeMillis() - cursorAt < 3_000L
+
     /** 开发期开关：打开后每次查表都把命中结果写诊断日志，便于定位"点不动/点偏" */
     var debugEnabled = false
 

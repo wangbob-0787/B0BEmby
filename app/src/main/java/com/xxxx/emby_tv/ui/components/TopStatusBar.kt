@@ -183,11 +183,6 @@ fun TopStatusBar(
                                     .size(26.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                             )
-                            Text(
-                                text = userInfo,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
                         }
                     }
 
