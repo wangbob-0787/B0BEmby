@@ -70,11 +70,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var updateLog by mutableStateOf("")
         private set
 
-    val needUpdate: Boolean
-        get() {
-            if (newVersion.isEmpty() || currentVersion.isEmpty()) return false
-            return newVersion != currentVersion
-        }
 
     init {
         loadThemeId()
