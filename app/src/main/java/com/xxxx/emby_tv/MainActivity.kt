@@ -389,8 +389,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        /*
+         * 摇杆：只报方向给 InputBridge，重复节奏由它自己的定时器发（2026-10-29 改）。
+         * 原来"收到运动事件才补一个方向键"，手柄按住不动就不再发事件，于是按着不动；
+         * 事件频率也因设备而异，滚动手感时快时慢。
+         */
         if (InputBridge.hasStickData(ev)) {
-            InputBridge.axisToDpadKey(ev)?.let { synthetic -> super.dispatchKeyEvent(synthetic) }
+            InputBridge.keyDispatcher = { synthetic -> super.dispatchKeyEvent(synthetic) }
+            InputBridge.onStick(ev)
         }
         return super.dispatchGenericMotionEvent(ev)
     }

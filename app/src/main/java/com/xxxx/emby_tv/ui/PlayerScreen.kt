@@ -1634,7 +1634,14 @@ fun PlayerScreen(
                      * 按钮之间的焦点移动只靠光点，不再用左右键。
                      * 这里提前吃掉左右键，否则横排按钮会先把它们当焦点导航用掉。
                      */
-                    if (!secondaryOpen &&
+                    /*
+                     * 演职人员面板开着时，左右键归那一排头像卡片滚动，不许拿去快退快进
+                     * （父亲 2026-10-29 00:07：往回滚的时候偶尔把快退快进也带出来了）。
+                     * 原来这个分支只排除"二级菜单"，演职人员被特意留了下来，于是抢在同一排
+                     * 卡片之前吃键，谁先吃到取决于当下焦点落在哪张卡上，表现就是"有时滚、有时快进"。
+                     */
+                    val castRowOpen = activeItem == PlayerMenuItem.CAST
+                    if (!secondaryOpen && !castRowOpen &&
                         com.xxxx.emby_tv.util.PointerTargets.cursorActive() &&
                         (event.key == Key.DirectionLeft || event.key == Key.DirectionRight)
                     ) {

@@ -31,11 +31,27 @@ object InputBridge {
     // 死区照 VR 版（0.35）：太大导致摇杆轻拨没反应，太小会漂移误触
     private const val AXIS_DEAD_ZONE = 0.35f
 
-    /** 摇杆按住不放时的重复间隔（毫秒）：与遥控器连按的节奏接近，列表能滚、又不至于飞掉 */
-    private const val AXIS_REPEAT_MS = 200L   // 与 VR 的 REPEAT_MS 一致
+    /** 摇杆按住后，第一次重复之前的等待（毫秒）。短一点手感才跟手 */
+    private const val AXIS_FIRST_DELAY_MS = 260L
 
-    private var lastAxisKey = 0
-    private var lastAxisAt = 0L
+    /** 按住期间的基础重复间隔（毫秒） */
+    private const val AXIS_REPEAT_MS = 110L
+
+    /** 按住超过这个时长后加快到 [AXIS_FAST_MS]，长列表才滚得动 */
+    private const val AXIS_ACCEL_AFTER_MS = 700L
+    private const val AXIS_FAST_MS = 60L
+
+    /** 连按保险：一直推着不松最多走这么久，防止手柄丢"回中"事件导致焦点一路飞走 */
+    private const val AXIS_RUNAWAY_MS = 8000L
+
+    private var axisKey = 0
+    private var axisKeyAt = 0L
+    private var axisHeldFrom = 0L
+    private var axisNextAt = 0L
+    private val axisTimer = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** 主线程把合成出来的方向键交给 Activity 派发（Activity 注入；为空则不派发） */
+    var keyDispatcher: ((KeyEvent) -> Unit)? = null
 
     /**
      * 手柄按键 → 遥控器语义。
@@ -87,18 +103,49 @@ object InputBridge {
     }
 
     /**
-     * 摇杆轴 → 方向键。
+     * 摇杆轴 → 方向键（定时驱动，2026-10-29 重做）。
      *
-     * 只在方向变化时立刻发一次，按住不放按 [AXIS_REPEAT_MS] 重复；
-     * 回中时不发任何键（Compose 的焦点不会因为松开摇杆而丢）。
-     * 返回 null 表示这次事件没有可用的方向。
+     * 旧写法"收到运动事件才发键"，在两个前提上都不成立：
+     *  1. 手柄只会在数值变化时发事件 —— 摇杆推到某个位置停住，事件就断了，于是按住不动；
+     *  2. 事件频率取决于设备 —— 有的 60Hz、有的只在变化时来一次，重复节奏完全不可控。
+     * 父亲的原话是"有时候滚得动，有时候滚不动，按着动都不动"。
+     * 现在改成：事件只用来确定"往哪个方向推着"，重复由主线程定时器发，推着就一直走，
+     * 回中（轴值回到死区内）才停 —— 这样节奏稳定，按住也一定在动。
      */
-    fun axisToDpadKey(event: MotionEvent): KeyEvent? {
+    fun onStick(event: MotionEvent) {
+        val key = directionOf(event)
+        val now = SystemClock.uptimeMillis()
+        if (key == 0) {
+            stopStick()
+            return
+        }
+        if (key != axisKey) {
+            axisKey = key
+            axisKeyAt = now
+            axisHeldFrom = now
+            emit(key, now)            // 换方向：立刻走一格，手感才跟手
+            schedule(AXIS_FIRST_DELAY_MS)
+        } else if (axisKeyAt == 0L) {
+            axisKeyAt = now
+            axisHeldFrom = now
+            emit(key, now)
+            schedule(AXIS_FIRST_DELAY_MS)
+        }
+    }
+
+    /** 摇杆回中：停掉重复 */
+    fun stopStick() {
+        axisKey = 0
+        axisKeyAt = 0L
+        axisHeldFrom = 0L
+        axisTimer.removeCallbacksAndMessages(null)
+    }
+
+    private fun directionOf(event: MotionEvent): Int {
         val ax = event.getAxisValue(MotionEvent.AXIS_X)
         val ay = event.getAxisValue(MotionEvent.AXIS_Y)
         val hx = event.getAxisValue(MotionEvent.AXIS_HAT_X)
         val hy = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-
         val h = when {
             hx > 0.5f || ax > AXIS_DEAD_ZONE -> KeyEvent.KEYCODE_DPAD_RIGHT
             hx < -0.5f || ax < -AXIS_DEAD_ZONE -> KeyEvent.KEYCODE_DPAD_LEFT
@@ -109,18 +156,33 @@ object InputBridge {
             hy < -0.5f || ay < -AXIS_DEAD_ZONE -> KeyEvent.KEYCODE_DPAD_UP
             else -> 0
         }
-        // 斜着推时先走横向（电视焦点大多横向排布，竖排也能靠下一个事件走到）
-        val key = if (h != 0) h else v
-        if (key == 0) {
-            lastAxisKey = 0
-            return null
+        // 斜着推先走横向：电视界面以横向排布为主
+        return if (h != 0) h else v
+    }
+
+    private fun emit(key: Int, now: Long) {
+        keyDispatcher?.invoke(KeyEvent(now, now, KeyEvent.ACTION_DOWN, key, 0))
+    }
+
+    private fun schedule(delay: Long) {
+        axisNextAt = SystemClock.uptimeMillis() + delay
+        axisTimer.removeCallbacksAndMessages(null)
+        axisTimer.postDelayed(tick, delay)
+    }
+
+    private val tick = object : Runnable {
+        override fun run() {
+            val key = axisKey
+            if (key == 0) return
+            val now = SystemClock.uptimeMillis()
+            if (now - axisHeldFrom > AXIS_RUNAWAY_MS) {
+                stopStick()
+                return
+            }
+            emit(key, now)
+            val held = now - axisHeldFrom
+            schedule(if (held > AXIS_ACCEL_AFTER_MS) AXIS_FAST_MS else AXIS_REPEAT_MS)
         }
-        val now = SystemClock.uptimeMillis()
-        // 方向没变且还没到重复间隔 → 这次不发
-        if (key == lastAxisKey && now - lastAxisAt < AXIS_REPEAT_MS) return null
-        lastAxisKey = key
-        lastAxisAt = now
-        return KeyEvent(now, now, KeyEvent.ACTION_DOWN, key, 0)
     }
 
     /** 这次运动事件里有没有摇杆/十字键数据（纯鼠标移动事件不必喂给方向键映射） */
