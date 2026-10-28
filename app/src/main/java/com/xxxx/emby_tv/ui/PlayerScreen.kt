@@ -1084,10 +1084,27 @@ fun PlayerScreen(
             danmakuTrack = null
             return@LaunchedEffect
         }
-        val isEpisode = !mediaInfo.seriesName.isNullOrBlank()
-        val title = if (isEpisode) (mediaInfo.seriesName ?: "") else (mediaInfo.name ?: "")
-        val ep = if (isEpisode) (mediaInfo.indexNumber ?: 1) else 0
+        /*
+         * 剧名/集号的取法（父亲 2026-10-29 报「TV 版弹幕没接进来」）。
+         *
+         * 服务端日志实证：剧集条目缺「所属剧集」时，我们直接把整条文件名当剧名发过去
+         *（`小镇良方 第11集 一起挡过屎的日子&ep=2147483647`），服务端当然 404。
+         * 现在从名字里剥出「第N集/话/期」：前面那段当剧名、N 当集号，集号夹在 0..2000。
+         */
+        val rawName = mediaInfo.name ?: ""
+        val epMark = Regex("第\\s*(\\d{1,4})\\s*[集话期回]").find(rawName)
+        var title = mediaInfo.seriesName.orEmpty()
+        var ep = when {
+            mediaInfo.indexNumber == null || mediaInfo.indexNumber == Int.MAX_VALUE -> null
+            else -> mediaInfo.indexNumber
+        }
+        if (title.isBlank()) {
+            title = if (epMark != null) rawName.substring(0, epMark.range.first).trim() else rawName
+            if (ep == null) ep = epMark?.groupValues?.get(1)?.toIntOrNull()
+        }
+        val isEpisode = epMark != null || !mediaInfo.seriesName.isNullOrBlank()
         val kind = if (isEpisode) "tv" else "movie"
+        ep = if (isEpisode) (ep ?: 1).coerceIn(0, 2000) else 0
         val year = mediaInfo.productionYear
         val season = if (isEpisode) mediaInfo.parentIndexNumber else null
         val fetched = withContext(Dispatchers.IO) {
