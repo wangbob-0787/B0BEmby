@@ -1472,6 +1472,21 @@ fun PlayerScreen(
                     handleAudioSinkFailure()
                     return
                 }
+                /*
+                 * 出错要让画面说人话（父亲 2026-10-29 报"黑屏/转圈，什么原因都不说"）。
+                 * 第一次出错会换一路重试，第二次直接停：两种情况各给一句中文，不再只写日志。
+                 * 不含技术名词，也不放"重试"按钮。
+                 */
+                val reason = when {
+                    causeMsg.isNotBlank() -> causeMsg
+                    error.message.isNotBlank() -> error.message
+                    else -> error.errorCodeName
+                }
+                hudText = if (hasTriedTranscodeFallback) {
+                    "起播失败：" + reason.take(60)
+                } else {
+                    "这一路播不了，正在换一路重试（" + reason.take(40) + "）"
+                }
                 fallbackToServerTranscode()
             }
         }
@@ -2019,6 +2034,12 @@ fun PlayerScreen(
                     position = position,
                     duration = duration,
                     buffered = buffered,
+                    onSeekTo = { target ->
+                        // 立刻写 position：暂停状态下游标也要跟手（原来要等 800ms 采样）
+                        position = target.coerceIn(0L, duration.coerceAtLeast(0L))
+                        player.seekTo(target)
+                        interactionTick++
+                    },
                     isPlaying = isPlaying,
                     menuItems = mainMenu,
                     onButtonPositions = { btnPositions = it },

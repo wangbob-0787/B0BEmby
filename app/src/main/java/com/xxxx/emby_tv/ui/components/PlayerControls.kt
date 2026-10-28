@@ -1,12 +1,18 @@
 package com.xxxx.emby_tv.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -312,6 +318,8 @@ fun PlayerControlPanel(
     position: Long,
     duration: Long,
     buffered: Long,
+    /** 点/拖进度条跳到哪（毫秒）；空实现 = 不可拖 */
+    onSeekTo: (Long) -> Unit = {},
     isPlaying: Boolean,
     menuItems: List<PlayerMenuItem>,
     activeItem: PlayerMenuItem?,
@@ -468,10 +476,38 @@ fun PlayerControlPanel(
                 )
                 Spacer(modifier = Modifier.width(24.dp))  // 官方：左时间右边界 183 → 进度条起点 230 = 47px
                 // 进度条：官方是 4px(=2dp) 细条、无圆点；已播 #45913D、未播 #262626（2026-09-30 规格）
+                /*
+                 * 进度条可点可拖（父亲 2026-10-29 报"只能靠左右键跳 10 秒"）：
+                 * 触摸区加高到 28dp 便于按，细条仍画 2dp；拖动中按手指位置画游标，
+                 * 松手才真正跳，避免每帧都 seek。
+                 */
+                var dragFrac by remember { mutableStateOf<Float?>(null) }
+                val total = duration.coerceAtLeast(1L)
+                val shownFrac = dragFrac ?: (position.toFloat() / total.toFloat()).coerceIn(0f, 1f)
                 BoxWithConstraints(
                     modifier = Modifier
                         .weight(1f)
-                        .height(8.dp)
+                        .height(28.dp)
+                        .pointerInput(total) {
+                            detectTapGestures { offset ->
+                                onSeekTo(((offset.x / size.width).coerceIn(0f, 1f) * total).toLong())
+                            }
+                        }
+                        .pointerInput(total) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { off ->
+                                    dragFrac = (off.x / size.width).coerceIn(0f, 1f)
+                                },
+                                onHorizontalDrag = { _, delta ->
+                                    dragFrac = ((dragFrac ?: 0f) + delta / size.width).coerceIn(0f, 1f)
+                                },
+                                onDragEnd = {
+                                    dragFrac?.let { onSeekTo((it * total).toLong()) }
+                                    dragFrac = null
+                                },
+                                onDragCancel = { dragFrac = null },
+                            )
+                        }
                 ) {
                     Box(
                         modifier = Modifier
@@ -480,16 +516,12 @@ fun PlayerControlPanel(
                             .align(Alignment.CenterStart)
                             .background(SpecBarRest)
                     ) {
-                        if (duration > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(
-                                        (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                                    )
-                                    .background(SpecAccent)
-                            )
-                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(shownFrac)
+                                .background(SpecAccent)
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.width(26.dp))  // 官方：进度条终点 1679 → 右时间起点 1734 = 55px
