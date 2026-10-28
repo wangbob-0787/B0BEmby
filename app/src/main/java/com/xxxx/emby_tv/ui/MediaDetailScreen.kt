@@ -422,7 +422,7 @@ fun MediaDetailScreen(
                                     // 父亲 2026-10-02：**只有聚焦才是绿底**；当前季不聚焦时也是暗灰
                                     containerColor = Color(0xFF3A3A3A),
                                     contentColor = Color.White,
-                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                                    focusedContainerColor = Color(0x24FFFFFF),
                                     focusedContentColor = MaterialTheme.colorScheme.onTertiary
                                 ),
                                 modifier = Modifier
@@ -704,7 +704,7 @@ fun PersonCard(
             .scale(focusedScale = 1.06f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Black.copy(alpha = 0.2f),
-            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContainerColor = Color(0x24FFFFFF),
             contentColor = MaterialTheme.colorScheme.onSurface,
             pressedContentColor = MaterialTheme.colorScheme.surface,
             focusedContentColor = MaterialTheme.colorScheme.onTertiary
@@ -887,7 +887,7 @@ private fun ActionTile(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color(0xFF3A3A3A),
             contentColor = Color.White,
-            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContainerColor = Color(0x24FFFFFF),
             focusedContentColor = MaterialTheme.colorScheme.onTertiary
         ),
         modifier = Modifier
@@ -1208,7 +1208,7 @@ private fun DetailRowShell(
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color(0x1AFFFFFF),
                     contentColor = Color.White,
-                    focusedContainerColor = Color(0x3D2FD57C),
+                    focusedContainerColor = Color(0x24FFFFFF),
                     focusedContentColor = Color.White
                 ),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
@@ -1245,7 +1245,7 @@ private fun DetailOptionRow(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) Color(0x3D2FD57C) else Color(0x14FFFFFF),
             contentColor = Color.White,
-            focusedContainerColor = Color(0x3D2FD57C),
+            focusedContainerColor = Color(0x24FFFFFF),
             focusedContentColor = Color.White
         ),
         modifier = Modifier

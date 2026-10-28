@@ -308,7 +308,7 @@ fun LoginScreen(
                         .hoverToFocus(loginButtonFocusRequester),
                     // 聚焦底与其它控件统一成绿 24%（VR 登录页同款），文字保持白色
                     colors = ButtonDefaults.colors(
-                        focusedContainerColor = Color(0x3D2FD57C),
+                        focusedContainerColor = Color(0x24FFFFFF),
                         focusedContentColor = Color.White,
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
                         contentColor = MaterialTheme.colorScheme.onSurface
@@ -431,7 +431,7 @@ fun TvInputButton(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = Color(0x3D2FD57C),
+            focusedContainerColor = Color(0x24FFFFFF),
             focusedContentColor = Color.White,
         ),
         modifier = modifier
@@ -485,7 +485,7 @@ fun ProtocolButton(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = Color(0x3D2FD57C),
+            focusedContainerColor = Color(0x24FFFFFF),
             focusedContentColor = Color.White,
         ),
         modifier = modifier

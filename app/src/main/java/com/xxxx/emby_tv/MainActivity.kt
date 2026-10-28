@@ -89,6 +89,10 @@ class MainActivity : ComponentActivity() {
     private var lastScrollAt = 0L
     // 上一次移动的时间：算光点速度用（决定滚动快慢）
     private var lastMoveAt = 0L
+    private val scrollHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var lastCursorSpeedPxPerSec = 0f
+    private var lastScrollAxis = 0      // 1=上下 0=左右
+    private var lastScrollSign = 0
 
 
     /** 光标位置是否新鲜（3 秒内动过）；新鲜才认为「用户在指东西」，否则按遥控器处理 */
@@ -164,6 +168,33 @@ class MainActivity : ComponentActivity() {
      * 所以一步一个 DPAD_UP/DOWN/LEFT/RIGHT，列表自己会跟着滚。
      * 节流保证一次拖动不会把列表甩飞。
      */
+
+    /**
+     * 滚动惯性：摇杆松手后按残速继续发方向键，间隔逐渐拉长、约 0.8 秒停住。
+     * 与「按光点速度决定步频」配套，合起来就是先加速、松手再减速的手感。
+     */
+    private fun startScrollInertia() {
+        val speed = lastCursorSpeedPxPerSec
+        if (speed < 120f) return
+        var remaining = 8
+        var stepMs = 45L
+        val runner = object : Runnable {
+            override fun run() {
+                if (remaining <= 0) return
+                remaining--
+                if (dragMoved) return                      // 用户又拨动了：交给实时逻辑
+                val key = when (lastScrollAxis) {
+                    1 -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
+                    else -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+                }
+                fireScroll(key)
+                stepMs = (stepMs * 1.25).toLong()
+                scrollHandler.postDelayed(this, stepMs)
+            }
+        }
+        scrollHandler.postDelayed(runner, stepMs)
+    }
+
     private fun fireScroll(keyCode: Int) {
         val now = SystemClock.uptimeMillis()
         if (now - lastScrollAt < 80L) return
@@ -214,6 +245,9 @@ class MainActivity : ComponentActivity() {
                         val moveDt = if (lastMoveAt > 0L) (moveNow - lastMoveAt).coerceIn(8L, 100L) else 16L
                         lastMoveAt = moveNow
                         val cursorSpeed = kotlin.math.max(kotlin.math.abs(dx), kotlin.math.abs(dy)) * 1000f / moveDt
+                        lastCursorSpeedPxPerSec = cursorSpeed
+                        lastScrollAxis = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) 1 else 0
+                        lastScrollSign = if (lastScrollAxis == 1) (if (dy > 0) 1 else -1) else (if (dx > 0) 1 else -1)
                         val step = (60f - cursorSpeed / 25f).coerceIn(16f, 60f)
                         // 方向口径（父亲 2026-10-28 实机）：摇杆往下 = 往下滚，往右 = 往右滚。
                         // 上一版按指针位移原样发键，头显上实测是反向的，这里取反。
@@ -229,6 +263,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
             MotionEvent.ACTION_UP -> {
+                // 松手后按最后一段的速度继续滑一小段（线性减速，约 0.8 秒），推得猛滑得远、轻推立刻停
+                if (dragMoved) startScrollInertia()
                 if (pressPending) {
                     pressPending = false
                     // 拖动过的手抬起来 = 滚完了，不当作点击

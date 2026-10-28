@@ -154,7 +154,7 @@ fun TopStatusBar(
                         // 父亲 2026-10-02：聚焦 = 绿底白图标
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                            focusedContainerColor = Color(0x24FFFFFF),
                             contentColor = Color.White,
                             focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )
@@ -187,7 +187,7 @@ fun TopStatusBar(
                         shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.CircleShape),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                            focusedContainerColor = Color(0x24FFFFFF),
                             contentColor = Color.White,
                             focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )

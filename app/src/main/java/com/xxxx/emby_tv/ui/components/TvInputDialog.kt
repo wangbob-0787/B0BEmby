@@ -102,7 +102,7 @@ fun TvInputDialog(
                         activate = { commit() }
                     ),
                 colors = ButtonDefaults.colors(
-                    focusedContainerColor = androidx.compose.ui.graphics.Color(0x3D2FD57C),
+                    focusedContainerColor = androidx.compose.ui.graphics.Color(0x24FFFFFF),
                     focusedContentColor = androidx.compose.ui.graphics.Color.White,
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -123,7 +123,7 @@ fun TvInputDialog(
                         activate = { onDismiss() }
                     ),
                 colors = ButtonDefaults.colors(
-                    focusedContainerColor = androidx.compose.ui.graphics.Color(0x3D2FD57C),
+                    focusedContainerColor = androidx.compose.ui.graphics.Color(0x24FFFFFF),
                     focusedContentColor = androidx.compose.ui.graphics.Color.White,
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
                     contentColor = MaterialTheme.colorScheme.onSurface

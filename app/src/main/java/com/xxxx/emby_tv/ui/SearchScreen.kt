@@ -208,7 +208,7 @@ fun SearchScreen(
                                 containerColor = if (isAllSelected) MaterialTheme.colorScheme.primary.copy(
                                     alpha = 0.2f
                                 ) else Color.White.copy(alpha = 0.05f),
-                                focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                                focusedContainerColor = Color(0x24FFFFFF),
                                 contentColor = Color.White,
                                 focusedContentColor = MaterialTheme.colorScheme.onTertiary
                             ),
@@ -283,7 +283,7 @@ fun SearchScreen(
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = if (isSelected) Color(0x3D2FD57C) else Color.White.copy(alpha = 0.05f),
-                            focusedContainerColor = Color(0x3D2FD57C),
+                            focusedContainerColor = Color(0x24FFFFFF),
                             contentColor = Color.White,
                             focusedContentColor = Color.White
                         ),
@@ -392,7 +392,7 @@ fun SearchScreen(
                     ),
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = Color.White.copy(alpha = 0.1f),
-                        focusedContainerColor = Color(0x3D2FD57C),
+                        focusedContainerColor = Color(0x24FFFFFF),
                         contentColor = Color.White
                     )
                 ) {

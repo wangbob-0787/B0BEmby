@@ -62,7 +62,7 @@ fun BufferSettingsTab(
                 onClick = onReplay,
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
+                    focusedContainerColor = Color(0x24FFFFFF),
                     focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -178,7 +178,7 @@ fun BufferSettingsTab(
                 onClick = onReplay,
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
+                    focusedContainerColor = Color(0x24FFFFFF),
                     focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSecondary
@@ -210,7 +210,7 @@ fun BufferSettingsTab(
                 onClick = onResetDefault,
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    focusedContainerColor = TvMaterialTheme.colorScheme.secondary,
+                    focusedContainerColor = Color(0x24FFFFFF),
                     focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSecondary
@@ -301,7 +301,7 @@ private fun BufferSettingRow(
                         .scale(focusedScale = 1.06f),
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                        focusedContainerColor = Color(0x24FFFFFF),
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         pressedContentColor = MaterialTheme.colorScheme.onSecondary,
                         pressedContainerColor = MaterialTheme.colorScheme.secondary,

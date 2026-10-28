@@ -165,7 +165,7 @@ fun AccountScreen(
                         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.White.copy(alpha = 0.08f),
-                            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                            focusedContainerColor = Color(0x24FFFFFF),
                             contentColor = Color.White,
                             focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )
@@ -242,7 +242,7 @@ private fun AccountListItem(
                 containerColor = if (isCurrentAccount)  MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.2f)
                 else  Color.White.copy(alpha = 0.05f)
                 ,
-                focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                focusedContainerColor = Color(0x24FFFFFF),
                 contentColor = if (isCurrentAccount)  MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.tertiary,
                 focusedContentColor = MaterialTheme.colorScheme.onTertiary
@@ -414,7 +414,7 @@ private fun DeleteConfirmDialog(
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = Color.White.copy(alpha = 0.1f),
-                                focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                                focusedContainerColor = Color(0x24FFFFFF),
                                 contentColor = Color.White,
                                 focusedContentColor = MaterialTheme.colorScheme.onTertiary
                             )

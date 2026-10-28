@@ -83,6 +83,22 @@ object PointerTargets {
         return true
     }
 
+
+    /** 面板区域表：只用来判断「光点是否落在这块面板上」 */
+    private val regions = LinkedHashMap<Any, androidx.compose.ui.geometry.Rect>()
+
+    fun putRegion(key: Any, bounds: androidx.compose.ui.geometry.Rect) {
+        synchronized(regions) { regions[key] = bounds }
+    }
+
+    fun removeRegion(key: Any) {
+        synchronized(regions) { regions.remove(key) }
+    }
+
+    fun regionContains(key: Any, x: Float, y: Float): Boolean = synchronized(regions) {
+        regions[key]?.contains(androidx.compose.ui.geometry.Offset(x, y)) ?: false
+    }
+
     fun clear() { synchronized(targets) { targets.clear() } }
 }
 
@@ -110,4 +126,22 @@ fun Modifier.pointerTarget(
             activate = activate,
         )
     }
+}
+
+/**
+ * 面板区域登记：只登记矩形，不参与焦点与点击。
+ *
+ * 用途是「光点指到才受控」——光点不在这个区域里时，摇杆的方向键不驱动这块面板
+ *（父亲 2026-10-28 全局口径：光点指哪控哪）。
+ */
+fun Modifier.pointerRegion(key: Any): Modifier = composed {
+    val stableKey = remember(key) { key }
+    DisposableEffect(stableKey) { onDispose { PointerTargets.removeRegion(stableKey) } }
+    this.onGloballyPositioned { coords -> PointerTargets.putRegion(stableKey, coords.boundsInWindow()) }
+}
+
+/** 光点此刻是否落在这个区域里；光标很久没动（遥控器场景）视为不限制 */
+fun cursorInRegion(key: Any): Boolean {
+    if (!PointerTargets.cursorActive()) return true
+    return PointerTargets.regionContains(key, PointerTargets.cursorX, PointerTargets.cursorY)
 }

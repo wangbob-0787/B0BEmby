@@ -102,7 +102,7 @@ private fun DialogButton(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color(0xFF333333),
             contentColor = Color.White,
-            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            focusedContainerColor = Color(0x24FFFFFF),
             focusedContentColor = MaterialTheme.colorScheme.onTertiary
         ),
         modifier = Modifier.then(

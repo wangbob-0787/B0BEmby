@@ -166,7 +166,7 @@ fun LibraryScreen(
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color.White.copy(alpha = 0.15f),
                     contentColor = Color.White,
-                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                    focusedContainerColor = Color(0x24FFFFFF),
                     focusedContentColor = MaterialTheme.colorScheme.onTertiary
                 ),
                 border = ClickableSurfaceDefaults.border(
@@ -211,7 +211,7 @@ fun LibraryScreen(
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = if (isSelected) Color(0x3D2FD57C) else Color.Transparent,
                         contentColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
-                        focusedContainerColor = Color(0x3D2FD57C),
+                        focusedContainerColor = Color(0x24FFFFFF),
                         focusedContentColor = Color.White
                     ),
                     border = ClickableSurfaceDefaults.border(
@@ -414,7 +414,7 @@ private fun SortDialog(
                                         Color.Transparent
                                     },
                                     contentColor = Color.White,
-                                    focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                                    focusedContainerColor = Color(0x24FFFFFF),
                                     focusedContentColor = MaterialTheme.colorScheme.onTertiary
                                 )
                             ) {
