@@ -237,7 +237,7 @@ fun LibraryScreen(
                 ready = false,
                 failed = libraryViewModel.errorMessage != null,
                 onRetry = {
-                    libraryViewModel.errorMessage = null
+                    libraryViewModel.clearError()
                     libraryViewModel.refresh()
                 }
             )

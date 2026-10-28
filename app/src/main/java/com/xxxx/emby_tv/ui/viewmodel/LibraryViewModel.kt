@@ -166,6 +166,11 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** 清掉错误提示（页面等待态在重试前调用，让「请检查网络连接」跟着新一次请求走） */
+    fun clearError() {
+        errorMessage = null
+    }
+
     fun refresh() {
         val parentId = currentParentId
         val type = currentType
