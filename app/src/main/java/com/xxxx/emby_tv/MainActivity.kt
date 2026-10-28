@@ -43,6 +43,12 @@ import com.xxxx.emby_tv.ui.viewmodel.LibraryViewModel
 import com.xxxx.emby_tv.ui.viewmodel.DetailViewModel
 import com.xxxx.emby_tv.ui.viewmodel.PlayerViewModel
 import com.xxxx.emby_tv.ui.viewmodel.SearchViewModel
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
+import com.xxxx.emby_tv.util.DiagLog
+import com.xxxx.emby_tv.util.InputBridge
 
 
 class MainActivity : ComponentActivity() {
@@ -58,28 +64,160 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // ── 指针点击：把「扳机/点击」显式换算成触摸，注入 Compose 根视图 ──────────
+    //
+    // 事实（VR 版 2026-10-04 抓 /dev/input/event4 实测）：头显的扳机在系统层不是 KeyEvent，
+    // 而是 BTN_TOUCH DOWN/UP 的一次触摸点击，坐标就是光标位置；A 键与扳机在系统层分不开。
+    // TV 版是遥控器焦点模型，焦点控件不会因为「来了一个坐标」自己按下去 —— 悬停只负责移焦点，
+    // 真正触发必须把点击按窗口坐标派发进 Compose（Surface(onClick)/clickable 认触摸）。
+    //
+    // 分工：悬停事件照旧交给 super（移焦点、亮点）；按下/抬起由这里接管，注入一次干净的点击，
+    // 同一帧不会既走焦点点击又走注入，避免双击。
+    private var cursorX = 0f
+    private var cursorY = 0f
+    private var cursorAt = 0L
+    private var pressPending = false
+    private var pressX = 0f
+    private var pressY = 0f
+    private var lastInjectAt = 0L
+    private var traceAt = 0L
+    private var motionPressed = false
+
+    /** 光标位置是否新鲜（3 秒内动过）；新鲜才认为「用户在指东西」，否则按遥控器处理 */
+    private fun cursorFresh(): Boolean =
+        cursorAt > 0L && SystemClock.uptimeMillis() - cursorAt < 3_000L
+
+    private fun recordCursor(ev: MotionEvent) {
+        cursorX = ev.x
+        cursorY = ev.y
+        cursorAt = SystemClock.uptimeMillis()
+    }
+
+    /** 原始事件取证：DOWN/UP 必记，MOVE/HOVER 限流，避免刷屏（父亲要求先证明事件在不在） */
+    private fun traceTouch(ev: MotionEvent) {
+        val now = SystemClock.uptimeMillis()
+        val xy = "(" + ev.x.toInt() + "," + ev.y.toInt() + ")"
+        val src = "0x" + Integer.toHexString(ev.source)
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                traceAt = now
+                DiagLog.w(this, "input", "touch DOWN " + xy + " source=" + src)
+            }
+            MotionEvent.ACTION_UP ->
+                DiagLog.w(this, "input", "touch UP " + xy + " source=" + src)
+            MotionEvent.ACTION_CANCEL ->
+                DiagLog.w(this, "input", "touch CANCEL " + xy + " source=" + src)
+            else -> if (now - traceAt >= 200L) {
+                traceAt = now
+                DiagLog.w(
+                    this, "input",
+                    "touch action=" + ev.actionMasked + " " + xy + " source=" + src +
+                        " btn=0x" + Integer.toHexString(ev.buttonState)
+                )
+            }
+        }
+    }
+
     /**
-     * 手柄按键 → 遥控器语义（A/扳机 = OK、B = 返回、START = 菜单）。
+     * 在「当前焦点」上补一次确认键（DPAD_CENTER）。
      *
-     * 不这么转的话，A 键在 Android 上是 KEYCODE_BUTTON_A，Compose 只认 DPAD_CENTER，
-     * 表现就是「手柄能移动焦点但按 A 没反应」。
+     * 为什么不注入鼠标点击：TV 版的控件全是 TV 库的 Surface/Button，它们的语义是
+     * 「焦点 + OK」，鼠标式点击实测不触发它们（VR 版 2026-10-04 也踩过这条：
+     * 电视库的 Surface 吃鼠标事件但不动作，最后靠补 OK 才成）。而光标悬停已经把焦点
+     * 搬到指针所指的控件上，所以补一次 OK 就等于「在光标处点了一下」，且只发一次不会双击。
      */
-    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
-        val mapped = com.xxxx.emby_tv.util.InputBridge.mapGamepadKey(event)
+    private fun fireConfirm(source: String) {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastInjectAt < 150L) return      // 防抖：同一次扳机不重复触发
+        lastInjectAt = now
+        val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0)
+        val up = KeyEvent(now, now + 40L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0)
+        super.dispatchKeyEvent(down)
+        super.dispatchKeyEvent(up)
+        DiagLog.w(
+            this, "input",
+            "确认键已派发（来源=" + source + " 光标=(" + cursorX.toInt() + "," + cursorY.toInt() + ")）"
+        )
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        traceTouch(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_HOVER_MOVE, MotionEvent.ACTION_HOVER_ENTER -> recordCursor(event)
+            MotionEvent.ACTION_DOWN -> {
+                if (cursorFresh()) {
+                    // 用光标的落点当按点：头显上「看着指哪」才是用户的本意
+                    pressX = cursorX
+                    pressY = cursorY
+                    pressPending = true
+                    return true
+                }
+            }
+            MotionEvent.ACTION_UP -> {
+                if (pressPending) {
+                    pressPending = false
+                    fireConfirm("触摸抬起")
+                    return true
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> if (pressPending) {
+                pressPending = false
+                return true
+            }
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    /**
+     * 手柄按键：有光标时扳机/A 走「在光标处点一下」，没有光标时退回遥控器语义
+     * （A/扳机 = OK、B = 返回、START = 菜单）。
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (cursorFresh() && InputBridge.isConfirmKey(event.keyCode)) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                pressPending = true
+                pressX = cursorX
+                pressY = cursorY
+                return true
+            }
+            if (event.action == KeyEvent.ACTION_UP) {
+                // 同一次动作可能已经由触摸路径处理过，pressPending 为 false 就跳过
+                val pending = pressPending
+                pressPending = false
+                if (pending) fireConfirm("手柄确认键")
+                return true
+            }
+        }
+        val mapped = InputBridge.mapGamepadKey(event)
         return super.dispatchKeyEvent(mapped ?: event)
     }
 
     /**
-     * 摇杆 → 方向键。
+     * 摇杆 → 方向键；同时兜住「悬停移动里夹着按键状态」这类手柄（有的设备把扳机塞在 buttonState 里）。
      *
-     * 只在事件源确实是手柄/摇杆/十字键时才转换（鼠标与头显光标的事件不能当方向键，
+     * 只在事件源确实是手柄/摇杆/十字键时才转方向（鼠标与头显光标的事件不能当方向键，
      * 否则光标一动焦点就乱跳）。
      */
-    override fun dispatchGenericMotionEvent(ev: android.view.MotionEvent): Boolean {
-        if (com.xxxx.emby_tv.util.InputBridge.hasStickData(ev)) {
-            com.xxxx.emby_tv.util.InputBridge.axisToDpadKey(ev)?.let { synthetic ->
-                super.dispatchKeyEvent(synthetic)
+    override fun dispatchGenericMotionEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_HOVER_MOVE) recordCursor(ev)
+
+        // 按下状态变化：按下记按点，抬起注入点击（与触摸路径共用 pressPending，天然去重）
+        val pressedNow = (ev.buttonState and (MotionEvent.BUTTON_PRIMARY or MotionEvent.BUTTON_SECONDARY)) != 0
+        if (pressedNow != motionPressed) {
+            motionPressed = pressedNow
+            if (pressedNow) {
+                pressPending = true
+                pressX = cursorX
+                pressY = cursorY
+                DiagLog.w(this, "input", "buttonState 按下 -> 记按点 (" + pressX.toInt() + "," + pressY.toInt() + ")")
+            } else if (pressPending) {
+                pressPending = false
+                fireConfirm("buttonState 抬起")
             }
+        }
+
+        if (InputBridge.hasStickData(ev)) {
+            InputBridge.axisToDpadKey(ev)?.let { synthetic -> super.dispatchKeyEvent(synthetic) }
         }
         return super.dispatchGenericMotionEvent(ev)
     }

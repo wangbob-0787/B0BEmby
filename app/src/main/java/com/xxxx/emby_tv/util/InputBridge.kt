@@ -43,6 +43,23 @@ object InputBridge {
      * B = 返回；START = 菜单键（播放页开关控制条）。
      * 其它键（X/Y/摇杆按下/肩键）不映射，避免误触出奇怪行为。
      */
+    /**
+     * 这颗键是不是「确认」（A / 扳机 / OK）。
+     *
+     * 头显上有光标时，确认键不能走焦点点击，要在光标处注入一次触摸；所以先在这里认身份。
+     */
+    fun isConfirmKey(keyCode: Int): Boolean = when (keyCode) {
+        KeyEvent.KEYCODE_BUTTON_A,
+        KeyEvent.KEYCODE_BUTTON_R2,
+        KeyEvent.KEYCODE_BUTTON_L2,
+        KeyEvent.KEYCODE_BUTTON_1,
+        KeyEvent.KEYCODE_ENTER,
+        KeyEvent.KEYCODE_NUMPAD_ENTER,
+        KeyEvent.KEYCODE_DPAD_CENTER -> true
+
+        else -> false
+    }
+
     fun mapGamepadKey(event: KeyEvent): KeyEvent? {
         val mapped = when (event.keyCode) {
             KeyEvent.KEYCODE_BUTTON_A,
