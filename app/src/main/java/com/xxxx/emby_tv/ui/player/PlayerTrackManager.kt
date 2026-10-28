@@ -72,43 +72,43 @@ object PlayerTrackManager {
             }
         }
 
-//        if (isLoadedViaConfig) {
-//            // 策略1：使用唯一 Label 格式 "Label [Index]" 匹配
-//            val uniqueTargetLabel = "$targetLabel [$targetIndex]"
-//            outer@ for (group in trackGroups) {
-//                for (i in 0 until group.length) {
-//                    val format = group.getTrackFormat(i)
-//                    if (format.label == uniqueTargetLabel) {
-//                        parametersBuilder.setOverrideForType(
-//                            TrackSelectionOverride(group.mediaTrackGroup, i)
-//                        )
-//                        isMatched = true
-////                        Log.d(TAG, "Matched subtitle by UniqueLabel: ${format.label} -> ID:${format.id}")
-//                        break@outer
-//                    }
-//                }
-//            }
-//
-//            // 策略1.1：ID 包含 index 匹配（回退）
-//            if (!isMatched) {
-//                outer2@ for (group in trackGroups) {
-//                    for (i in 0 until group.length) {
-//                        val format = group.getTrackFormat(i)
-//                        if (format.id?.endsWith(":$targetIndex") == true || format.id == targetIndex) {
-//                            parametersBuilder.setOverrideForType(
-//                                TrackSelectionOverride(group.mediaTrackGroup, i)
-//                            )
-//                            isMatched = true
-////                            Log.d(TAG, "Matched subtitle by ID contains: ${format.id} -> Label:${format.label}")
-//                            break@outer2
-//                        }
-//                    }
-//                }
-//            }
-//        }
+        /*
+         * 匹配顺序（2026-10-29 重做，父亲报"字幕菜单点了没反应"）：
+         *  1) 唯一 Label（"标题 [index]"）—— 外挂字幕由配置加载时最准；
+         *  2) 轨道 ID 以 :index 结尾或等于 index —— 用 Emby 的流序号对 ExoPlayer 的轨道号；
+         *  3) 按顺序数（内封字幕走这条）。
+         * 原来 1、2 两段被整块注释掉，3 又被 isLoadedViaConfig（只认 isExternal）门住，
+         * 于是**内嵌字幕一条也切不动**，只在日志里留一行 warn。
+         */
+        outer1@ for (group in trackGroups) {
+            for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                if (format.label == "$targetLabel [$targetIndex]") {
+                    parametersBuilder.setOverrideForType(
+                        TrackSelectionOverride(group.mediaTrackGroup, i)
+                    )
+                    isMatched = true
+                    break@outer1
+                }
+            }
+        }
 
-        // 策略2：顺序匹配（用于直接播放的内嵌字幕）
-        if (!isMatched && isLoadedViaConfig && targetOrdinalIndex >= 0) {
+        if (!isMatched) {
+            outer2@ for (group in trackGroups) {
+                for (i in 0 until group.length) {
+                    val format = group.getTrackFormat(i)
+                    if (format.id?.endsWith(":$targetIndex") == true || format.id == targetIndex) {
+                        parametersBuilder.setOverrideForType(
+                            TrackSelectionOverride(group.mediaTrackGroup, i)
+                        )
+                        isMatched = true
+                        break@outer2
+                    }
+                }
+            }
+        }
+
+        if (!isMatched && targetOrdinalIndex >= 0) {
             var trackCounter = 0
             outerOrdinal@ for (group in trackGroups) {
                 for (i in 0 until group.length) {
@@ -117,8 +117,6 @@ object PlayerTrackManager {
                             TrackSelectionOverride(group.mediaTrackGroup, i)
                         )
                         isMatched = true
-                        val f = group.getTrackFormat(i)
-//                        Log.d(TAG, "Matched subtitle by Ordinal: OrdinalIndex=$targetOrdinalIndex -> Track (ID:${f.id}, Label:${f.label})")
                         break@outerOrdinal
                     }
                     trackCounter++

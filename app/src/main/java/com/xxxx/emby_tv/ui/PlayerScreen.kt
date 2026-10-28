@@ -1718,6 +1718,14 @@ fun PlayerScreen(
                     // 一级控制条展开时交给焦点系统在条内移动焦点(二级菜单已被 Preview 拦掉)
                     if (event.key == Key.DirectionLeft) {
                         if (activeItem != null || inMoreMenu) return@onKeyEvent false
+                        /*
+                         * 没有光点时（电视遥控器），控制条展开着就把左右键让给焦点系统，
+                         * 否则永远只能在按钮之间"快退快进"，选不中左边的按钮。
+                         * 这段一直只写了注释没写判据（父亲 2026-10-29 报）。
+                         */
+                        if (showPanel && !com.xxxx.emby_tv.util.PointerTargets.cursorActive()) {
+                            return@onKeyEvent false
+                        }
                         if (event.type == KeyEventType.KeyDown) {
                             // 每一次按键(含长按产生的重复 KeyDown)都重置进度条的隐退计时:
                             // 原先只在 leftKeyDownTime==0 时重置,长按期间不重置 → 用户还在操作,
@@ -1740,6 +1748,10 @@ fun PlayerScreen(
                     }
                     if (event.key == Key.DirectionRight) {
                         if (activeItem != null || inMoreMenu) return@onKeyEvent false
+                        // 同上：遥控器展开控制条时左右键归焦点系统
+                        if (showPanel && !com.xxxx.emby_tv.util.PointerTargets.cursorActive()) {
+                            return@onKeyEvent false
+                        }
                         if (event.type == KeyEventType.KeyDown) {
                             // 同左键:每次按键都重置隐退计时(父亲 2026-09-30 要求)
                             seekHudForward = true
@@ -1787,6 +1799,15 @@ fun PlayerScreen(
                                 showPanel = true
                                 inMoreMenu = false
                                 activeItem = null
+                            } else {
+                                // 上键：面板收起时调大音量（原来上键被吃掉却什么也不做，父亲 2026-10-29 报）
+                                runCatching {
+                                    audioManager.adjustStreamVolume(
+                                        AudioManager.STREAM_MUSIC,
+                                        AudioManager.ADJUST_RAISE,
+                                        AudioManager.FLAG_SHOW_UI
+                                    )
+                                }
                             }
                             return@onKeyEvent true
                         }
