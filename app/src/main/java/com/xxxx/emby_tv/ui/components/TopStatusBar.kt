@@ -41,6 +41,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.xxxx.emby_tv.R
 import com.xxxx.emby_tv.data.local.PreferencesManager
+import com.xxxx.emby_tv.util.hoverToFocus
 
 
 @Composable
@@ -104,7 +105,7 @@ fun TopStatusBar(
                 )
 
                 if (proxyEnabled) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Box(
                         modifier = Modifier
                             .background(
@@ -129,8 +130,9 @@ fun TopStatusBar(
                     Surface(
                         onClick = onSearchClick,
                         modifier = Modifier
-                            .size(32.dp)
-                            .focusRequester(searchFocusRequester),
+                            .size(48.dp)
+                            .focusRequester(searchFocusRequester)
+                            .hoverToFocus(searchFocusRequester),
                         shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.CircleShape),
                         // 父亲 2026-10-02：聚焦 = 绿底白图标
                         colors = ClickableSurfaceDefaults.colors(
@@ -149,7 +151,7 @@ fun TopStatusBar(
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = stringResource(R.string.search),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
@@ -157,30 +159,32 @@ fun TopStatusBar(
 
                 // 用户信息
                 if (userInfo != null) {
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
                     Surface(
                         onClick = onUserInfoClick ?: {},
                         modifier = Modifier
-                            .focusRequester(userInfoFocusRequester),
-                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
+                            .size(48.dp)
+                            .focusRequester(userInfoFocusRequester)
+                            .hoverToFocus(userInfoFocusRequester),
+                        shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.CircleShape),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
                             focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary,
+                            contentColor = Color.White,
                             focusedContentColor = MaterialTheme.colorScheme.onTertiary
                         )
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 12.dp, start = 4.dp, top = 4.dp, bottom = 4.dp)
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
                             // 头像：用父亲 2026-10-02 给的图（圆形裁剪）
                             Image(
                                 painter = painterResource(R.drawable.ic_user_avatar),
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(26.dp)
+                                    .size(38.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                             )
                         }
