@@ -27,7 +27,6 @@ import com.xxxx.emby_tv.ui.components.BuildItem
 import com.xxxx.emby_tv.ui.components.HomeHeroCarousel
 import com.xxxx.emby_tv.ui.components.LiveTvRow
 import com.xxxx.emby_tv.ui.components.Loading
-import com.xxxx.emby_tv.ui.components.WaitHint
 import com.xxxx.emby_tv.ui.components.NoData
 import com.xxxx.emby_tv.ui.components.TopStatusBar
 import com.xxxx.emby_tv.util.DiagLog
@@ -59,7 +58,6 @@ fun HomeScreen(
     val liveChannels = homeViewModel.liveChannels
     val liveTvView = homeViewModel.liveTvView
     val isLoading = homeViewModel.isLoading
-    val errorMessage = homeViewModel.errorMessage
 
     // 焦点是否还在顶部大片头上（离开就暂停自动轮播，父亲 2026-09-30 定）
     var heroFocused by remember { mutableStateOf(false) }
@@ -77,12 +75,33 @@ fun HomeScreen(
             .onFailure { ErrorHandler.logError("HomeScreen", "取剧集元数据失败", it) }
     }
 
-    // 首页等待三态（父亲 2026-10-13 口径）：不再弹系统 Toast，改页面内提示 + 每 5 秒自动重试
-    var waitFailed by remember { mutableStateOf(false) }
-    LaunchedEffect(errorMessage) {
-        if (errorMessage != null) {
-            waitFailed = true
-            homeViewModel.clearError()
+    /*
+     * 首页等待三态（父亲 2026-10-13 口径）：页面内提示 + 每 5 秒自动重试，不放重试按钮。
+     *
+     * 判据必须用 isNullOrEmpty（父亲 2026-10-29 报"断网时首页一片空白、没有提示"）：
+     * ViewModel 的失败分支会把列表写成空表而不是 null，原来用「!= null」判"数据到了"，
+     * 于是失败被当成成功，直接渲染成一片空白，等态与错误态永远走不到。
+     */
+    var homeWait by remember { mutableStateOf(HomeWait.Loading) }
+    LaunchedEffect(Unit) {
+        var waited = 0L
+        while (true) {
+            kotlinx.coroutines.delay(500L)
+            waited += 500L
+            val noData = homeViewModel.libraryLatestItems.isNullOrEmpty() &&
+                homeViewModel.resumeItems.isNullOrEmpty()
+            if (!noData) {
+                homeWait = HomeWait.Done
+                waited = 0L
+                continue
+            }
+            homeWait = if (waited < 8_000L && homeViewModel.lastError == null) {
+                HomeWait.Loading
+            } else {
+                HomeWait.NoNetwork
+            }
+            // 判为网络问题之后每 5 秒自动重试（8s、13s、18s…）
+            if (waited >= 8_000L && (waited - 8_000L) % 5_000L == 0L) homeViewModel.refresh()
         }
     }
 
@@ -206,7 +225,7 @@ fun HomeScreen(
 //        if(isLoading){
 //            Loading()
 //        }
-        if (libraryLatestItems != null) {
+        if (homeWait == HomeWait.Done) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f),
@@ -315,15 +334,19 @@ fun HomeScreen(
                 }
             }
         } else {
-            // 三态：正在加载… → 请检查网络连接 → 每 5 秒自动重试（不要重试按钮）
-            WaitHint(
-                ready = libraryLatestItems != null,
-                failed = waitFailed,
-                onRetry = {
-                    waitFailed = false
-                    homeViewModel.refresh()
-                }
-            )
+            // 三态：正在加载… → 请检查网络连接（之后由上面的心跳每 5 秒自动重试，不放按钮）
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (homeWait == HomeWait.Loading) "正在加载…" else "请检查网络连接",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 16.sp
+                )
+            }
         }
     }
 }
@@ -420,3 +443,6 @@ private fun MediaSection(
 
     Spacer(modifier = Modifier.height(32.dp))
 }
+
+/** 首页等待三态（与 VR 同名同义） */
+private enum class HomeWait { Loading, Done, NoNetwork }

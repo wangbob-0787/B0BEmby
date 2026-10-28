@@ -39,6 +39,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     // === 加载状态 ===
     var isLoading by mutableStateOf(false)
+
+    /** 最近一次失败的原始原因；首页三态用它区分"还在等"与"等不到了" */
+    var lastError by mutableStateOf<String?>(null)
         private set
     var errorMessage by mutableStateOf<String?>(null)
         private set
@@ -59,6 +62,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             resumeItems = cache.resume
             libraryLatestItems = cache.latest
             favoriteItems = cache.favorites
+            liveChannels = cache.live ?: emptyList()
+            liveTvView = cache.liveView
         } catch (e: Exception) {
             ErrorHandler.logError("HomeViewModel", "读取首页缓存失败", e)
         }
@@ -67,7 +72,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun saveCache() {
         try {
             if (resumeItems.isNullOrEmpty() && libraryLatestItems.isNullOrEmpty() && favoriteItems.isNullOrEmpty()) return
-            cacheFile.writeText(gson.toJson(HomeCache(resumeItems, libraryLatestItems, favoriteItems)))
+            cacheFile.writeText(
+                gson.toJson(HomeCache(resumeItems, libraryLatestItems, favoriteItems, liveChannels, liveTvView))
+            )
         } catch (e: Exception) {
             ErrorHandler.logError("HomeViewModel", "写入首页缓存失败", e)
         }
@@ -112,18 +119,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     catch (e: Exception) { emptyList() }
                 }
 
-                resumeItems = resumeDeferred.await()
-                libraryLatestItems = latestDeferred.await()
-                favoriteItems = favDeferred.await()
-                liveChannels = liveDeferred.await()
-                liveTvView = viewsDeferred.await()
+                /*
+                 * 先全部 await 到局部变量，最后一次性写状态（父亲 2026-10-29 报"首页一行一行
+                 * 蹦出来、位置老跳"）：每 await 完就写一次，等于五次独立重画，下面内容被顶五次。
+                 */
+                val resume = resumeDeferred.await()
+                val latest = latestDeferred.await()
+                val fav = favDeferred.await()
+                val live = liveDeferred.await()
+                val liveView = viewsDeferred.await()
                     .firstOrNull { it.collectionType.equals("livetv", ignoreCase = true) }
+
+                resumeItems = resume
+                libraryLatestItems = latest
+                favoriteItems = fav
+                liveChannels = live
+                liveTvView = liveView
+                lastError = null
             } catch (e: Exception) {
+                /*
+                 * 失败时**不要**把列表清成空表：空表会被首页当成"有数据"，一片空白还挡掉提示；
+                 * 留着缓存里的内容，三态那边按 isNullOrEmpty 判，才会正确显示"请检查网络连接"。
+                 */
                 if (errorMessage == null) errorMessage = e.message
-                resumeItems = emptyList()
-                libraryLatestItems = emptyList()
-                favoriteItems = emptyList()
-                liveChannels = emptyList()
+                lastError = e.message ?: "首页加载失败"
             } finally {
                 isLoading = false
                 saveCache()
@@ -164,5 +183,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 private data class HomeCache(
     val resume: List<BaseItemDto>? = null,
     val latest: List<BaseItemDto>? = null,
-    val favorites: List<BaseItemDto>? = null
+    val favorites: List<BaseItemDto>? = null,
+    /*
+     * 直播行与「我的媒体库」里的直播图块也要进缓存（父亲 2026-10-29 报"冷启动后直播行插进来，
+     * 内容再下移一格"）：它们比其余行回来得晚，缓存不带就会后插、把下面的内容顶下去。
+     */
+    val live: List<BaseItemDto>? = null,
+    val liveView: BaseItemDto? = null
 )
