@@ -129,6 +129,36 @@ fun HomeHeroCarousel(
         index = (index + 1) % list.size
     }
 
+    /*
+     * 摇杆左右 = 每次换一页（父亲 2026-10-29：往右不换、往左一下翻好几页）。
+     *
+     * 大海报不是可滚容器，摇杆的横向量原来落到滚动兜底，才会出现"一边不灵、一边连翻"。
+     * 这里直接把它注册成横向目标：一次推进只算一次换页，同方向 400ms 内去重，
+     * 推住不放也不会连翻；手指/摇杆回中后再次推动才换下一页。
+     */
+    var heroFocused by remember { mutableStateOf(false) }
+    var lastSwitchAt by remember { mutableStateOf(0L) }
+    DisposableEffect(list.size, heroFocused) {
+        // 只有大海报拿到焦点时才接管横向摇杆；焦点离开就交还给下方各行
+        if (!heroFocused) {
+            onDispose { }
+        } else {
+            com.xxxx.emby_tv.util.PixelScroll.setHorizontal { px ->
+                val now = android.os.SystemClock.uptimeMillis()
+                if (list.size > 1 && now - lastSwitchAt > 400L) {
+                    lastSwitchAt = now
+                    index = if (px > 0f) {
+                        (index + 1) % list.size
+                    } else {
+                        (index - 1 + list.size) % list.size
+                    }
+                }
+                true
+            }
+            onDispose { com.xxxx.emby_tv.util.PixelScroll.setHorizontal(null) }
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -143,7 +173,10 @@ fun HomeHeroCarousel(
                 .align(Alignment.BottomStart)
                 .fillMaxWidth(0.55f)
                 .fillMaxHeight()
-                .onFocusChanged { onFocusChanged(it.isFocused) }
+                .onFocusChanged {
+                    onFocusChanged(it.isFocused)
+                    heroFocused = it.isFocused
+                }
                 .focusRequester(heroFocus)
                 // 登记进坐标表：光标指到大片头就移焦点，扣扳机直接续播
                 //（原先只有焦点、没有点击处理，指针扫上去也点不动）
