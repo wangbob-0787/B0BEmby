@@ -31,13 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import com.xxxx.emby_tv.util.hoverToFocus
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.navigation.NavController
-import com.xxxx.emby_tv.ui.components.MenuDialog
 import com.xxxx.emby_tv.ui.components.TopStatusBar
 import com.xxxx.emby_tv.ui.theme.ThemeColorManager
 import com.xxxx.emby_tv.ui.viewmodel.LoginViewModel
@@ -120,7 +114,6 @@ fun LoginScreen(
         }
     }
 
-    var showMenu by remember { mutableStateOf(false) }
     val failText = stringResource(id = R.string.login_failed)
 
     // 检查更新
@@ -271,7 +264,6 @@ fun LoginScreen(
                         value = host,
                         label = stringResource(R.string.host),
                         onClick = { showHostDialog = true },
-                        showMenu = { showMenu = true },
                         modifier = Modifier.weight(1f),
                         focusRequester = hostFocusRequester
                     )
@@ -279,7 +271,6 @@ fun LoginScreen(
                         value = port,
                         label = stringResource(R.string.port),
                         onClick = { showPortDialog = true },
-                        showMenu = { showMenu = true },
                         modifier = Modifier.width(80.dp)
                     )
                 }
@@ -290,7 +281,6 @@ fun LoginScreen(
                 TvInputButton(
                     value = username,
                     label = stringResource(R.string.username),
-                    showMenu = { showMenu = true },
                     onClick = { showUsernameDialog = true }
                 )
 
@@ -301,7 +291,6 @@ fun LoginScreen(
                     value = password,
                     label = stringResource(R.string.password),
                     visualTransformation = PasswordVisualTransformation(),
-                    showMenu = { showMenu = true },
                     onClick = { showPasswordDialog = true }
                 )
 
@@ -316,24 +305,7 @@ fun LoginScreen(
                         //兼容移动端点击  TODO：移除
                         //  .clickable(true, onClick = { onLoginClick() })
                         .focusRequester(loginButtonFocusRequester)
-                        .hoverToFocus(loginButtonFocusRequester)
-                        .onKeyEvent { keyEvent ->
-                            if (keyEvent.type == KeyEventType.KeyDown) {
-                                when (keyEvent.key) {
-                                    Key.Menu -> {
-                                        showMenu = true
-                                        true
-                                    }
-
-                                    Key.Bookmark -> {
-                                        showMenu = true
-                                        true
-                                    }
-
-                                    else -> false
-                                }
-                            } else false
-                        },
+                        .hoverToFocus(loginButtonFocusRequester),
                     // 聚焦底与其它控件统一成绿 24%（VR 登录页同款），文字保持白色
                     colors = ButtonDefaults.colors(
                         focusedContainerColor = Color(0x3D2FD57C),
@@ -376,20 +348,6 @@ fun LoginScreen(
 
             }
         }
-    }
-
-    if (showMenu) {
-        MenuDialog(
-            onDismiss = { showMenu = false },
-            onLogout = {
-                loginViewModel.logout()
-                showMenu = false
-            },
-            onThemeChange = { themeColor ->
-                mainViewModel.saveThemeId(themeColor.id)
-            },
-            isShowLogout = false
-        )
     }
 
     // Dialogs
@@ -449,7 +407,6 @@ fun LoginScreen(
 fun TvInputButton(
     value: String,
     label: String,
-    showMenu: () -> Unit,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -482,18 +439,6 @@ fun TvInputButton(
             .height(64.dp)
             .focusRequester(fieldFocus)
             .hoverToFocus(fieldFocus)
-            .onKeyEvent { keyEvent ->
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    when (keyEvent.key) {
-                        Key.Menu -> {
-                            showMenu()
-                            true
-                        }
-
-                        else -> false
-                    }
-                } else false
-            }
     ) {
         Column(
             modifier = Modifier

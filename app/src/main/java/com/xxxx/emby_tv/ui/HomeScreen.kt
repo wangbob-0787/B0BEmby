@@ -8,10 +8,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -31,7 +27,6 @@ import com.xxxx.emby_tv.ui.components.BuildItem
 import com.xxxx.emby_tv.ui.components.HomeHeroCarousel
 import com.xxxx.emby_tv.ui.components.LiveTvRow
 import com.xxxx.emby_tv.ui.components.Loading
-import com.xxxx.emby_tv.ui.components.MenuDialog
 import com.xxxx.emby_tv.ui.components.WaitHint
 import com.xxxx.emby_tv.ui.components.NoData
 import com.xxxx.emby_tv.ui.components.TopStatusBar
@@ -52,7 +47,6 @@ fun HomeScreen(
     onSwitchAccount: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    var showMenu by remember { mutableStateOf(false) }
 
     // 获取 serverUrl
     val repository = remember { EmbyRepository.getInstance(context) }
@@ -97,27 +91,7 @@ fun HomeScreen(
         mainViewModel.checkUpdate()
     }
 
-    // 菜单对话框
-    if (showMenu) {
-        MenuDialog(
-            onDismiss = { showMenu = false },
-            onLogout = {
-                mainViewModel.logout()
-                showMenu = false
-            },
-            onThemeChange = { themeColor ->
-                mainViewModel.saveThemeId(themeColor.id)
-            },
-            onSwitchAccount = {
-                showMenu = false
-                onSwitchAccount()
-            },
-            onSearch = {
-                showMenu = false
-                navController.navigate("search")
-            }
-        )
-    }
+    // 菜单已取消（父亲 2026-10-28）：只保留账号管理，点右上角头像进账户页增删账号。
 
     fun goPlay(item: BaseItemDto) {
         val id = item.id ?: ""
@@ -207,17 +181,7 @@ fun HomeScreen(
         }
     }
 
-    // 顶栏菜单按钮取消后，菜单改由手柄 START / 遥控器菜单键打开（页面级接住，任何焦点位置都行）
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .onKeyEvent { keyEvent ->
-                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Menu) {
-                    showMenu = true
-                    true
-                } else false
-            }
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // 顶部状态栏
         TopStatusBar(
             currentVersion = mainViewModel.currentVersion,
@@ -287,7 +251,6 @@ fun HomeScreen(
                                 navController.navigate("library/$id?libraryName=$title&type=$type")
                             }
                         },
-                        onMenuPressed = { showMenu = true },
                         // 「电视直播」图块是网络返回后才插到第一位；LazyRow 默认保持"原第一张"的位置，
                         // 新图块会被挤到屏幕左边外（父亲 2026-10-02 报"图标跑到左侧外面"）→ 出现后滚回行首
                         scrollToStartSignal = liveTvView?.id
@@ -317,7 +280,6 @@ fun HomeScreen(
                             isContinueWatching = true,
                             serverUrl = serverUrl,
                             onItemSelected = { item -> goPlay(item) },
-                            onMenuPressed = { showMenu = true },
                             focusTarget = restoreId
                         )
                     }
@@ -332,7 +294,6 @@ fun HomeScreen(
                             isShowImg17 = true,
                             serverUrl = serverUrl,
                             onItemSelected = { item -> openDetail(item) },
-                            onMenuPressed = { showMenu = true },
                             focusTarget = restoreId
                         )
                     }
@@ -349,7 +310,6 @@ fun HomeScreen(
                         items = library.latestItems ?: emptyList(),
                         serverUrl = serverUrl,
                         onItemSelected = { item -> openDetail(item) },
-                        onMenuPressed = { showMenu = true },
                         focusTarget = restoreId
                     )
                 }
@@ -378,7 +338,6 @@ private fun MediaSection(
     isContinueWatching: Boolean = false,
     serverUrl: String,
     onItemSelected: (BaseItemDto) -> Unit,
-    onMenuPressed: () -> Unit,
     // 从详情页返回时要恢复焦点到的那一条（父亲 2026-10-02）
     focusTarget: String? = null,
     // 变成非空时把这一行滚回行首（用于"首项是异步插入"的场景）
@@ -411,7 +370,9 @@ private fun MediaSection(
             // 层级按 VR 收成三档：大片头剧名 28 > 行标题 18 > 卡片标题 16（父亲 2026-10-28）
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 24.dp, top = 12.dp, bottom = 8.dp)
+            modifier = Modifier
+                .padding(start = 24.dp, top = 12.dp, bottom = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
         )
 
         if (items.isEmpty()) {
@@ -449,7 +410,6 @@ private fun MediaSection(
                         isMyLibrary = isMyLibrary,
                         serverUrl = serverUrl,
                         onItemClick = { onItemSelected(item) },
-                        onMenuClick = { onMenuPressed() },
                         autoFocus = item.id != null && item.id == focusTarget,
                         rememberFocus = true,
                     )

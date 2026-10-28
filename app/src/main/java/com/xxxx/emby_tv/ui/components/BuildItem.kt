@@ -43,11 +43,6 @@ import com.xxxx.emby_tv.util.hoverToFocus
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Icon
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 
 import com.xxxx.emby_tv.R
@@ -68,7 +63,6 @@ fun BuildItem(
     accountName: String? = null,
     isPlaying: Boolean = false,
     onItemClick: () -> Unit,
-    onMenuClick: (() -> Unit)? = null,
     // 返回上一页时把焦点送回这一张（父亲 2026-10-02）；由宿主页面按 FocusMemory 里的 id 置 true
     autoFocus: Boolean = false,
     // 是否把"最后聚焦的条目"记进 FocusMemory。只给首页的行开：
@@ -158,22 +152,6 @@ fun BuildItem(
             .focusProperties {
                 if (upFocus != null) up = upFocus
                 if (downFocus != null) down = downFocus
-            }
-            .onKeyEvent { keyEvent ->
-                if (onMenuClick != null && keyEvent.type == KeyEventType.KeyDown) {
-                    when (keyEvent.key) {
-                        Key.Menu -> {
-                            onMenuClick()
-                            true
-                        }
-                        Key.Bookmark -> {
-                            onMenuClick()
-                            true
-                        }
-
-                        else -> false
-                    }
-                } else false
             }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
