@@ -222,12 +222,19 @@ class MainActivity : ComponentActivity() {
                 if (com.xxxx.emby_tv.util.InputBridge.playerScreenActive) {
                     // 播放页也可能有可滚区域（一级/二级菜单、字幕菜单、演职人员横排）：
                     // 先按像素滚它，滚不动才把「往下」当成唤出控制条。
-                    val pxPerNotchP = 56f * resources.displayMetrics.density
-                    val notchesP = 0.16f
+                    /*
+                     * 每帧推进量按"速度"算，不能按位移乘系数：位移大时那样会一帧滚几千像素，
+                     * 60 集的菜单一下就窜到最后（父亲 2026-10-29 报）。
+                     * 这里与页面滚动同一个口径：速率（格/秒）× 16ms，封顶 1.5 格。
+                     */
+                    val pxPerNotch = 56f * resources.displayMetrics.density
+                    val perFrame = (holdRate * 16f / 1000f).coerceIn(0.02f, 1.5f)
                     val scrolled = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
-                        com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notchesP * pxPerNotchP * 4f)
+                        val sign = if (dy > 0f) -1f else 1f
+                        com.xxxx.emby_tv.util.PixelScroll.verticalBy(sign * perFrame * pxPerNotch)
                     } else {
-                        com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notchesP * pxPerNotchP * 4f)
+                        val sign = if (dx > 0f) 1f else -1f
+                        com.xxxx.emby_tv.util.PixelScroll.horizontalBy(sign * perFrame * pxPerNotch)
                     }
                     if (!scrolled) {
                         val nowKey = SystemClock.uptimeMillis()
