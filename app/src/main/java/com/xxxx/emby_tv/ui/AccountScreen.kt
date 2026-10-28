@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui
 
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -113,7 +114,10 @@ fun AccountScreen(
                         )
                     }
                 } else {
+                    val accountListState = rememberLazyListState()
+                    com.xxxx.emby_tv.util.RegisterVerticalScroll(accountListState)
                     LazyColumn(
+                        state = accountListState,
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)

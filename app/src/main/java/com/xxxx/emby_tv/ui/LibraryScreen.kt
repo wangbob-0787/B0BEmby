@@ -53,6 +53,7 @@ fun LibraryScreen(
     val context = LocalContext.current
     val firstItemFocusRequester = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
+    com.xxxx.emby_tv.util.RegisterVerticalScroll(gridState)
     var isInitialScrollDone by rememberSaveable { mutableStateOf(false) }
     var returnFocusIndex by rememberSaveable { mutableIntStateOf(-1) }
     var shouldFocusOnReturn by rememberSaveable { mutableStateOf(false) }
@@ -349,6 +350,7 @@ private fun SortDialog(
     onDismiss: () -> Unit
 ) {
     val listState = rememberLazyListState()
+    com.xxxx.emby_tv.util.RegisterVerticalScroll(listState)
     val focusRequesters = remember { LibraryViewModel.SORT_OPTIONS.map { FocusRequester() } }
 
     Dialog(

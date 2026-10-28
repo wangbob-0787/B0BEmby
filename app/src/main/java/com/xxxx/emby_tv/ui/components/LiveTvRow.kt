@@ -82,6 +82,7 @@ fun LiveTvRow(
 
         LazyRow(
             state = rowState,
+            modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(rowState),
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {

@@ -225,31 +225,41 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * 滚动惯性：摇杆松手后按残速继续发方向键，间隔逐渐拉长、约 0.8 秒停住。
-     * 与「按光点速度决定步频」配套，合起来就是先加速、松手再减速的手感。
+     * 松手惯性：照 VR 的物理，按松手瞬间的速度线性减速，1 秒内停（低于 0.8 格/秒即止）。
+     * 原来那版发 8 次方向键、间隔逐次拉长，既不是像素滚、也停得太急。
      */
-    private fun startScrollInertia() {
-        val speed = lastCursorSpeedPxPerSec
-        if (speed < 120f) return
-        var remaining = 8
-        var stepMs = 45L
-        val runner = object : Runnable {
-            override fun run() {
-                if (remaining <= 0) return
-                remaining--
-                if (dragMoved) return                      // 用户又拨动了：交给实时逻辑
-                doScroll(
-                    if (lastScrollAxis == 1) 0f else (if (lastScrollSign > 0) -1f else 1f),
-                    if (lastScrollAxis == 1) (if (lastScrollSign > 0) -1f else 1f) else 0f,
-                    0.16f
-                )
-                stepMs = (stepMs * 1.25).toLong()
-                scrollHandler.postDelayed(this, stepMs)
+    private var inertiaRate = 0f
+    private var inertiaStartAt = 0L
+    private var inertiaDirX = 0f
+    private var inertiaDirY = 0f
+
+    private val inertiaTick = object : Runnable {
+        override fun run() {
+            if (inertiaRate <= 0f) return
+            val elapsed = SystemClock.uptimeMillis() - inertiaStartAt
+            val rate = inertiaRate * (1f - elapsed.toFloat() / 1000f)
+            if (rate < 0.8f || elapsed > 1500L) {
+                inertiaRate = 0f
+                return
             }
+            doScroll(inertiaDirX, inertiaDirY, (rate * 16f / 1000f).coerceIn(0.02f, 1.5f))
+            holdHandler.postDelayed(this, 16L)
         }
-        scrollHandler.postDelayed(runner, stepMs)
     }
 
+    private fun startScrollInertia() {
+        val rate = holdRate
+        if (rate < 1f) return
+        val dx = holdLastX - holdAnchorX
+        val dy = holdLastY - holdAnchorY
+        val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
+        inertiaDirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
+        inertiaDirY = if (vertical) (if (dy > 0f) 1f else -1f) else 0f
+        inertiaRate = rate
+        inertiaStartAt = SystemClock.uptimeMillis()
+        holdHandler.removeCallbacks(inertiaTick)
+        holdHandler.postDelayed(inertiaTick, 16L)
+    }
 
     /**
      * 摇杆当鼠标滚轮用（照 VR 的 PanelLayer）：向落点派发一次滚轮事件，

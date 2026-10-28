@@ -209,10 +209,12 @@ fun MediaDetailScreen(
             )
 
             // 3. Main Scrollable Content
+            val detailScroll = rememberScrollState()
+            com.xxxx.emby_tv.util.RegisterVerticalScroll(detailScroll)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(detailScroll)
                     // 外层只留上下；左右不留 —— 行容器左右贴屏幕边，
                     // 内容靠行内 contentPadding 缩进（父亲 2026-10-02 定的结构）
                     .padding(vertical = 32.dp)
@@ -406,7 +408,10 @@ fun MediaDetailScreen(
                     val seasonEpisodes =
                         episodes?.filter { it.seasonName == currentSeasonName } ?: emptyList()
 
+                    val seasonRowState = rememberLazyListState()
                     LazyRow(
+                        state = seasonRowState,
+                        modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(seasonRowState),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         // 上下留出焦点放大（1.03x + 白描边）需要的余量，别被容器裁掉
                         contentPadding = PaddingValues(
@@ -458,7 +463,10 @@ fun MediaDetailScreen(
                         // 集列表：官方形态 —— 横向滚动的 16:9 集卡
                         // （缩略图 + 第一行剧名 + 第二行 "S1:E1 集名"，由 BuildItem(isShowImg17) 出）
                         // 季的切换仍是我们的胶囊行（父亲 2026-10-02 定：季用自己的方式，集用官方方式）
+                        val episodeRowState = rememberLazyListState()
                         LazyRow(
+                            state = episodeRowState,
+                            modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(episodeRowState),
                             contentPadding = PaddingValues(
                                 start = 40.dp, end = 40.dp, top = 16.dp, bottom = 26.dp
                             ),
@@ -788,7 +796,10 @@ private fun PersonRow(
 ) {
     val maxAspectRatio = 0.66f
     val imgWidth = (160f * maxAspectRatio).dp
+    val castRowState = rememberLazyListState()
     LazyRow(
+        state = castRowState,
+        modifier = Modifier.com.xxxx.emby_tv.util.pixelScrollRow(castRowState),
         contentPadding = PaddingValues(start = 40.dp, end = 40.dp, top = 16.dp, bottom = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(22.dp),
     ) {

@@ -97,6 +97,7 @@ fun SearchScreen(
     // Focus
     val searchInputFocusRequester = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
+    com.xxxx.emby_tv.util.RegisterVerticalScroll(gridState)
 
 
     // Start Local Server for Search

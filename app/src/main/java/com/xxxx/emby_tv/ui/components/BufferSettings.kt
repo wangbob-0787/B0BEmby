@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,7 +52,10 @@ fun BufferSettingsTab(
 ) {
 
 
+    val bufferListState = rememberLazyListState()
+    com.xxxx.emby_tv.util.RegisterVerticalScroll(bufferListState)
     LazyColumn(
+        state = bufferListState,
         modifier = Modifier
             .padding(horizontal = 50.dp)
             .fillMaxWidth(),
