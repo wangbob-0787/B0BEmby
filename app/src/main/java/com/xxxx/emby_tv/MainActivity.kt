@@ -187,7 +187,11 @@ class MainActivity : ComponentActivity() {
                     1 -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
                     else -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
                 }
-                doScroll(if (lastScrollAxis == 1) 0f else (if (lastScrollSign > 0) -1f else 1f), if (lastScrollAxis == 1) (if (lastScrollSign > 0) -1f else 1f) else 0f)
+                doScroll(
+                    if (lastScrollAxis == 1) 0f else (if (lastScrollSign > 0) -1f else 1f),
+                    if (lastScrollAxis == 1) (if (lastScrollSign > 0) -1f else 1f) else 0f,
+                    0.16f
+                )
                 stepMs = (stepMs * 1.25).toLong()
                 scrollHandler.postDelayed(this, stepMs)
             }
@@ -210,10 +214,19 @@ class MainActivity : ComponentActivity() {
      * 一个滚动格：先派发滚轮给光点底下的容器（焦点不动）；没人接才退化发方向键。
      * 落点用摇杆推下去的起点，不用光点当前可能已顶到边缘的位置（照 VR）。
      */
-    private fun doScroll(dx: Float, dy: Float) {
+    private fun doScroll(dx: Float, dy: Float, notches: Float) {
         val x = if (pressX > 0f) pressX else cursorX
         val y = if (pressY > 0f) pressY else cursorY
-        val handled = fireWheel(dx, dy, x, y)
+        // 没有光点（投影 + 遥控器/手柄）时落到屏幕中心：列表几乎都铺在页面中间，
+        // 否则落在 (0,0) 上没人接，永远退化成焦点翻牌（父亲 2026-10-29 报的"按钮/格子感"）
+        val vw = window.decorView.width
+        val vh = window.decorView.height
+        val px = if (x > 0f && y > 0f) x else vw / 2f
+        val py = if (x > 0f && y > 0f) y else vh / 2f
+        // 滚轮量竖向取负、横向取正（照 VR：向下推 = 列表往下走）
+        val h = if (dx != 0f) dx * notches else 0f
+        val v = if (dy != 0f) -dy * notches else 0f
+        val handled = fireWheel(h, v, px, py)
         if (handled) return
         DiagLog.w(this, "input", "滚轮没被接住 → 退化为方向键")
         when {
@@ -247,6 +260,25 @@ class MainActivity : ComponentActivity() {
         }.getOrDefault(false)
         ev.recycle()
         return handled
+    }
+
+    /**
+     * 播放页的摇杆语义：一次一格方向键（下唤控制条 / 上音量 / 左右快退快进）。
+     * 节拍 90ms，与遥控器连按的节奏一致。
+     */
+    private var lastStickKeyAt = 0L
+
+    private fun stickAsKeys(dx: Float, dy: Float) {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastStickKeyAt < 90L) return
+        lastStickKeyAt = now
+        val code = when {
+            dx > 0f -> KeyEvent.KEYCODE_DPAD_RIGHT
+            dx < 0f -> KeyEvent.KEYCODE_DPAD_LEFT
+            dy > 0f -> KeyEvent.KEYCODE_DPAD_DOWN
+            else -> KeyEvent.KEYCODE_DPAD_UP
+        }
+        fireScroll(code)
     }
 
     private fun fireScroll(keyCode: Int) {
@@ -398,10 +430,13 @@ class MainActivity : ComponentActivity() {
             /*
              * 摇杆走滚动，不发方向键（父亲 2026-10-29 报"TV 滚动没 VR 丝滑"）。
              * 方向键由焦点系统消费：一步一格卡、跳完列表再把那张卡拉进视野，天生一格一格；
-             * 滚轮是容器自己按像素滚、焦点不动 —— 和光点那条路同一套实现，也有加减速。
+             * 滚轮是容器自己按像素滚、焦点不动 —— 和光点那条路同一套实现，节拍与加减速、
+             * 松手滑行都由 InputBridge 的逐帧引擎给（照 VR 版物理）。
+             * 播放页例外：那里的摇杆本来就是方向语义（下唤控制条、上音量、左右快退快进）。
              */
-            InputBridge.scrollDispatcher = { dx, dy -> doScroll(dx, dy) }
-            InputBridge.onRelease = { startScrollInertia() }
+            InputBridge.scrollDispatcher = { dx, dy, notches ->
+                if (InputBridge.playerScreenActive) stickAsKeys(dx, dy) else doScroll(dx, dy, notches)
+            }
             InputBridge.onStick(ev)
         }
         return super.dispatchGenericMotionEvent(ev)

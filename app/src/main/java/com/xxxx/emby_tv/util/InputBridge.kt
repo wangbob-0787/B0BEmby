@@ -27,43 +27,51 @@ import androidx.compose.ui.input.pointer.pointerInput
  */
 object InputBridge {
 
-    /** 摇杆死区：PS/Xbox 手柄轻推的抖动不该当成方向键 */
-    // 死区照 VR 版（0.35）：太大导致摇杆轻拨没反应，太小会漂移误触
-    private const val AXIS_DEAD_ZONE = 0.35f
+    /*
+     * 摇杆滚动的物理照 VR 版（panel/PanelLayer.kt 的 VR 摇杆段，父亲 2026-10-05 定稿）：
+     *   过死区才滚；速度 = 3~12 格/秒，按 1.3 次方曲线过渡（轻推好控、推顶够快）；
+     *   每渲染帧推进一次，位移按这一帧实际时长算；
+     *   松手按残速线性减速，1 秒内停住，不急停。
+     */
+    private const val AXIS_DEAD_ZONE = 0.55f
+    private const val RATE_MIN = 3f
+    private const val RATE_MAX = 12f
+    private const val RATE_CURVE = 1.3
 
-    /** 摇杆按住后，第一次重复之前的等待（毫秒）。短一点手感才跟手 */
-    private const val AXIS_FIRST_DELAY_MS = 200L
+    /** 松手后的滑行总时长与停下的阈值（格/秒） */
+    private const val INERTIA_MS = 1000L
+    private const val INERTIA_MIN_RATE = 0.8f
 
-    /** 按住期间的基础重复间隔（毫秒） */
-    private const val AXIS_REPEAT_MS = 45L
-
-    /** 按住超过这个时长后加快到 [AXIS_FAST_MS]，长列表才滚得动 */
-    private const val AXIS_ACCEL_AFTER_MS = 500L
-    private const val AXIS_FAST_MS = 25L
-
-    /** 连按保险：一直推着不松最多走这么久，防止手柄丢"回中"事件导致焦点一路飞走 */
-    private const val AXIS_RUNAWAY_MS = 8000L
-
-    private var axisKey = 0
-    private var axisKeyAt = 0L
-    private var axisHeldFrom = 0L
-    private var axisNextAt = 0L
-    private val axisTimer = android.os.Handler(android.os.Looper.getMainLooper())
+    /** 兜底：抬起事件万一丢失，推住最多滚这么久 */
+    private const val HOLD_SAFETY_MS = 15_000L
 
     /**
-     * 主线程把"一次滚动格"交给 Activity（Activity 注入；为空则不派发）。
+     * 主线程把"这一帧该滚多少"交给 Activity（Activity 注入；为空则不派发）。
      *
-     * 参数是方向与幅度：(dx, dy) 各取 -1.5..1.5，正 = 右/下。
-     * Activity 侧先用滚轮派发给光点底下的容器（列表按像素滚、焦点不动），
-     * 没人接才退化成方向键 —— 摇杆与光点两条路因此走同一套滚动实现。
+     * @param dx,dy 方向，各取 -1 / 0 / 1
+     * @param notches 这一帧的位移量（格），等于速度 × 帧时长；Activity 原样写进滚轮轴值
      */
-    var scrollDispatcher: ((Float, Float) -> Unit)? = null
+    var scrollDispatcher: ((Float, Float, Float) -> Unit)? = null
 
-    /** 摇杆回中时回调（Activity 用来接滚动惯性） */
-    var onRelease: (() -> Unit)? = null
+    /**
+     * 播放页标记（PlayerScreen 进出时切换）。
+     *
+     * 播放页的摇杆语义是"下=唤控制条、上=音量、左右=快退快进"，不是滚列表，
+     * 所以这里走方向键；其余页面才走滚轮。父亲 2026-10-29 报"往下要扫一下才出控制条"，
+     * 就是播放页也被当成滚列表、键被滚轮吃掉的表现。
+     */
+    @Volatile
+    var playerScreenActive = false
 
-    private var axisX = 0f
-    private var axisY = 0f
+    private val choreographer = android.view.Choreographer.getInstance()
+    private var frameScheduled = false
+    private var lastFrameAt = 0L
+    private var pushRate = 0f
+    private var dirX = 0f
+    private var dirY = 0f
+    private var holdFrom = 0L
+    private var inertiaRate = 0f
+    private var inertiaStartAt = 0L
 
     /**
      * 手柄按键 → 遥控器语义。
@@ -115,106 +123,101 @@ object InputBridge {
     }
 
     /**
-     * 摇杆轴 → 方向键（定时驱动，2026-10-29 重做）。
+     * 摇杆 → 滚动（照 VR 版物理，2026-10-29 重做两次的最终形态）。
      *
-     * 旧写法"收到运动事件才发键"，在两个前提上都不成立：
-     *  1. 手柄只会在数值变化时发事件 —— 摇杆推到某个位置停住，事件就断了，于是按住不动；
-     *  2. 事件频率取决于设备 —— 有的 60Hz、有的只在变化时来一次，重复节奏完全不可控。
-     * 父亲的原话是"有时候滚得动，有时候滚不动，按着动都不动"。
-     * 现在改成：事件只用来确定"往哪个方向推着"，重复由主线程定时器发，推着就一直走，
-     * 回中（轴值回到死区内）才停 —— 这样节奏稳定，按住也一定在动。
+     * 事件只用来更新"往哪个方向推、推多深"，推进由每渲染帧的 [frameTick] 负责：
+     * 推住不动也照常滚（旧写法"收到事件才补一格"在推住时等于静止），
+     * 回中则进入惯性滑行。父亲的原话是"有时候滚得动有时候滚不动、按着动都不动、
+     * 没有 VR 版那么丝滑"。
      */
     fun onStick(event: MotionEvent) {
-        axisX = event.getAxisValue(MotionEvent.AXIS_X)
-            .takeIf { kotlin.math.abs(it) > 0.01f } ?: event.getAxisValue(MotionEvent.AXIS_HAT_X)
-        axisY = event.getAxisValue(MotionEvent.AXIS_Y)
-            .takeIf { kotlin.math.abs(it) > 0.01f } ?: event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-        val key = directionOf(event)
+        val ax = axisOf(event, MotionEvent.AXIS_X, MotionEvent.AXIS_HAT_X)
+        val ay = axisOf(event, MotionEvent.AXIS_Y, MotionEvent.AXIS_HAT_Y)
+        val mag = kotlin.math.max(kotlin.math.abs(ax), kotlin.math.abs(ay))
         val now = SystemClock.uptimeMillis()
-        if (key == 0) {
-            val was = axisKey != 0
-            stopStick()
-            if (was) onRelease?.invoke()
+        if (mag < AXIS_DEAD_ZONE) {
+            if (pushRate > 0f) {
+                // 回中 = 松手：按松手瞬间的速度进入惯性，1 秒线性减速到停
+                inertiaRate = pushRate
+                inertiaStartAt = now
+                pushRate = 0f
+                scheduleFrame()
+            }
             return
         }
-        if (key != axisKey) {
-            axisKey = key
-            axisKeyAt = now
-            axisHeldFrom = now
-            emit(now)                 // 换方向：立刻走一格，手感才跟手
-            schedule(AXIS_FIRST_DELAY_MS)
-        } else if (axisKeyAt == 0L) {
-            axisKeyAt = now
-            axisHeldFrom = now
-            emit(now)
-            schedule(AXIS_FIRST_DELAY_MS)
-        }
+        // 斜推只取更轴的一向，免得两轴一起乱滚
+        val horizontal = kotlin.math.abs(ax) > kotlin.math.abs(ay)
+        dirX = if (horizontal) (if (ax > 0f) 1f else -1f) else 0f
+        dirY = if (horizontal) 0f else (if (ay > 0f) 1f else -1f)
+        val t = ((mag - AXIS_DEAD_ZONE) / (1f - AXIS_DEAD_ZONE)).coerceIn(0f, 1f)
+        val curved = Math.pow(t.toDouble(), RATE_CURVE.toDouble()).toFloat()
+        pushRate = RATE_MIN + (RATE_MAX - RATE_MIN) * curved
+        holdFrom = now
+        scheduleFrame()
     }
 
-    /** 摇杆回中：停掉重复 */
+    /** 停下并清掉惯性（退出播放页、界面切换时调用） */
     fun stopStick() {
-        axisKey = 0
-        axisKeyAt = 0L
-        axisHeldFrom = 0L
-        axisTimer.removeCallbacksAndMessages(null)
+        pushRate = 0f
+        inertiaRate = 0f
+        dirX = 0f
+        dirY = 0f
     }
 
-    private fun directionOf(event: MotionEvent): Int {
-        val ax = event.getAxisValue(MotionEvent.AXIS_X)
-        val ay = event.getAxisValue(MotionEvent.AXIS_Y)
-        val hx = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-        val hy = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-        val h = when {
-            hx > 0.5f || ax > AXIS_DEAD_ZONE -> KeyEvent.KEYCODE_DPAD_RIGHT
-            hx < -0.5f || ax < -AXIS_DEAD_ZONE -> KeyEvent.KEYCODE_DPAD_LEFT
-            else -> 0
-        }
-        val v = when {
-            hy > 0.5f || ay > AXIS_DEAD_ZONE -> KeyEvent.KEYCODE_DPAD_DOWN
-            hy < -0.5f || ay < -AXIS_DEAD_ZONE -> KeyEvent.KEYCODE_DPAD_UP
-            else -> 0
-        }
-        // 斜着推先走横向：电视界面以横向排布为主
-        return if (h != 0) h else v
+    private fun axisOf(event: MotionEvent, analog: Int, hat: Int): Float {
+        val a = event.getAxisValue(analog)
+        return if (kotlin.math.abs(a) > 0.01f) a else event.getAxisValue(hat)
+    }
+
+    private fun scheduleFrame() {
+        if (frameScheduled) return
+        frameScheduled = true
+        choreographer.postFrameCallback(frameTick)
     }
 
     /**
-     * 走一格滚动。幅度按推杆深浅算（0.5..1.5 倍），推得深就走得快，
-     * 这样同一个重复节拍下也有快慢层次，不像开关一样只有"一格/空格"。
+     * 每帧一次：① 惯性阶段按时间线性减速；② 推住阶段按当前速度档滚。
+     * 帧时长钳在 1..40ms，卡顿时不会一帧挪一大段。
      */
-    private fun emit(now: Long) {
-        val dx: Float
-        val dy: Float
-        when (axisKey) {
-            KeyEvent.KEYCODE_DPAD_RIGHT -> { dx = 1f; dy = 0f }
-            KeyEvent.KEYCODE_DPAD_LEFT -> { dx = -1f; dy = 0f }
-            KeyEvent.KEYCODE_DPAD_DOWN -> { dx = 0f; dy = 1f }
-            else -> { dx = 0f; dy = -1f }
-        }
-        val push = if (dx != 0f) kotlin.math.abs(axisX) else kotlin.math.abs(axisY)
-        val scale = (0.5f + push.coerceIn(0f, 1f)).coerceIn(0.5f, 1.5f)
-        scrollDispatcher?.invoke(dx * scale, dy * scale)
-    }
-
-    private fun schedule(delay: Long) {
-        axisNextAt = SystemClock.uptimeMillis() + delay
-        axisTimer.removeCallbacksAndMessages(null)
-        axisTimer.postDelayed(tick, delay)
-    }
-
-    private val tick = object : Runnable {
-        override fun run() {
-            val key = axisKey
-            if (key == 0) return
+    private val frameTick = object : android.view.Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            frameScheduled = false
+            val dtMs = if (lastFrameAt > 0L) {
+                ((frameTimeNanos - lastFrameAt) / 1_000_000L).coerceIn(1L, 40L)
+            } else {
+                16L
+            }
+            lastFrameAt = frameTimeNanos
             val now = SystemClock.uptimeMillis()
-            if (now - axisHeldFrom > AXIS_RUNAWAY_MS) {
-                stopStick()
+
+            if (inertiaRate > 0f) {
+                val elapsed = (now - inertiaStartAt).coerceAtLeast(0L)
+                val rate = inertiaRate * (1f - elapsed.toFloat() / INERTIA_MS.toFloat())
+                if (rate < INERTIA_MIN_RATE) {
+                    inertiaRate = 0f
+                    lastFrameAt = 0L
+                    return
+                }
+                dispatch(rate * dtMs / 1000f)
+                scheduleFrame()
                 return
             }
-            emit(now)
-            val held = now - axisHeldFrom
-            schedule(if (held > AXIS_ACCEL_AFTER_MS) AXIS_FAST_MS else AXIS_REPEAT_MS)
+
+            if (pushRate <= 0f) {
+                lastFrameAt = 0L
+                return
+            }
+            if (now - holdFrom > HOLD_SAFETY_MS) {
+                pushRate = 0f
+                return
+            }
+            dispatch(pushRate * dtMs / 1000f)
+            scheduleFrame()
         }
+    }
+
+    private fun dispatch(notches: Float) {
+        scrollDispatcher?.invoke(dirX, dirY, notches.coerceIn(0.02f, 1.5f))
     }
 
     /** 这次运动事件里有没有摇杆/十字键数据（纯鼠标移动事件不必喂给方向键映射） */

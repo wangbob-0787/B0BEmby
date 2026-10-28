@@ -300,6 +300,15 @@ fun PlayerScreen(
 
     // 字幕时间偏移 - 仅当前播放会话生效
     var subtitleTimeOffsetMs by remember { mutableLongStateOf(0L) }
+
+    /*
+     * 播放页标记：让摇杆在播放页保持"方向语义"（下唤控制条、上音量、左右快退快进），
+     * 不被滚轮通道吃掉（父亲 2026-10-29 报"往下要扫一下控制条才出来"）。
+     */
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.xxxx.emby_tv.util.InputBridge.playerScreenActive = true
+        onDispose { com.xxxx.emby_tv.util.InputBridge.playerScreenActive = false }
+    }
     val subtitleOffsetController = remember { SubtitleOffsetController() }
     val overlaySubtitleView = remember { mutableStateOf<SubtitleView?>(null) }
     // 独立弹幕层:自解析 ASS 的 \move 定位,逐帧绘制(不依赖 Media3 的 SSA 解析,后者不支持 \move)
