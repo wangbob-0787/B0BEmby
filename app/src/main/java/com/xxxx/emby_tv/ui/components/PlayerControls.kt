@@ -81,7 +81,6 @@ import com.xxxx.emby_tv.data.model.MediaStreamDto
 import com.xxxx.emby_tv.data.model.PersonInfo
 import com.xxxx.emby_tv.ui.PersonCard
 import com.xxxx.emby_tv.util.hoverToFocus
-import com.xxxx.emby_tv.util.cursorInRegion
 import com.xxxx.emby_tv.util.pointerRegion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -683,12 +682,6 @@ fun SheetShell(
             .padding(horizontal = 14.dp, vertical = 8.dp)
             // 光点不在面板上时，摇杆上下不驱动这块面板（父亲 2026-10-28：光点指哪控哪）
             .pointerRegion(sheetRegionKey)
-            .onPreviewKeyEvent { e ->
-                (e.key == androidx.compose.ui.input.key.Key.DirectionUp ||
-                    e.key == androidx.compose.ui.input.key.Key.DirectionDown) &&
-                    e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
-                    !cursorInRegion(sheetRegionKey)
-            }
             .focusGroup()
     ) {
         if (title.isNotEmpty()) {
@@ -1020,17 +1013,11 @@ fun CastListSheet(
     firstFocus: FocusRequester,
 ) {
     // 无框:标题 + 一排大头像卡片;卡片可以超出屏幕边,左右键横向滚动(照官方排版)
-    // 光点不在这排照片上时，摇杆左右不驱动它（父亲 2026-10-28：光点指哪控哪）
+    // 光点在照片排上时，摇杆左右横滚（滚轮按落点命中，指不到就不滚）
     val castRegionKey = "panel:cast"
     Column(
         modifier = modifier
             .pointerRegion(castRegionKey)
-            .onPreviewKeyEvent { e ->
-                (e.key == androidx.compose.ui.input.key.Key.DirectionLeft ||
-                    e.key == androidx.compose.ui.input.key.Key.DirectionRight) &&
-                    e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
-                    !cursorInRegion(castRegionKey)
-            }
     ) {
         Text(
             text = "演职人员",

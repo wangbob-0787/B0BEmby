@@ -1,7 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,7 +9,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import androidx.tv.material3.Border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -111,15 +109,8 @@ fun BuildItem(
     Surface(
         onClick = onItemClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        // P1 视觉对齐（2026-09-27）：焦点态改官方 Emby 的绿色描边（原来是白色描边 + 白底反色）
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(
-                BorderStroke(
-                    2.dp,
-                    MaterialTheme.colorScheme.secondary
-                )
-            )
-        ),
+        // 焦点态照 VR：不描边，只铺一层白色 14% 的光块（VrHoverBg），选中态才用绿色
+        border = null,
         // 放大倍数收到 1.06：1.1 时会被所在行裁掉边缘（父亲 2026-10-02）
         scale = ClickableSurfaceDefaults
             .scale(focusedScale = 1.06f),
@@ -128,10 +119,10 @@ fun BuildItem(
             // 海报完全盖住它，却要多付一次整卡面积的混合（同屏十来张 = 一屏多余混合）。
             // 焦点态保留高亮（同屏只有一张卡带焦点）。
             containerColor = Color.Transparent,
-            focusedContainerColor = Color.Black.copy(alpha = 0.35f),
+            focusedContainerColor = Color(0x24FFFFFF),
             contentColor = MaterialTheme.colorScheme.onSurface,
             pressedContentColor = MaterialTheme.colorScheme.secondary,
-            focusedContentColor = MaterialTheme.colorScheme.secondary
+            focusedContentColor = Color.White
         ),
 
         modifier = modifier

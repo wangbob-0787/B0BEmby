@@ -187,12 +187,66 @@ class MainActivity : ComponentActivity() {
                     1 -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
                     else -> if (lastScrollSign > 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
                 }
-                fireScroll(key)
+                doScroll(if (lastScrollAxis == 1) 0f else (if (lastScrollSign > 0) -1f else 1f), if (lastScrollAxis == 1) (if (lastScrollSign > 0) -1f else 1f) else 0f)
                 stepMs = (stepMs * 1.25).toLong()
                 scrollHandler.postDelayed(this, stepMs)
             }
         }
         scrollHandler.postDelayed(runner, stepMs)
+    }
+
+
+    /**
+     * 摇杆当鼠标滚轮用（照 VR 的 PanelLayer）：向落点派发一次滚轮事件，
+     * 由光点下面的可滚容器自己滚 —— 焦点完全不动。
+     *
+     * 为什么不能发方向键：方向键由焦点系统消费，系统会一边滚一边把焦点挪走，
+     * 表现就是页面一跳一跳、焦点不跟光点（父亲 2026-10-28 实机）。
+     *
+     * @return true = 有容器接住了滚轮，false = 没人接（调用方再退化为方向键）
+     */
+
+    /**
+     * 一个滚动格：先派发滚轮给光点底下的容器（焦点不动）；没人接才退化发方向键。
+     * 落点用摇杆推下去的起点，不用光点当前可能已顶到边缘的位置（照 VR）。
+     */
+    private fun doScroll(dx: Float, dy: Float) {
+        val x = if (pressX > 0f) pressX else cursorX
+        val y = if (pressY > 0f) pressY else cursorY
+        val handled = fireWheel(dx, dy, x, y)
+        if (handled) return
+        DiagLog.w(this, "input", "滚轮没被接住 → 退化为方向键")
+        when {
+            dy < 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_UP)
+            dy > 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
+            dx < 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_LEFT)
+            dx > 0f -> fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
+        }
+    }
+
+    private fun fireWheel(dx: Float, dy: Float, x: Float, y: Float): Boolean {
+        val now = SystemClock.uptimeMillis()
+        val props = MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_MOUSE
+        }
+        val coords = MotionEvent.PointerCoords().apply {
+            this.x = x
+            this.y = y
+            // 滚轮量必须写在坐标对象上，否则系统读不到
+            setAxisValue(MotionEvent.AXIS_VSCROLL, dy)
+            setAxisValue(MotionEvent.AXIS_HSCROLL, dx)
+        }
+        val ev = MotionEvent.obtain(
+            now, now, MotionEvent.ACTION_SCROLL, 1,
+            arrayOf(props), arrayOf(coords),
+            0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_MOUSE, 0
+        )
+        val handled = runCatching {
+            window.decorView.dispatchGenericMotionEvent(ev)
+        }.getOrDefault(false)
+        ev.recycle()
+        return handled
     }
 
     private fun fireScroll(keyCode: Int) {
@@ -238,25 +292,30 @@ class MainActivity : ComponentActivity() {
                         pressX = event.x
                         pressY = event.y
                         /*
-                         * 滚动快慢按光点速度走（照 VR）：摇杆没有力度值，只能拿光点每秒移动多少像素换算。
-                         * 猛推时光点速度快 → 触发一轮滚动所需的位移更少 → 滚得更密；轻推则一格一格慢慢挪。
+                         * 滚动快慢跟光点速度走（照 VR）：摇杆没有力度值，只能拿光点每秒移动多少像素换算。
+                         * 每 120 像素/秒记 1 格/秒，封顶 20 格/秒 —— 轻推慢滚、猛推快滚。
+                         * 攒够一格才滚一次，所以慢推时格与格之间自然拉得开。
                          */
                         val moveNow = SystemClock.uptimeMillis()
                         val moveDt = if (lastMoveAt > 0L) (moveNow - lastMoveAt).coerceIn(8L, 100L) else 16L
                         lastMoveAt = moveNow
                         val cursorSpeed = kotlin.math.max(kotlin.math.abs(dx), kotlin.math.abs(dy)) * 1000f / moveDt
                         lastCursorSpeedPxPerSec = cursorSpeed
-                        lastScrollAxis = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) 1 else 0
-                        lastScrollSign = if (lastScrollAxis == 1) (if (dy > 0) 1 else -1) else (if (dx > 0) 1 else -1)
-                        val step = (60f - cursorSpeed / 25f).coerceIn(16f, 60f)
-                        // 方向口径（父亲 2026-10-28 实机）：摇杆往下 = 往下滚，往右 = 往右滚。
-                        // 上一版按指针位移原样发键，头显上实测是反向的，这里取反。
-                        if (kotlin.math.abs(scrollAccumY) >= step) {
-                            fireScroll(if (scrollAccumY > 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN)
+                        val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
+                        lastScrollAxis = if (vertical) 1 else 0
+                        lastScrollSign = if (vertical) (if (dy > 0) 1 else -1) else (if (dx > 0) 1 else -1)
+                        val rate = (cursorSpeed / 120f).coerceIn(1f, 20f)   // 格/秒
+                        scrollAccumY += rate * moveDt / 1000f
+                        pressX = event.x
+                        pressY = event.y
+                        if (scrollAccumY >= 1f) {
+                            // 方向口径（父亲 2026-10-28 实机）：摇杆往下 = 往下滚，往右 = 往右滚。
+                            if (vertical) {
+                                doScroll(0f, if (dy > 0) -1f else 1f)
+                            } else {
+                                doScroll(if (dx > 0) -1f else 1f, 0f)
+                            }
                             scrollAccumY = 0f
-                        } else if (kotlin.math.abs(scrollAccumX) >= step) {
-                            fireScroll(if (scrollAccumX > 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
-                            scrollAccumX = 0f
                         }
                         return true
                     }
