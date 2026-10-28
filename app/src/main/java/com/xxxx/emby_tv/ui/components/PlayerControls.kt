@@ -402,6 +402,16 @@ fun PlayerControlPanel(
                 .fillMaxWidth()
                 .height(260.dp)
                 .align(Alignment.BottomStart)
+                /*
+                 * 控制条矩形的真正来源（父亲 2026-10-29 报减法没生效）。
+                 * 之前上报的是外层 fillMaxSize 的容器，矩形等于整屏，判定永远"在控制条里"，
+                 * 于是点播放区也去补发确认键、激活焦点按钮。这里才是那条底部横条本身。
+                 */
+                .onGloballyPositioned { coords ->
+                    val b = coords.boundsInWindow()
+                    com.xxxx.emby_tv.util.InputBridge.playerPanelRect =
+                        android.graphics.RectF(b.left, b.top, b.right, b.bottom)
+                }
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(

@@ -626,6 +626,9 @@ fun PlayerScreen(
      * 焦点所在的那个按钮）。现在点画面的动作由播放页自己接：扳机落在控制条以外就只切
      * 播放/暂停，不再补发确认键去激活按钮。
      */
+    androidx.compose.runtime.LaunchedEffect(showPanel) {
+        com.xxxx.emby_tv.util.InputBridge.playerPanelVisible = showPanel
+    }
     androidx.compose.runtime.LaunchedEffect(player) {
         com.xxxx.emby_tv.util.InputBridge.playerTapToggle = {
             runCatching { if (player.isPlaying) player.pause() else player.play() }
@@ -2036,13 +2039,8 @@ fun PlayerScreen(
                 // 信息/演职人员打开时整排控制收起,整屏只留内容(照官方排版)
                 if (activeItem != PlayerMenuItem.INFO && activeItem != PlayerMenuItem.CAST) {
                 PlayerControlPanel(
-                    modifier = Modifier.onGloballyPositioned { coords ->
-                        val b = coords.boundsInWindow()
-                        com.xxxx.emby_tv.util.InputBridge.playerPanelTopPx = b.top
-                        com.xxxx.emby_tv.util.InputBridge.playerPanelVisible = showPanel
-                        com.xxxx.emby_tv.util.InputBridge.playerPanelRect =
-                            android.graphics.RectF(b.left, b.top, b.right, b.bottom)
-                    },
+                    modifier = Modifier,
+                    /* 控制条矩形由 PlayerControls 的底部横条自己上报（外层是整屏，不能当控制条） */
                     title = panelTitle(),
                     subtitle = panelSubtitle(),
                     // 官方副行没有"播放方式"这一项，传空即不显示

@@ -229,19 +229,33 @@ class MainActivity : ComponentActivity() {
                     } else {
                         com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notchesP * pxPerNotchP * 4f)
                     }
-                    if (!scrolled && dy > 0f && kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+                    if (!scrolled) {
                         val nowKey = SystemClock.uptimeMillis()
-                        if (nowKey - lastPlayerKeyAt > 400L) {
+                        if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+                            // 往下唤出控制条（父亲 2026-10-29 定的这条保留）
+                            if (dy > 0f && nowKey - lastPlayerKeyAt > 400L) {
+                                lastPlayerKeyAt = nowKey
+                                fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
+                            }
+                        } else if (nowKey - lastPlayerKeyAt > 400L) {
+                            // 光点在播放区时，左右拨 = 快退/快进（父亲 2026-10-29 报没反应）
                             lastPlayerKeyAt = nowKey
-                            fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
+                            fireScroll(
+                                if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT
+                                else KeyEvent.KEYCODE_DPAD_LEFT
+                            )
                         }
                     }
                     holdHandler.postDelayed(this, 16L)
                     return
                 }
+                /*
+                 * 父亲 2026-10-29 实测：摇杆往下反而是往上滚。屏幕坐标往下是正、列表往下滚也是正，
+                 * 但摇杆送进来的 dy 正方向与屏幕相反，这里取反后再交给滚动。
+                 */
                 val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
                 val dirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
-                val dirY = if (vertical) (if (dy > 0f) 1f else -1f) else 0f
+                val dirY = if (vertical) (if (dy > 0f) -1f else 1f) else 0f
                 // 偏移 120px 记 1 格/秒，封顶 20 格/秒；按帧折算成这一帧该滚多少
                 holdRate = (mag / 120f).coerceIn(1f, 20f)
                 lastScrollAxis = if (vertical) 1 else 0
