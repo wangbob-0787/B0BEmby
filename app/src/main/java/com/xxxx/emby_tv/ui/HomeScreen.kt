@@ -28,6 +28,7 @@ import com.xxxx.emby_tv.ui.components.HomeHeroCarousel
 import com.xxxx.emby_tv.ui.components.LiveTvRow
 import com.xxxx.emby_tv.ui.components.Loading
 import com.xxxx.emby_tv.ui.components.MenuDialog
+import com.xxxx.emby_tv.ui.components.WaitHint
 import com.xxxx.emby_tv.ui.components.NoData
 import com.xxxx.emby_tv.ui.components.TopStatusBar
 import com.xxxx.emby_tv.util.DiagLog
@@ -78,9 +79,11 @@ fun HomeScreen(
             .onFailure { ErrorHandler.logError("HomeScreen", "取剧集元数据失败", it) }
     }
 
+    // 首页等待三态（父亲 2026-10-13 口径）：不再弹系统 Toast，改页面内提示 + 每 5 秒自动重试
+    var waitFailed by remember { mutableStateOf(false) }
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
-            android.widget.Toast.makeText(context, errorMessage, android.widget.Toast.LENGTH_LONG).show()
+            waitFailed = true
             homeViewModel.clearError()
         }
     }
@@ -345,6 +348,16 @@ fun HomeScreen(
                     )
                 }
             }
+        } else {
+            // 三态：正在加载… → 请检查网络连接 → 每 5 秒自动重试（不要重试按钮）
+            WaitHint(
+                ready = libraryLatestItems != null,
+                failed = waitFailed,
+                onRetry = {
+                    waitFailed = false
+                    homeViewModel.refresh()
+                }
+            )
         }
     }
 }

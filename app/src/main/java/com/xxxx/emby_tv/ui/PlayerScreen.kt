@@ -1955,6 +1955,13 @@ fun PlayerScreen(
                                         )
                                 PlayerMenuItem.QUALITY -> "视频质量：" + qualityLabel(maxStreamingBitrate)
                                 PlayerMenuItem.PLAY_MODE -> "播放模式：" + playModeName(playMode)
+                                // 行尾写当前档，免得点进去才知道现在是什么（VR 同款）
+                                PlayerMenuItem.BUFFER -> "缓冲设置：" + when (minBufferMs) {
+                                    15_000 -> "标准"
+                                    30_000 -> "较大"
+                                    60_000 -> "最大"
+                                    else -> (minBufferMs / 1000).toString() + " 秒"
+                                }
                                 else -> item.label
                             }
                             SheetRow(

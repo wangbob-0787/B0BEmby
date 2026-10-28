@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.TextUnitType
 import com.xxxx.emby_tv.data.repository.EmbyRepository
 import com.xxxx.emby_tv.ui.viewmodel.DetailViewModel
 import com.xxxx.emby_tv.util.ErrorHandler
+import com.xxxx.emby_tv.util.hoverToFocus
 import kotlinx.coroutines.delay
 
 @Composable
@@ -428,6 +429,7 @@ fun MediaDetailScreen(
                                     .width(DetailButtonWidth)
                                     .height(DetailButtonHeight)
                                     .focusRequester(seasonFocusers[index])
+                                    .hoverToFocus(seasonFocusers[index])
                                     .onFocusChanged { if (it.isFocused) lastPillIndex = index }
                                     .focusProperties {
                                         // 上键回「续播」按钮；下键进集行"上次停的那一集"（默认第一集）
@@ -816,6 +818,7 @@ private fun SongRow(
     onPlay: () -> Unit,
 ) {
     val duration = song.runTimeTicks?.let { Utils.formatRuntimeFromTicks(it) } ?: ""
+    val rowFocus = remember { FocusRequester() }
     Surface(
         onClick = onPlay,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -827,7 +830,10 @@ private fun SongRow(
             containerColor = Color.White.copy(alpha = 0.06f),
             focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.30f)
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(rowFocus)
+            .hoverToFocus(rowFocus)
     ) {
         Row(
             modifier = Modifier
@@ -869,6 +875,9 @@ private fun ActionTile(
     downFocus: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
+    // 指针悬停（PICO 光标）也要能选到这颗按钮
+    val ownFocus = remember { FocusRequester() }
+    val anchor = focusRequester ?: ownFocus
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -884,7 +893,8 @@ private fun ActionTile(
         modifier = Modifier
             .width(DetailButtonWidth)
             .height(DetailButtonHeight)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .focusRequester(anchor)
+            .hoverToFocus(anchor)
             // ↑ 回背景（顶部）；↓ 落到**当前季**那颗胶囊（多季时不会跑到第一季去）
             .focusProperties {
                 if (upFocus != null) up = upFocus
@@ -937,6 +947,9 @@ private fun EpisodeRow(
         if (hasSub) append("   ·   CC")
     }
 
+    // 指针悬停（PICO 光标）也要能选中这一集
+    val ownFocus = remember { FocusRequester() }
+    val anchor = focusRequester ?: ownFocus
     Surface(
         onClick = onPlay,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -950,9 +963,8 @@ private fun EpisodeRow(
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
-            )
+            .focusRequester(anchor)
+            .hoverToFocus(anchor)
     ) {
         Row(
             modifier = Modifier
@@ -1225,6 +1237,8 @@ private fun DetailOptionRow(
     text: String,
     onClick: () -> Unit,
 ) {
+    // 指针悬停也拿焦点：头显光标指到哪一行，哪一行就亮（遥控器无指针，不受影响）
+    val rowFocus = remember { FocusRequester() }
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -1234,6 +1248,9 @@ private fun DetailOptionRow(
             focusedContainerColor = Color(0x3D2FD57C),
             focusedContentColor = Color.White
         ),
+        modifier = Modifier
+            .focusRequester(rowFocus)
+            .hoverToFocus(rowFocus),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
     ) {
         Text(

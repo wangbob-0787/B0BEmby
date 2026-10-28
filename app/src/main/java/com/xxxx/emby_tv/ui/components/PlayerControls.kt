@@ -733,13 +733,17 @@ fun SheetRow(
     val scope = rememberCoroutineScope()
     val ownBringIntoView = remember { BringIntoViewRequester() }
     val bringIntoView = externalBringIntoView ?: ownBringIntoView
+    // 行自己的焦点锚点：firstFocus 没给时也能被指针悬停选中（PICO 光标 / 鼠标）
+    val rowFocus = remember { FocusRequester() }
+    val anchor = firstFocus ?: rowFocus
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(4.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.30f) else Color.Transparent,
+            // 选中（当前生效项）与焦点（光标所在）都用 VR 的绿 24%，未选中透明
+            containerColor = if (selected) Color(0x3D2FD57C) else Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.45f),
+            focusedContainerColor = Color(0x3D2FD57C),
             focusedContentColor = Color.White
         ),
         modifier = Modifier
@@ -748,10 +752,9 @@ fun SheetRow(
             .onFocusChanged {
                 if (it.isFocused) scope.launch { bringIntoView.bringIntoView() }
             }
-            .then(
-                if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier
-            ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f)
+            .focusRequester(anchor)
+            .hoverToFocus(anchor),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
     ) {
         Row(
             modifier = Modifier

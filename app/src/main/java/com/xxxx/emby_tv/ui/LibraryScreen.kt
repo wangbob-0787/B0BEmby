@@ -35,6 +35,7 @@ import androidx.tv.material3.*
 import com.xxxx.emby_tv.R
 import com.xxxx.emby_tv.data.repository.EmbyRepository
 import com.xxxx.emby_tv.ui.components.Loading
+import com.xxxx.emby_tv.ui.components.WaitHint
 import com.xxxx.emby_tv.ui.components.NoData
 import com.xxxx.emby_tv.ui.viewmodel.LibraryViewModel
 
@@ -126,7 +127,8 @@ fun LibraryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            // 页边距照 VR 统一成 40dp（父亲 2026-10-28）
+            .padding(start = 40.dp, end = 40.dp, top = 16.dp, bottom = 16.dp)
     ) {
         Row(
             modifier = Modifier
@@ -205,25 +207,18 @@ fun LibraryScreen(
                     },
                     modifier = Modifier.padding(horizontal = 4.dp),
                     shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(50)),
+                    // 选中态照 VR：绿 24%（0x3D2FD57C）+ 白字；未选中留 45% 白描边（30% 低于 3:1 对比度）
                     colors = ClickableSurfaceDefaults.colors(
-                        containerColor = if (isSelected) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                        } else {
-                            Color.Transparent
-                        },
-                        contentColor = if (isSelected) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            Color.White.copy(alpha = 0.7f)
-                        },
-                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
-                        focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                        containerColor = if (isSelected) Color(0x3D2FD57C) else Color.Transparent,
+                        contentColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                        focusedContainerColor = Color(0x3D2FD57C),
+                        focusedContentColor = Color.White
                     ),
                     border = ClickableSurfaceDefaults.border(
                         border = if (!isSelected) Border(
-                            BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                            BorderStroke(1.dp, Color.White.copy(alpha = 0.45f))
                         ) else Border(BorderStroke(0.dp, Color.Transparent)),
-                        focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+                        focusedBorder = Border(BorderStroke(2.dp, Color(0xFF2FD57C)))
                     )
                 ) {
                     Text(
@@ -237,7 +232,15 @@ fun LibraryScreen(
         }
 
         if (libraryItems == null) {
-            Loading()
+            // 三态：正在加载… → 请检查网络连接 → 每 5 秒自动重试（不要重试按钮）
+            WaitHint(
+                ready = false,
+                failed = libraryViewModel.errorMessage != null,
+                onRetry = {
+                    libraryViewModel.errorMessage = null
+                    libraryViewModel.refresh()
+                }
+            )
         } else if (libraryItems.isEmpty()) {
             NoData()
         } else {

@@ -30,6 +30,7 @@ import com.xxxx.emby_tv.ui.components.TvInputDialog
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import com.xxxx.emby_tv.util.hoverToFocus
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -269,9 +270,8 @@ fun LoginScreen(
                         label = stringResource(R.string.host),
                         onClick = { showHostDialog = true },
                         showMenu = { showMenu = true },
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(hostFocusRequester)
+                        modifier = Modifier.weight(1f),
+                        focusRequester = hostFocusRequester
                     )
                     TvInputButton(
                         value = port,
@@ -314,6 +314,7 @@ fun LoginScreen(
                         //兼容移动端点击  TODO：移除
                         //  .clickable(true, onClick = { onLoginClick() })
                         .focusRequester(loginButtonFocusRequester)
+                        .hoverToFocus(loginButtonFocusRequester)
                         .onKeyEvent { keyEvent ->
                             if (keyEvent.type == KeyEventType.KeyDown) {
                                 when (keyEvent.key) {
@@ -372,6 +373,7 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val proxyFocus = remember { FocusRequester() }
                 Surface(
                     onClick = { navController.navigate("proxy_settings") },
                     shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(100)),
@@ -381,7 +383,10 @@ fun LoginScreen(
                         contentColor = Color.White.copy(alpha = 0.5f),
                         focusedContentColor = MaterialTheme.colorScheme.onTertiary
                     ),
-                    modifier = Modifier.fillMaxWidth(0.8f)
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .focusRequester(proxyFocus)
+                        .hoverToFocus(proxyFocus)
                 ) {
                     Box(
                         modifier = Modifier.fillMaxWidth().height(40.dp),
@@ -481,7 +486,11 @@ fun TvInputButton(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    // 外部要指定初始焦点时传进来；不传就自己造一个，用于指针悬停拿焦点
+    focusRequester: FocusRequester? = null,
 ) {
+    val ownFocus = remember { FocusRequester() }
+    val fieldFocus = focusRequester ?: ownFocus
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -503,6 +512,8 @@ fun TvInputButton(
         modifier = modifier
             .fillMaxWidth(0.8f)
             .height(64.dp)
+            .focusRequester(fieldFocus)
+            .hoverToFocus(fieldFocus)
             .onKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {
@@ -545,6 +556,7 @@ fun ProtocolButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val ownFocus = remember { FocusRequester() }
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -563,7 +575,10 @@ fun ProtocolButton(
             focusedContainerColor = MaterialTheme.colorScheme.onSurface,
             focusedContentColor = MaterialTheme.colorScheme.onTertiary,
         ),
-        modifier = modifier.height(64.dp)
+        modifier = modifier
+            .height(64.dp)
+            .focusRequester(ownFocus)
+            .hoverToFocus(ownFocus)
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),

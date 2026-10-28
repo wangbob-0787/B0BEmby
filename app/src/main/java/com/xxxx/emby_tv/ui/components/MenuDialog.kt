@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import com.xxxx.emby_tv.util.hoverToFocus
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -223,10 +225,14 @@ fun MenuListItem(
     primaryColor: Color,
     modifier: Modifier = Modifier
 ) {
+    // 指针悬停（PICO 光标）也拿焦点，菜单里每一项都能被光标选中
+    val ownFocus = remember { FocusRequester() }
     ListItem(
         selected = false,
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier
+            .focusRequester(ownFocus)
+            .hoverToFocus(ownFocus),
         scale = ListItemDefaults.scale(focusedScale = 1.04f),
         shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ListItemDefaults.colors(
