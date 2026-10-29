@@ -93,6 +93,8 @@ class MainActivity : ComponentActivity() {
     private var lastCursorSpeedPxPerSec = 0f
     private var lastScrollAxis = 0      // 1=上下 0=左右
     private var lastScrollSign = 0
+    /** 全局滚动倍速：VR 的 12 格/秒在电视上偏慢，这里整体抬 1.8 倍 */
+    private val SPEED = 1.8f
 
 
     /** 光标位置是否新鲜（3 秒内动过）；新鲜才认为「用户在指东西」，否则按遥控器处理 */
@@ -230,7 +232,7 @@ class MainActivity : ComponentActivity() {
                      * 这里与页面滚动同一个口径：速率（格/秒）× 16ms，封顶 1.5 格。
                      */
                     val pxPerNotch = 56f * resources.displayMetrics.density
-                    val perFrame = (holdRate * 16f / 1000f).coerceIn(0.02f, 1.5f)
+                    val perFrame = (holdRate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED)
                     val scrolled = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
                         val sign = if (dy > 0f) -1f else 1f
                         com.xxxx.emby_tv.util.PixelScroll.verticalBy(sign * perFrame * pxPerNotch)
@@ -270,7 +272,7 @@ class MainActivity : ComponentActivity() {
                 lastScrollAxis = if (vertical) 1 else 0
                 lastScrollSign = if (vertical) (if (dy > 0f) 1 else -1) else (if (dx > 0f) 1 else -1)
                 lastCursorSpeedPxPerSec = holdRate * 120f
-                doScroll(dirX, dirY, (holdRate * 16f / 1000f).coerceIn(0.02f, 1.5f))
+                doScroll(dirX, dirY, (holdRate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED))
             }
             holdHandler.postDelayed(this, 16L)
         }
@@ -312,7 +314,7 @@ class MainActivity : ComponentActivity() {
                 inertiaRate = 0f
                 return
             }
-            doScroll(inertiaDirX, inertiaDirY, (rate * 16f / 1000f).coerceIn(0.02f, 1.5f))
+            doScroll(inertiaDirX, inertiaDirY, (rate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED))
             holdHandler.postDelayed(this, 16L)
         }
     }
@@ -347,6 +349,7 @@ class MainActivity : ComponentActivity() {
      * 落点用摇杆推下去的起点，不用光点当前可能已顶到边缘的位置（照 VR）。
      */
     private fun doScroll(dx: Float, dy: Float, notches: Float): Boolean {
+        // 一格按 96dp 折算（原来 56dp）：父亲 2026-10-29 实测整体滚动偏慢，这一档与电视手感更接近
         val x = if (pressX > 0f) pressX else cursorX
         val y = if (pressY > 0f) pressY else cursorY
         // 没有光点（投影 + 遥控器/手柄）时落到屏幕中心：列表几乎都铺在页面中间，
@@ -365,7 +368,7 @@ class MainActivity : ComponentActivity() {
          * 这里直接 scrollBy 一个像素量，焦点不动，跟 VR 的手感一致。
          * 一格滚轮按 56dp 折算，与系统滚轮一格的观感接近。
          */
-        val pxPerNotch = 56f * resources.displayMetrics.density
+        val pxPerNotch = 96f * resources.displayMetrics.density
         if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) return true
         if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) return true
         /*
@@ -434,7 +437,13 @@ class MainActivity : ComponentActivity() {
          * 摇杆左右就是快退快进、往下就是唤控制条 —— 不能先去滚菜单，否则会被隐藏菜单吃掉。
          * 只有光点真的落在控制条或展开的菜单上，才按像素滚菜单（父亲 2026-10-29 口径）。
          */
-        if (!cursorInPlayerUi()) {
+        /*
+         * 只有控制条或菜单真的在画面上时才走像素滚动（演职人员照片墙就是"菜单开着但控制条收起"，
+         * 只看控制条可见会把它判成播放区，结果退化成方向键、一格一格跳还带不上惯性）。
+         */
+        val uiOpen = com.xxxx.emby_tv.util.InputBridge.playerPanelVisible ||
+                com.xxxx.emby_tv.util.InputBridge.playerMenuRect != null
+        if (!uiOpen) {
             if (now - lastStickKeyAt < 90L) return
             val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
             lastStickKeyAt = now

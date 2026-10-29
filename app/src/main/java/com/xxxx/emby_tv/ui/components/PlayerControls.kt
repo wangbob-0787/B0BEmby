@@ -95,6 +95,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.layout.boundsInWindow
 
 /** 播放控制面板上的一级菜单项（名称与顺序照 VR 版，父亲 2026-10-28 定） */
 enum class PlayerMenuItem(val label: String) {
@@ -1098,6 +1099,31 @@ fun CastListSheet(
         val rowFocus = remember { FocusRequester() }
         val listState = rememberLazyListState()
         val scope = rememberCoroutineScope()
+        /*
+         * 照片墙是这一页唯一的横向可滚区：显式把它登记成摇杆横向目标，
+         * 别让别的横排覆盖掉。父亲 2026-10-29 实测这一排"能滚但慢、没惯性"，
+         * 根因是它原来靠焦点一格一格移动，不走像素滚动，也带不上松手后的惯性。
+         */
+        var rowBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+        DisposableEffect(listState) {
+            com.xxxx.emby_tv.util.PixelScroll.setHorizontal { px ->
+                /*
+                 * 只认光点落在照片墙上（父亲 2026-10-29 口径）：光点在别处就返回 false，
+                 * 让上层退回去做快退快进，照片墙不跟着动。
+                 */
+                val b = rowBounds
+                val inside = b == null || b.contains(
+                    androidx.compose.ui.geometry.Offset(
+                        com.xxxx.emby_tv.util.PointerTargets.cursorX,
+                        com.xxxx.emby_tv.util.PointerTargets.cursorY
+                    )
+                )
+                if (!inside) return@setHorizontal false
+                scope.launch { listState.scrollBy(px) }
+                true
+            }
+            onDispose { com.xxxx.emby_tv.util.PixelScroll.setHorizontal(null) }
+        }
         LaunchedEffect(Unit) {
             delay(80)
             runCatching { rowFocus.requestFocus() }
@@ -1108,6 +1134,7 @@ fun CastListSheet(
                 .fillMaxWidth()
                 .height(250.dp)
                 .then(Modifier.pixelScrollRow(listState))
+                .onGloballyPositioned { rowBounds = it.boundsInWindow() }
                 .focusRequester(rowFocus)
                 .focusGroup()
                 .focusable()
