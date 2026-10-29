@@ -32,6 +32,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.input.key.KeyEventType
 
 /**
  * 文本输入弹窗（服务器地址 / 端口 / 用户名 / 密码都用它）。

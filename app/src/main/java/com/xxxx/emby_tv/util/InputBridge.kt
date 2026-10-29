@@ -139,7 +139,12 @@ object InputBridge {
      * 回中则进入惯性滑行。父亲的原话是"有时候滚得动有时候滚不动、按着动都不动、
      * 没有 VR 版那么丝滑"。
      */
+    /** 最近是否在用摇杆轴数据（用它自己的帧引擎），光点位移那条要同时让开 */
+    private var lastAxisAt = 0L
+    fun axisInUse(): Boolean = SystemClock.uptimeMillis() - lastAxisAt < 200L
+
     fun onStick(event: MotionEvent) {
+        lastAxisAt = SystemClock.uptimeMillis()
         val ax = axisOf(event, MotionEvent.AXIS_X, MotionEvent.AXIS_HAT_X)
         val ay = axisOf(event, MotionEvent.AXIS_Y, MotionEvent.AXIS_HAT_Y)
         val mag = kotlin.math.max(kotlin.math.abs(ax), kotlin.math.abs(ay))

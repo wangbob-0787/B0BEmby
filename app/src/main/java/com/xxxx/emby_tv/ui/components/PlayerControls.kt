@@ -95,7 +95,8 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.foundation.layout.boundsInWindow
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.foundation.gestures.scrollBy
 
 /** 播放控制面板上的一级菜单项（名称与顺序照 VR 版，父亲 2026-10-28 定） */
 enum class PlayerMenuItem(val label: String) {
