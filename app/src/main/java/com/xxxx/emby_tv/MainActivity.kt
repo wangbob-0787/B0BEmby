@@ -215,19 +215,6 @@ class MainActivity : ComponentActivity() {
     private val holdTick = object : Runnable {
         override fun run() {
             if (!holdTicking) return
-            try {
-                holdStep()
-            } catch (t: Throwable) {
-                // 任何一步出错都只丢弃这一拍：循环一停，整个摇杆就彻底失灵
-                android.util.Log.w("B0BEmby", "推住节拍异常：${t.message}")
-            } finally {
-                if (holdTicking) holdHandler.postDelayed(this, 16L)
-            }
-        }
-    }
-
-    private fun holdStep() {
-        run {
             // 摇杆轴数据在用它自己的帧引擎，光点位移那条同时跑会双倍滚动
             if (com.xxxx.emby_tv.util.InputBridge.axisInUse()) return
             val dx = holdLastX - holdAnchorX
@@ -236,15 +223,15 @@ class MainActivity : ComponentActivity() {
             if (mag > ViewConfiguration.get(this@MainActivity).scaledTouchSlop) {
                 dragMoved = true
                 /*
-                 * 力度换算只在外面算一次。播放页分支原来没赋值，holdRate 恒为 0，
-                 * 每帧按最小档推进 —— 这就是"菜单和演职人员滚动很慢"的直接原因。
-                 * 取值照 VR：每 90 像素记 1 格/秒，3~12 格/秒。
-                 */
-                holdRate = (mag / 90f).coerceIn(3f, 12f)
-                /*
                  * 播放页保持方向键语义（父亲 2026-10-29：摇杆往下要能唤出控制条）：
                  * 只认「往下」，一次推只发一次，往上与左右什么都不做。
                  */
+                /*
+                 * 力度在进分支前算一次：播放页分支原来从未赋值，holdRate 恒 0，
+                 * 每帧贴着最小档推进，所以菜单与演职人员滚动慢、松手也没有惯性初速。
+                 * 口径照 VR：90 像素记 1 格/秒，3~12 格/秒。
+                 */
+                holdRate = (mag / 90f).coerceIn(3f, 12f)
                 if (com.xxxx.emby_tv.util.InputBridge.playerScreenActive) {
                     // 播放页也可能有可滚区域（一级/二级菜单、字幕菜单、演职人员横排）：
                     // 先按像素滚它，滚不动才把「往下」当成唤出控制条。
@@ -253,15 +240,15 @@ class MainActivity : ComponentActivity() {
                      * 60 集的菜单一下就窜到最后（父亲 2026-10-29 报）。
                      * 这里与页面滚动同一个口径：速率（格/秒）× 16ms，封顶 1.5 格。
                      */
-                    val verticalInPlayer = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
-                    val dirX = if (verticalInPlayer) 0f else (if (dx > 0f) 1f else -1f)
-                    val dirY = if (verticalInPlayer) (if (dy > 0f) -1f else 1f) else 0f
-                    lastScrollAxis = if (verticalInPlayer) 1 else 0
-                    lastScrollSign = if (verticalInPlayer) (if (dy > 0f) 1 else -1) else (if (dx > 0f) 1 else -1)
-                    lastCursorSpeedPxPerSec = holdRate * 90f
-                    val perFrameNotches =
-                        (holdRate * 16f / 1000f * SPEED).coerceIn(0.3f * SPEED, 2.5f * SPEED)
-                    val scrolled = doScroll(dirX, dirY, perFrameNotches)
+                    val pxPerNotch = 56f * resources.displayMetrics.density
+                    val perFrame = (holdRate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED)
+                    val scrolled = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+                        val sign = if (dy > 0f) -1f else 1f
+                        com.xxxx.emby_tv.util.PixelScroll.verticalBy(sign * perFrame * pxPerNotch)
+                    } else {
+                        val sign = if (dx > 0f) 1f else -1f
+                        com.xxxx.emby_tv.util.PixelScroll.horizontalBy(sign * perFrame * pxPerNotch)
+                    }
                     if (!scrolled) {
                         val nowKey = SystemClock.uptimeMillis()
                         if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
@@ -270,11 +257,11 @@ class MainActivity : ComponentActivity() {
                                 lastPlayerKeyAt = nowKey
                                 fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
                             }
-                        } else if (nowKey - lastPlayerKeyAt > 200L) {
+                        } else if (nowKey - lastPlayerKeyAt > 120L) {
                             /*
-                             * 左右拨 = 快退/快进（父亲 2026-10-29 实测方向已对）。
-                             * 发离散方向键，节拍 200ms：与播放页自己"按住 0.5 秒后每 200ms
-                             * seek 30 秒"的节奏对齐，不再相互打断。
+                             * 光点在播放区时，左右拨 = 快退/快进。
+                             * 指针往右是正 dx，但父亲 2026-10-29 实测"方向反了"：
+                             * 他往右拨要的是快进，所以这里把正负对调，与屏幕位移方向相反。
                              */
                             lastPlayerKeyAt = nowKey
                             fireScroll(
@@ -283,6 +270,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                    holdHandler.postDelayed(this, 16L)
                     return
                 }
                 /*
@@ -293,6 +281,11 @@ class MainActivity : ComponentActivity() {
                 val dirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
                 val dirY = if (vertical) (if (dy > 0f) -1f else 1f) else 0f
                 // 偏移 120px 记 1 格/秒，封顶 20 格/秒；按帧折算成这一帧该滚多少
+                /*
+                 * 力度换算照 VR：每 90 像素偏移记 1 格/秒，下限 3、上限 12（VR 的 VR_RATE_MIN/MAX）。
+                 * 原来按 120 像素、下限 1，实测滚动明显偏慢且推起来没惯性感。
+                 */
+                holdRate = (mag / 90f).coerceIn(3f, 12f)
                 lastScrollAxis = if (vertical) 1 else 0
                 lastScrollSign = if (vertical) (if (dy > 0f) 1 else -1) else (if (dx > 0f) 1 else -1)
                 lastCursorSpeedPxPerSec = holdRate * 120f
@@ -318,6 +311,8 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+            holdHandler.postDelayed(this, 16L)
         }
     }
 
@@ -990,5 +985,4 @@ fun EmbyTvApp() {
             }
         }
     }
-}
 }
