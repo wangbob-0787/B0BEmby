@@ -215,6 +215,19 @@ class MainActivity : ComponentActivity() {
     private val holdTick = object : Runnable {
         override fun run() {
             if (!holdTicking) return
+            try {
+                holdStep()
+            } catch (t: Throwable) {
+                // 任何一步出错都只丢弃这一拍：循环一停，整个摇杆就彻底失灵
+                android.util.Log.w("B0BEmby", "推住节拍异常：${t.message}")
+            } finally {
+                if (holdTicking) holdHandler.postDelayed(this, 16L)
+            }
+        }
+    }
+
+    private fun holdStep() {
+        run {
             // 摇杆轴数据在用它自己的帧引擎，光点位移那条同时跑会双倍滚动
             if (com.xxxx.emby_tv.util.InputBridge.axisInUse()) return
             val dx = holdLastX - holdAnchorX
@@ -257,23 +270,19 @@ class MainActivity : ComponentActivity() {
                                 lastPlayerKeyAt = nowKey
                                 fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
                             }
-                        } else {
+                        } else if (nowKey - lastPlayerKeyAt > 200L) {
                             /*
-                             * 左右拨 = 快退/快进。做法是**按住一次方向键**，不是连续发按键：
-                             * 播放页自己有长按逻辑（按下 0.5 秒后每 200ms seek 30 秒），
-                             * 连续发按键会让它反复重启那段循环 —— 表现为"快进几秒就停"，
-                             * 而按键本身还会带着焦点在控制按钮之间跳。
+                             * 左右拨 = 快退/快进（父亲 2026-10-29 实测方向已对）。
+                             * 发离散方向键，节拍 200ms：与播放页自己"按住 0.5 秒后每 200ms
+                             * seek 30 秒"的节奏对齐，不再相互打断。
                              */
-                            val seekKey = if (dx > 0f) KeyEvent.KEYCODE_DPAD_LEFT
-                                          else KeyEvent.KEYCODE_DPAD_RIGHT
-                            if (heldSeekKey != seekKey) {
-                                releaseHeldSeekKey()
-                                heldSeekKey = seekKey
-                                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, seekKey))
-                            }
+                            lastPlayerKeyAt = nowKey
+                            fireScroll(
+                                if (dx > 0f) KeyEvent.KEYCODE_DPAD_LEFT
+                                else KeyEvent.KEYCODE_DPAD_RIGHT
+                            )
                         }
                     }
-                    holdHandler.postDelayed(this, 16L)
                     return
                 }
                 /*
@@ -309,8 +318,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-            }
-            holdHandler.postDelayed(this, 16L)
         }
     }
 
@@ -330,18 +337,6 @@ class MainActivity : ComponentActivity() {
     private fun stopHoldScroll() {
         holdTicking = false
         holdHandler.removeCallbacks(holdTick)
-        releaseHeldSeekKey()
-    }
-
-    /** 当前被按住的方向键（快进/快退用）；松手必须补一条抬起，否则播放页会一直 seek */
-    private var heldSeekKey = -1
-
-    private fun releaseHeldSeekKey() {
-        val k = heldSeekKey
-        if (k != -1) {
-            heldSeekKey = -1
-            dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, k))
-        }
     }
 
     /**
