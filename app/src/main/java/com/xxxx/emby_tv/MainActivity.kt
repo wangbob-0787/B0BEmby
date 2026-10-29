@@ -359,16 +359,6 @@ class MainActivity : ComponentActivity() {
          * 大海报（首页大片头）本身不是可滚容器：摇杆左右必须直接换片。
          * 判据是光点落在大片头区域，或压根没有光标（遥控器/手柄）且焦点在大海报上。
          */
-        val onHero = com.xxxx.emby_tv.util.PointerTargets.regionContains(
-            "hero", com.xxxx.emby_tv.util.PointerTargets.cursorX,
-            com.xxxx.emby_tv.util.PointerTargets.cursorY)
-        if (onHero && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
-            val now = SystemClock.uptimeMillis()
-            if (now - lastStickKeyAt < 260L) return
-            lastStickKeyAt = now
-            fireScroll(if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
-            return
-        }
         if (doScroll(dx, dy, notches)) return
         val now = SystemClock.uptimeMillis()
         if (now - lastStickKeyAt < 90L) return
@@ -476,16 +466,13 @@ class MainActivity : ComponentActivity() {
     private fun playerStick(dx: Float, dy: Float, notches: Float) {
         val now = SystemClock.uptimeMillis()
         /*
-         * 判据：光标 3 秒内动过才算"在指东西"。投影上用的是遥控器/手柄，根本不动光标，
-         * 这时按旧的"落点判定"会把每一次摇杆都算成播放区 —— 菜单滚不动、左右也不快进快退
-         * （父亲 2026-10-29 连报两次没生效）。没光标时：竖向滚面板、横向快退快进。
+         * 这条路径只服务手柄摇杆（遥控器走的是方向键，另一条路），两者不能混判
+         * （父亲 2026-10-29：TV 版同时支持遥控器和手柄）。
+         * 竖向一律交给像素滚动（菜单/列表谁注册就滚谁，带惯性）；横向先试横向行
+         * （演职人员照片墙），没人接就是播放区的快退快进。
          */
-        val hasCursor = com.xxxx.emby_tv.util.PointerTargets.cursorActive()
-        val inUi = hasCursor && cursorInPlayerUi()
         val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
-        // 竖向且（在面板上，或压根没有光标）：交给像素滚动，带惯性
-        if ((inUi || !hasCursor) && vertical && doScroll(dx, dy, notches * 2.4f)) return
-        if (inUi && doScroll(dx, dy, notches * 2.4f)) return
+        if (doScroll(dx, dy, notches * 2.4f)) return
         if (now - lastStickKeyAt < 90L) return
         lastStickKeyAt = now
         if (vertical) {

@@ -37,6 +37,13 @@ object PixelScroll {
     fun verticalBy(px: Float): Boolean = vertical?.invoke(px) ?: false
 
     fun horizontalBy(px: Float): Boolean = horizontal?.invoke(px) ?: false
+
+    private var owner: Any? = null
+
+    /** 谁最后注册的横向入口（用于焦点离开时只清自己的） */
+    fun takeOwner(who: Any) { owner = who }
+
+    fun ownerIs(who: Any): Boolean = owner === who
 }
 
 /** 竖向列表（LazyColumn / LazyVerticalGrid / 普通 Column 的 verticalScroll）注册为摇杆竖向目标。 */
@@ -85,10 +92,15 @@ fun Modifier.pixelScrollRow(state: LazyListState): Modifier {
     val scope = rememberCoroutineScope()
     return this.onFocusChanged { focusState ->
         if (focusState.hasFocus) {
+            PixelScroll.takeOwner(state)
             PixelScroll.setHorizontal { px ->
                 scope.launch { state.scrollBy(px) }
                 true
             }
+        } else if (PixelScroll.ownerIs(state)) {
+            /* 焦点离开这一行就要交还横向入口，否则播放页里横向摇杆永远被上一次的行走吃掉，
+             * 快退快进发不出去（父亲 2026-10-29 报「播放区左右没有快进快退」）。 */
+            PixelScroll.setHorizontal(null)
         }
     }
 }
