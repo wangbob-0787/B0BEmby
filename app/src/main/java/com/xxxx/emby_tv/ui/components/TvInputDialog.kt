@@ -30,7 +30,7 @@ import androidx.tv.material3.Text
 import com.xxxx.emby_tv.R
 import kotlinx.coroutines.delay
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.nativeKeyEvent
+import androidx.compose.ui.input.key.KeyEventType
 
 /**
  * 文本输入弹窗（服务器地址 / 端口 / 用户名 / 密码都用它）。
@@ -146,12 +146,11 @@ fun TvInputDialog(
  * 「点取消没反应」）。所以按钮自己在按键阶段把「确认/回车」翻成 onClick。
  */
 private fun Modifier.dialogKeyActivate(action: () -> Unit): Modifier = this.onPreviewKeyEvent { e ->
-    val ne = e.nativeKeyEvent
-    if (ne.action == android.view.KeyEvent.ACTION_UP) {
-        when (ne.keyCode) {
-            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-            android.view.KeyEvent.KEYCODE_ENTER,
-            android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+    if (e.type == KeyEventType.KeyUp) {
+        when (e.key) {
+            androidx.compose.ui.input.key.Key.DirectionCenter,
+            androidx.compose.ui.input.key.Key.Enter,
+            androidx.compose.ui.input.key.Key.NumPadEnter -> {
                 action()
                 true
             }
