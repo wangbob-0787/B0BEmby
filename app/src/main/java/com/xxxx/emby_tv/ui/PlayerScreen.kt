@@ -1079,7 +1079,16 @@ fun PlayerScreen(
      * 弹幕层：不再读本地 ASS、也不占 Emby 字幕轨，改成向 .15 的现拉服务要一份
      *（父亲 2026-10-28 口径，服务由乐乐维护）。拉不到就当没有弹幕，绝不影响出画面。
      */
-    LaunchedEffect(danmakuEnabled, mediaId) {
+    /*
+     * 键要带上片名与集号：mediaId 一到就开跑，但详情可能还没回来，
+     * 那时剧名是空的、一条请求都不会发（父亲 2026-10-29 实测服务端零请求）。
+     * 现在详情一变就重试，并且剧名还空着时按秒退重试几轮。
+     */
+    LaunchedEffect(
+        danmakuEnabled, mediaId,
+        mediaInfo.name, mediaInfo.seriesName,
+        mediaInfo.indexNumber, mediaInfo.parentIndexNumber, mediaInfo.productionYear
+    ) {
         if (!danmakuEnabled) {
             danmakuTrack = null
             return@LaunchedEffect
@@ -1102,6 +1111,24 @@ fun PlayerScreen(
             title = if (epMark != null) rawName.substring(0, epMark.range.first).trim() else rawName
             if (ep == null) ep = epMark?.groupValues?.get(1)?.toIntOrNull()
         }
+        // 详情还没到：等它（最多 6 秒），别把"还没加载"当成"没有弹幕"
+        var waited = 0
+        while (title.isBlank() && waited < 6000) {
+            kotlinx.coroutines.delay(500)
+            waited += 500
+            title = mediaInfo.seriesName.orEmpty()
+            val mark2 = Regex("第\\s*(\\d{1,4})\\s*[集话期回]").find(mediaInfo.name ?: "")
+            if (title.isBlank()) {
+                title = if (mark2 != null) (mediaInfo.name ?: "").substring(0, mark2.range.first).trim()
+                else (mediaInfo.name ?: "")
+            }
+            if (ep == null) ep = mark2?.groupValues?.get(1)?.toIntOrNull()
+        }
+        if (title.isBlank()) {
+            Log.w("PlayerScreen", "弹幕跳过：片名还没加载出来")
+            danmakuTrack = null
+            return@LaunchedEffect
+        }
         val isEpisode = epMark != null || !mediaInfo.seriesName.isNullOrBlank()
         val kind = if (isEpisode) "tv" else "movie"
         ep = if (isEpisode) (ep ?: 1).coerceIn(0, 2000) else 0
@@ -1112,7 +1139,10 @@ fun PlayerScreen(
         }
         danmakuTrack = fetched
         if (fetched != null) {
-            Log.i("PlayerScreen", "弹幕层加载完成: " + fetched.items.size + " 条")
+            Log.i("PlayerScreen", "弹幕层加载完成: " + fetched.items.size + " 条（"
+                    + title + " 第" + ep + "集）")
+        } else {
+            Log.w("PlayerScreen", "弹幕没取到：" + title + " ep=" + ep + " kind=" + kind)
         }
     }
 

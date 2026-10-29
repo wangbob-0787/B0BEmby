@@ -29,6 +29,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.xxxx.emby_tv.R
 import kotlinx.coroutines.delay
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.nativeKeyCode
 
 /**
  * 文本输入弹窗（服务器地址 / 端口 / 用户名 / 密码都用它）。
@@ -94,6 +97,7 @@ fun TvInputDialog(
             Button(
                 onClick = { commit() },
                 modifier = Modifier
+                    .dialogKeyActivate { commit() }
                     .focusRequester(confirmFocus)
                     .hoverToFocus(confirmFocus)
                     .pointerTarget(
@@ -102,10 +106,10 @@ fun TvInputDialog(
                         activate = { commit() }
                     ),
                 colors = ButtonDefaults.colors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF333333),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
                     focusedContainerColor = androidx.compose.ui.graphics.Color(0x24FFFFFF),
-                    focusedContentColor = androidx.compose.ui.graphics.Color.White,
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    focusedContentColor = androidx.compose.ui.graphics.Color.White
                 ),
             ) {
                 Text(stringResource(R.string.confirm))
@@ -115,6 +119,7 @@ fun TvInputDialog(
             Button(
                 onClick = onDismiss,
                 modifier = Modifier
+                    .dialogKeyActivate { onDismiss() }
                     .focusRequester(cancelFocus)
                     .hoverToFocus(cancelFocus)
                     .pointerTarget(
@@ -123,14 +128,34 @@ fun TvInputDialog(
                         activate = { onDismiss() }
                     ),
                 colors = ButtonDefaults.colors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF333333),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
                     focusedContainerColor = androidx.compose.ui.graphics.Color(0x24FFFFFF),
-                    focusedContentColor = androidx.compose.ui.graphics.Color.White,
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    focusedContentColor = androidx.compose.ui.graphics.Color.White
                 ),
             ) {
                 Text(stringResource(R.string.cancel))
             }
         }
     )
+}
+
+/**
+ * 弹窗按钮的确认键通道。
+ *
+ * 弹窗有独立的窗口，主界面注入的确认键与光点点击到不了这里（父亲 2026-10-29 报
+ * 「点取消没反应」）。所以按钮自己在按键阶段把「确认/回车」翻成 onClick。
+ */
+private fun Modifier.dialogKeyActivate(action: () -> Unit): Modifier = this.onPreviewKeyEvent { e ->
+    if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp) {
+        when (e.nativeKeyCode) {
+            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+            android.view.KeyEvent.KEYCODE_ENTER,
+            android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                action()
+                true
+            }
+            else -> false
+        }
+    } else false
 }

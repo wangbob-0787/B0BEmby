@@ -210,6 +210,8 @@ class MainActivity : ComponentActivity() {
     private val holdTick = object : Runnable {
         override fun run() {
             if (!holdTicking) return
+            // 摇杆轴数据在用它自己的帧引擎，光点位移那条同时跑会双倍滚动
+            if (com.xxxx.emby_tv.util.InputBridge.axisInUse()) return
             val dx = holdLastX - holdAnchorX
             val dy = holdLastY - holdAnchorY
             val mag = kotlin.math.max(kotlin.math.abs(dx), kotlin.math.abs(dy))
@@ -240,7 +242,7 @@ class MainActivity : ComponentActivity() {
                         val nowKey = SystemClock.uptimeMillis()
                         if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
                             // 往下唤出控制条（父亲 2026-10-29 定的这条保留）
-                            if (dy > 0f && nowKey - lastPlayerKeyAt > 400L) {
+                            if (dy < 0f && nowKey - lastPlayerKeyAt > 400L) {
                                 lastPlayerKeyAt = nowKey
                                 fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
                             }
@@ -344,7 +346,7 @@ class MainActivity : ComponentActivity() {
      * 一个滚动格：先派发滚轮给光点底下的容器（焦点不动）；没人接才退化发方向键。
      * 落点用摇杆推下去的起点，不用光点当前可能已顶到边缘的位置（照 VR）。
      */
-    private fun doScroll(dx: Float, dy: Float, notches: Float) {
+    private fun doScroll(dx: Float, dy: Float, notches: Float): Boolean {
         val x = if (pressX > 0f) pressX else cursorX
         val y = if (pressY > 0f) pressY else cursorY
         // 没有光点（投影 + 遥控器/手柄）时落到屏幕中心：列表几乎都铺在页面中间，
@@ -356,7 +358,7 @@ class MainActivity : ComponentActivity() {
         // 滚轮量与像素滚动同号：dy 在 holdTick 里已经翻成"屏幕方向"，这里不再额外取负
         val h = if (dx != 0f) dx * notches else 0f
         val v = if (dy != 0f) dy * notches else 0f
-        if (fireWheel(h, v, px, py)) return
+        if (fireWheel(h, v, px, py)) return true
         /*
          * 滚轮没人接时先自己按像素滚（2026-10-29 父亲实测：首页上下左右拨都是焦点在跳）。
          * 界面把当前页的竖向列表和当前有焦点的那一行注册在 PixelScroll 上，
@@ -364,14 +366,15 @@ class MainActivity : ComponentActivity() {
          * 一格滚轮按 56dp 折算，与系统滚轮一格的观感接近。
          */
         val pxPerNotch = 56f * resources.displayMetrics.density
-        if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) return
-        if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) return
+        if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) return true
+        if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) return true
         /*
          * 到此为止，不再退化成方向键（父亲 2026-10-29 01:25 明确：焦点移动全部取消，
          * 摇杆只按像素滚）。方向键由焦点系统消费，一旦发出去就是「焦点走一格」，
          * 与像素滚动的手感互相打架，所以这一路彻底不接。
          */
         DiagLog.w(this, "input", "滚轮与像素滚动都没接住 → 本次不动（不发方向键）")
+        return false
     }
 
     private fun fireWheel(dx: Float, dy: Float, x: Float, y: Float): Boolean {
@@ -405,21 +408,55 @@ class MainActivity : ComponentActivity() {
      */
     private var lastStickKeyAt = 0L
 
-    private fun stickAsKeys(dx: Float, dy: Float) {
+
+    /** 光点此刻是否落在播放页的控制条或展开的菜单里 */
+    private fun cursorInPlayerUi(): Boolean {
+        val x = com.xxxx.emby_tv.util.PointerTargets.cursorX
+        val y = com.xxxx.emby_tv.util.PointerTargets.cursorY
+        val panel = com.xxxx.emby_tv.util.InputBridge.playerPanelRect
+        val menu = com.xxxx.emby_tv.util.InputBridge.playerMenuRect
+        if (com.xxxx.emby_tv.util.InputBridge.playerPanelVisible && panel != null && panel.contains(x, y)) return true
+        if (menu != null && menu.contains(x, y)) return true
+        return false
+    }
+
+    /**
+     * 播放页的摇杆语义：菜单能滚就先按像素滚（与其余页面同一套速度与惯性），
+     * 滚不动了才把竖向当成"往下搬唤出控制条"、横向当成快退快进。
+     *
+     * 父亲 2026-10-29 实测：选集等菜单在播放页里滚得慢、没有惯性 —— 因为那一路原来只发方向键，
+     * 一格一格跳、松开即停；取消后统一走像素滚动。
+     */
+    private fun playerStick(dx: Float, dy: Float, notches: Float) {
         val now = SystemClock.uptimeMillis()
-        if (now - lastStickKeyAt < 90L) return
-        lastStickKeyAt = now
         /*
-         * 先比大小再看方向：斜着往下拨时 dx 常有一点残余，按「先看 x」的顺序会被判成左右，
-         * 表现就是往下拨唤不出控制条、反而在快进快退（父亲 2026-10-29 报的现象）。
-         * 竖向占优就算竖向，横向明显过半才算横向。
+         * 光点在播放区（控制条收起、菜单没开、或者光点根本没落在控制条/菜单里）时，
+         * 摇杆左右就是快退快进、往下就是唤控制条 —— 不能先去滚菜单，否则会被隐藏菜单吃掉。
+         * 只有光点真的落在控制条或展开的菜单上，才按像素滚菜单（父亲 2026-10-29 口径）。
          */
-        val code = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
-            if (dy > 0f) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_UP
-        } else {
-            if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
+        if (!cursorInPlayerUi()) {
+            if (now - lastStickKeyAt < 90L) return
+            val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
+            lastStickKeyAt = now
+            if (vertical) {
+                if (dy < 0f) fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
+            } else {
+                fireScroll(if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+            }
+            return
         }
-        fireScroll(code)
+        // 菜单里滚得比页面稍快一点（乘 1.6），父亲实测播放页菜单偏慢
+        if (doScroll(dx, dy, notches * 1.6f)) return
+        if (now - lastStickKeyAt < 90L) return
+        val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
+        if (vertical) {
+            lastStickKeyAt = now
+            // 与滚动同一套符号：往下搬（滚动方向那一侧）唤出控制条，往上搬不动
+            if (dy < 0f) fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
+        } else if (kotlin.math.abs(dx) > 0f) {
+            lastStickKeyAt = now
+            fireScroll(if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+        }
     }
 
     private fun fireScroll(keyCode: Int) {
@@ -543,7 +580,7 @@ class MainActivity : ComponentActivity() {
              * 播放页例外：那里的摇杆本来就是方向语义（下唤控制条、上音量、左右快退快进）。
              */
             InputBridge.scrollDispatcher = { dx, dy, notches ->
-                if (InputBridge.playerScreenActive) stickAsKeys(dx, dy) else doScroll(dx, dy, notches)
+                if (InputBridge.playerScreenActive) playerStick(dx, dy, notches) else doScroll(dx, dy, notches)
             }
             InputBridge.onStick(ev)
         }
