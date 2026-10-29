@@ -125,7 +125,7 @@ private const val kOutline = 2f
 private const val kStartX = 1920f
 private const val kEndX = -400f
 private const val kDurationMs = 9_000L
-private const val kLaneGap = 90f
-private val kLaneTops = floatArrayOf(66f, 66f + kFontSize * 1.45f)
+private const val kLaneGap = 150f
+private val kLaneTops = floatArrayOf(70f, 70f + kFontSize * 1.75f)
 /** 各轨道「下一条可以进场」的时刻，逐条累加，保证同轨前后不重叠 */
 private val laneNextFreeMs = LongArray(kLaneCount)

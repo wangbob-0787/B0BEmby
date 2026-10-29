@@ -35,7 +35,7 @@ object InputBridge {
      */
     private const val AXIS_DEAD_ZONE = 0.55f
     private const val RATE_MIN = 3f
-    private const val RATE_MAX = 12f
+    private const val RATE_MAX = 18f
     private const val RATE_CURVE = 1.3
 
     /** 松手后的滑行总时长与停下的阈值（格/秒） */
@@ -219,6 +219,19 @@ object InputBridge {
 
             if (pushRate <= 0f) {
                 lastFrameAt = 0L
+                return
+            }
+            /*
+             * 松手看门狗（父亲 2026-10-29：TV 上"按住滚动松手就停、没有惯性"）：
+             * 投影遥控器的十字键在松开时不一定再发一个中位事件，只看"收到中位"就永远进不了惯性。
+             * 超过 120 毫秒没有新的摇杆事件，就当作松手，按当前速度滑行出去。
+             */
+            if (now - lastAxisAt > 120L) {
+                inertiaRate = pushRate
+                inertiaStartAt = now - 120L
+                pushRate = 0f
+                lastFrameAt = frameTimeNanos
+                scheduleFrame()
                 return
             }
             if (now - holdFrom > HOLD_SAFETY_MS) {

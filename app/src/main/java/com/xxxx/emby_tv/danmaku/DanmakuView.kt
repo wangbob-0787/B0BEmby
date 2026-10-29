@@ -129,7 +129,16 @@ class DanmakuView(context: Context) : View(context) {
         val textSize = max(10f, item.style.fontSize * scale)
         fillPaint.textSize = textSize
         outlinePaint.textSize = textSize
-        fillPaint.color = item.style.primaryColor
+        /*
+         * 颜色按 VR 口径统一成近白：服务端返回的彩色在电视上偏暗、看不清，
+         * 深色（亮度低于 0.55）一律提白，浅色则保留原色。
+         */
+        val base = item.style.primaryColor
+        val r = android.graphics.Color.red(base)
+        val g2 = android.graphics.Color.green(base)
+        val b2 = android.graphics.Color.blue(base)
+        val luma = (0.299f * r + 0.587f * g2 + 0.114f * b2) / 255f
+        fillPaint.color = if (luma < 0.55f) 0xFFE8F8FF.toInt() else base
         shadowPaint.textSize = textSize
         // 阴影偏移按字号缩放（VR 用的是静音 2~3px 的黑色投影，不是四周描边）
         val off = max(1.5f, textSize * 0.05f)

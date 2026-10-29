@@ -355,6 +355,20 @@ class MainActivity : ComponentActivity() {
      * （父亲 2026-10-29：首页大海报左右扳动摇杆不切换，VR 版能切）。
      */
     private fun homeStick(dx: Float, dy: Float, notches: Float) {
+        /*
+         * 大海报（首页大片头）本身不是可滚容器：摇杆左右必须直接换片。
+         * 判据是光点落在大片头区域，或压根没有光标（遥控器/手柄）且焦点在大海报上。
+         */
+        val onHero = com.xxxx.emby_tv.util.PointerTargets.regionContains(
+            "hero", com.xxxx.emby_tv.util.PointerTargets.cursorX,
+            com.xxxx.emby_tv.util.PointerTargets.cursorY)
+        if (onHero && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastStickKeyAt < 260L) return
+            lastStickKeyAt = now
+            fireScroll(if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+            return
+        }
         if (doScroll(dx, dy, notches)) return
         val now = SystemClock.uptimeMillis()
         if (now - lastStickKeyAt < 90L) return
@@ -390,7 +404,7 @@ class MainActivity : ComponentActivity() {
          * 这里直接 scrollBy 一个像素量，焦点不动，跟 VR 的手感一致。
          * 一格滚轮按 56dp 折算，与系统滚轮一格的观感接近。
          */
-        val pxPerNotch = 96f * resources.displayMetrics.density
+        val pxPerNotch = 130f * resources.displayMetrics.density
         if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) return true
         if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) return true
         /*
@@ -461,10 +475,20 @@ class MainActivity : ComponentActivity() {
      */
     private fun playerStick(dx: Float, dy: Float, notches: Float) {
         val now = SystemClock.uptimeMillis()
-        if (cursorInPlayerUi() && doScroll(dx, dy, notches * 2.4f)) return
+        /*
+         * 判据：光标 3 秒内动过才算"在指东西"。投影上用的是遥控器/手柄，根本不动光标，
+         * 这时按旧的"落点判定"会把每一次摇杆都算成播放区 —— 菜单滚不动、左右也不快进快退
+         * （父亲 2026-10-29 连报两次没生效）。没光标时：竖向滚面板、横向快退快进。
+         */
+        val hasCursor = com.xxxx.emby_tv.util.PointerTargets.cursorActive()
+        val inUi = hasCursor && cursorInPlayerUi()
+        val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
+        // 竖向且（在面板上，或压根没有光标）：交给像素滚动，带惯性
+        if ((inUi || !hasCursor) && vertical && doScroll(dx, dy, notches * 2.4f)) return
+        if (inUi && doScroll(dx, dy, notches * 2.4f)) return
         if (now - lastStickKeyAt < 90L) return
         lastStickKeyAt = now
-        if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+        if (vertical) {
             if (dy < 0f) fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
         } else if (dx > 0f) {
             fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
