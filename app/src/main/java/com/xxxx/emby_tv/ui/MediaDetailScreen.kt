@@ -293,6 +293,15 @@ fun MediaDetailScreen(
                             )
                         }
 
+                        // ── 版本 / 视频 / 音频 / 字幕（照官方客户端四行，父亲 2026-10-28 定）──
+                        // 放在简介之前：详情页整体可滚动，放简介后面时会被挤到首屏之外，
+                        // 看上去就像这几行"没有显示"（父亲 2026-10-29 报）。
+                        DetailMediaRows(
+                            itemId = mediaInfo.id ?: "",
+                            sources = mediaInfo.mediaSources.orEmpty(),
+                            prefs = preferencesManager,
+                        )
+
                         // Overview —— 官方顺序是「标题 → 元数据 → 简介 → 按钮」（父亲 2026-10-02）
                         mediaInfo.overview?.let { overview ->
                             Text(
@@ -305,15 +314,6 @@ fun MediaDetailScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-
-                        // ── 版本 / 视频 / 音频 / 字幕（照官方客户端四行，父亲 2026-10-28 定）──
-                        // 版本只在库里有多个文件时出现；后三行跟着所选版本走，
-                        // 选过的项按「条目 + 版本」记在本地，播放页按同一份记忆取流。
-                        DetailMediaRows(
-                            itemId = mediaInfo.id ?: "",
-                            sources = mediaInfo.mediaSources.orEmpty(),
-                            prefs = preferencesManager,
-                        )
 
                         // 动作按钮（父亲 2026-10-02 定：只要两个，方块图标 + 下方文字）
                         //   续播 —— 从上次看到的位置接着播
