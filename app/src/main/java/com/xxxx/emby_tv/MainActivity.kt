@@ -180,6 +180,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        /*
+         * 坐标表没命中（大多数页面没登记控件）时，直接在光标位置派发一次触摸点击。
+         * 这样按钮与海报靠各自的 clickable 就能响应，不必逐页登记 ——
+         * 父亲 2026-10-29 报「除了首页，其他页面好多按钮、海报点不动」。
+         * 触摸事件没人接（返回 false）才退回遥控器语义补一次确认键。
+         */
+        val touchHandled = runCatching {
+            val t = SystemClock.uptimeMillis()
+            val downEv = android.view.MotionEvent.obtain(t, t, android.view.MotionEvent.ACTION_DOWN, cursorX, cursorY, 0)
+            val upEv = android.view.MotionEvent.obtain(t, t + 40L, android.view.MotionEvent.ACTION_UP, cursorX, cursorY, 0)
+            val handled = window.decorView.dispatchTouchEvent(downEv)
+            window.decorView.dispatchTouchEvent(upEv)
+            downEv.recycle(); upEv.recycle()
+            handled
+        }.getOrDefault(false)
+        if (touchHandled) {
+            DiagLog.w(this, "input", "光标处触摸点击已派发（来源=" + source + "）")
+            return
+        }
         val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0)
         val up = KeyEvent(now, now + 40L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0)
         super.dispatchKeyEvent(down)

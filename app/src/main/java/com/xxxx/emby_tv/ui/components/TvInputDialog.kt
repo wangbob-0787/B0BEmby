@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import com.xxxx.emby_tv.util.hoverToFocus
 import com.xxxx.emby_tv.util.pointerTarget
 import androidx.compose.ui.focus.FocusRequester
@@ -69,13 +70,29 @@ fun TvInputDialog(
         onDismiss()
     }
 
+    /*
+     * 输入框是否持有焦点：电视上「确认键」在输入法弹出时常常先被输入法吃掉一次，
+     * 用户体感就是「按了确认没反应、不开始搜索」。这里在弹窗根上兜一手：
+     * 焦点在输入框时按确认（含回车）就直接提交。
+     */
+    var fieldHasFocus by remember { mutableStateOf(false) }
+
     AlertDialog(
         modifier = modifier,
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.onSurface,
         title = { Text(text = title) },
         text = {
-            Column {
+            Column(modifier = Modifier.onPreviewKeyEvent { ev ->
+                val okKey = ev.key == Key.Enter || ev.key == Key.NumPadEnter ||
+                    (ev.key == Key.DirectionCenter && fieldHasFocus)
+                if (ev.type == KeyEventType.KeyDown && okKey && inputText.isNotBlank()) {
+                    commit()
+                    true
+                } else {
+                    false
+                }
+            }) {
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = if (isNumber) it.filter { c -> c.isDigit() } else it },
@@ -90,6 +107,7 @@ fun TvInputDialog(
                     else VisualTransformation.None,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .onFocusChanged { fieldHasFocus = it.isFocused }
                         .focusRequester(fieldFocus)
                 )
             }

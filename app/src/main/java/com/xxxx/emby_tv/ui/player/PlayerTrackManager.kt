@@ -3,6 +3,7 @@ package com.xxxx.emby_tv.ui.player
 import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.TrackGroup
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import com.xxxx.emby_tv.data.model.MediaStreamDto
@@ -103,6 +104,41 @@ object PlayerTrackManager {
                         )
                         isMatched = true
                         break@outer2
+                    }
+                }
+            }
+        }
+
+        /*
+         * 语言 + 标题匹配（2026-10-29 父亲实测「选中文出来的是英文」）：
+         * 前两条都靠 label/id 的写法，Emby 与外挂配置的写法对不上时就落到最后的
+         * 「按顺序数」——而顺序里夹着容器内封轨，一数就偏到别的语言上。
+         * 这里先按语言精确匹配，同语言多条时再用标题区分；命中就不再往下数顺序。
+         */
+        if (!isMatched) {
+            val wantLang = targetTrack.language?.lowercase()?.takeIf { it.isNotBlank() }
+            val wantTitle = (targetTrack.title ?: targetTrack.displayTitle)?.lowercase()
+            val candidates = mutableListOf<Pair<TrackGroup, Int>>()
+            for (group in trackGroups) {
+                for (i in 0 until group.length) {
+                    val f = group.getTrackFormat(i)
+                    if (wantLang != null && f.language?.lowercase() != wantLang) continue
+                    candidates += group.mediaTrackGroup to i
+                }
+            }
+            if (candidates.size == 1) {
+                parametersBuilder.setOverrideForType(
+                    TrackSelectionOverride(candidates[0].first, candidates[0].second)
+                )
+                isMatched = true
+            } else if (candidates.isNotEmpty() && wantTitle != null) {
+                for ((group, idx) in candidates) {
+                    val f = group.getFormat(idx)
+                    val hay = ((f.label ?: "") + " " + (f.id ?: "")).lowercase()
+                    if (hay.contains(wantTitle) || wantTitle.contains((f.label ?: "").lowercase())) {
+                        parametersBuilder.setOverrideForType(TrackSelectionOverride(group, idx))
+                        isMatched = true
+                        break
                     }
                 }
             }
