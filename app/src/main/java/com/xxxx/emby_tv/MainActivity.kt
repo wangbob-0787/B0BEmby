@@ -272,10 +272,10 @@ class MainActivity : ComponentActivity() {
                              * 发方向键时，控制条一展开左右键就归焦点系统接走 ——
                              * 扳住几秒后快进会断，接着焦点在按钮之间一个个跳
                              * （父亲 2026-10-29 实测 24:17→28:54 之后就停）。
-                             * 方向：往右拨 = 快进，往左拨 = 快退。
+                             * 方向沿用已验证的语义：往右拨 = 快退。
                              */
                             lastPlayerKeyAt = nowKey
-                            val step = if (dx > 0f) 30_000L else -30_000L
+                            val step = if (dx > 0f) -30_000L else 30_000L
                             com.xxxx.emby_tv.util.PlayerSeekBus.seekBy?.invoke(step)
                         }
                     }
