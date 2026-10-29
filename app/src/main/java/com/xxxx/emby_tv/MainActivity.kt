@@ -252,11 +252,15 @@ class MainActivity : ComponentActivity() {
                                 fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
                             }
                         } else if (nowKey - lastPlayerKeyAt > 400L) {
-                            // 光点在播放区时，左右拨 = 快退/快进（父亲 2026-10-29 报没反应）
+                            /*
+                             * 光点在播放区时，左右拨 = 快退/快进。
+                             * 指针往右是正 dx，但父亲 2026-10-29 实测"方向反了"：
+                             * 他往右拨要的是快进，所以这里把正负对调，与屏幕位移方向相反。
+                             */
                             lastPlayerKeyAt = nowKey
                             fireScroll(
-                                if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT
-                                else KeyEvent.KEYCODE_DPAD_LEFT
+                                if (dx > 0f) KeyEvent.KEYCODE_DPAD_LEFT
+                                else KeyEvent.KEYCODE_DPAD_RIGHT
                             )
                         }
                     }
@@ -275,7 +279,23 @@ class MainActivity : ComponentActivity() {
                 lastScrollAxis = if (vertical) 1 else 0
                 lastScrollSign = if (vertical) (if (dy > 0f) 1 else -1) else (if (dx > 0f) 1 else -1)
                 lastCursorSpeedPxPerSec = holdRate * 120f
-                doScroll(dirX, dirY, (holdRate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED))
+                val perFrameNotches = (holdRate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED)
+                val consumed = doScroll(dirX, dirY, perFrameNotches)
+                /*
+                 * 横向没人吃 = 这一屏没有可横向滚的容器（首页大海报就是这种）。
+                 * 此时左右拨必须换片，否则指针拖过去什么都不发生 ——
+                 * 父亲 2026-10-29 报"首页左右拨不会换片"。
+                 */
+                if (!consumed && !vertical) {
+                    val nowKey = SystemClock.uptimeMillis()
+                    if (nowKey - lastStickKeyAt > 110L) {
+                        lastStickKeyAt = nowKey
+                        fireScroll(
+                            if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT
+                            else KeyEvent.KEYCODE_DPAD_LEFT
+                        )
+                    }
+                }
             }
             holdHandler.postDelayed(this, 16L)
         }
