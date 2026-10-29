@@ -240,3 +240,59 @@ object PlayerTrackManager {
         }
     }
 }
+
+/*
+ * 字幕清单与选择（照 VR 的做法：**以播放器实际报出来的轨表为准**，不再拿 Emby 的流
+ * 序号去猜）。VR 侧是读内核 track-list、按 ordinal 直接切；TV 侧对应读
+ * ExoPlayer 的 Tracks，按「轨道组 + 组内序号」直接 override，标签也用轨表自己的。
+ * 这样菜单里出现的每一条都真实存在、勾哪条就是哪条（父亲 2026-10-29 报
+ * 「选项不全、选中文出英文」就是猜序号猜歪了）。
+ */
+data class TextTrackItem(
+    val key: String,
+    val label: String,
+    val sub: String?,
+    val group: TrackGroup,
+    val trackIndex: Int,
+    val language: String?,
+)
+
+private fun langName(code: String?): String? {
+    if (code.isNullOrBlank() || code == "und") return null
+    return java.util.Locale.forLanguageTag(code.replace('_', '-')).displayLanguage
+}
+
+fun textTrackItems(player: ExoPlayer): List<TextTrackItem> {
+    val out = mutableListOf<TextTrackItem>()
+    val groups = runCatching { player.currentTracks.groups }.getOrNull() ?: return out
+    groups.forEachIndexed { gi, group ->
+        if (group.type != C.TRACK_TYPE_TEXT) return@forEachIndexed
+        for (i in 0 until group.length) {
+            val f = group.getTrackFormat(i)
+            val lang = f.language
+            val label = f.label?.takeIf { it.isNotBlank() } ?: langName(lang) ?: "字幕 ${out.size + 1}"
+            val sub = langName(lang)?.takeIf { it != label }
+            out += TextTrackItem("g$gi:$i", label, sub, group.mediaTrackGroup, i, lang)
+        }
+    }
+    return out
+}
+
+/** 当前正在显示的那条（null = 关着） */
+fun selectedTextTrackKey(player: ExoPlayer): String? {
+    val groups = runCatching { player.currentTracks.groups }.getOrNull() ?: return null
+    groups.forEachIndexed { gi, group ->
+        if (group.type != C.TRACK_TYPE_TEXT) return@forEachIndexed
+        for (i in 0 until group.length) {
+            if (group.isTrackSelected(i)) return "g$gi:$i"
+        }
+    }
+    return null
+}
+
+fun selectTextTrack(player: ExoPlayer, item: TextTrackItem?) {
+    val b = player.trackSelectionParameters.buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, item == null)
+    if (item != null) b.setOverrideForType(TrackSelectionOverride(item.group, item.trackIndex))
+    player.trackSelectionParameters = b.build()
+}

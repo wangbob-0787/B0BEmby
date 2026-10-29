@@ -278,6 +278,9 @@ fun PlayerScreen(
     // 用于跟踪是否已经尝试过转码回退
     var hasTriedTranscodeFallback by remember { mutableStateOf(false) }
     var currentTracks by remember { mutableStateOf<Tracks?>(null) }
+    /* 字幕清单与当前勾选：以播放器实际轨表为准（照 VR 的做法） */
+    var textTrackItems by remember { mutableStateOf<List<com.xxxx.emby_tv.ui.player.TextTrackItem>>(emptyList()) }
+    var selectedTextKey by remember { mutableStateOf<String?>(null) }
 
     val preferencesManager = remember { PreferencesManager(context) }
     // 详情页选过的「版本」（Emby MediaSource id）。键名与 VR 共用：ver_choice_<itemId>
@@ -1450,6 +1453,8 @@ fun PlayerScreen(
 
             override fun onTracksChanged(tracks: Tracks) {
                 currentTracks = tracks
+                textTrackItems = com.xxxx.emby_tv.ui.player.textTrackItems(player)
+                selectedTextKey = com.xxxx.emby_tv.ui.player.selectedTextTrackKey(player)
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -2275,10 +2280,16 @@ fun PlayerScreen(
                             )
 
                             PlayerMenuItem.SUBTITLE -> SubtitleSheet(
-                                tracks = subtitleTracks,
-                                selectedIndex = selectedSubtitleIndex,
-                                onSelect = { index ->
-                                    changeTrack(selectedAudioIndex, index)
+                                items = textTrackItems,
+                                selectedKey = selectedTextKey,
+                                onSelect = { item ->
+                                    com.xxxx.emby_tv.ui.player.selectTextTrack(player, item)
+                                    selectedTextKey = item?.key
+                                    // 同步给上报/记忆用的 Emby 流序号：按语言找回对应流，找不到就记 -1
+                                    selectedSubtitleIndex = if (item == null) -1 else
+                                        subtitleTracks.firstOrNull {
+                                            it.language?.equals(item.language, true) == true
+                                        }?.index ?: -1
                                     activeItem = null
                                 },
                                 firstFocus = sheetFirstFocus
