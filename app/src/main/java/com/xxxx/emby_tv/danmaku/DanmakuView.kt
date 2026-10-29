@@ -98,10 +98,10 @@ class DanmakuView(context: Context) : View(context) {
         }
         val heightPx = height.toFloat()
         val sizePx = if (t.playResY > 0f) 46f * (heightPx / t.playResY) * userScale else 46f * userScale
-        val stepPx = sizePx * 1.55f
+        val stepPx = sizePx * 1.5f
         val topPx = heightPx * 0.055f
         laneCount = if (heightPx > 0f && stepPx > 1f) {
-            (((heightPx * 0.46f) - topPx) / stepPx).toInt().coerceIn(1, 6)
+            (((heightPx * 0.58f) - topPx) / stepPx).toInt().coerceIn(1, 9)
         } else {
             2
         }
@@ -135,7 +135,7 @@ class DanmakuView(context: Context) : View(context) {
         val t = track ?: return 0f
         val heightPx = height.toFloat()
         val sizePx = if (t.playResY > 0f) 46f * (heightPx / t.playResY) * userScale else 46f * userScale
-        return heightPx * 0.055f + lane * sizePx * 1.55f
+        return heightPx * 0.055f + lane * sizePx * 1.5f
     }
 
     override fun onDraw(canvas: Canvas) {
