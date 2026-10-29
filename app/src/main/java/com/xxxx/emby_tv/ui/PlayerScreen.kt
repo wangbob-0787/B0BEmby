@@ -698,6 +698,22 @@ fun PlayerScreen(
     var downloadSpeed by remember { mutableStateOf(0L) }
     var lastSpeedUpdate by remember { mutableStateOf(0L) }
 
+    /*
+     * 摇杆直连 seek（2026-10-29 父亲报「扳住快进几秒就停、随后焦点在按钮之间跳」）：
+     * 摇杆推住时不再发方向键，直接按毫秒偏移 seek，焦点与按键流无关。
+     */
+    DisposableEffect(player) {
+        com.xxxx.emby_tv.util.PlayerSeekBus.seekBy = { deltaMs ->
+            if (duration > 0L) {
+                val np = (player.currentPosition + deltaMs).coerceIn(0L, duration)
+                player.seekTo(np)
+                position = np
+                if (!player.isPlaying) player.play()
+            }
+        }
+        onDispose { com.xxxx.emby_tv.util.PlayerSeekBus.seekBy = null }
+    }
+
     // Long press state
     var leftKeyDownTime by remember { mutableStateOf(0L) }
     var rightKeyDownTime by remember { mutableStateOf(0L) }

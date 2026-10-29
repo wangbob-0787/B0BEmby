@@ -242,13 +242,22 @@ class MainActivity : ComponentActivity() {
                      */
                     val pxPerNotch = 56f * resources.displayMetrics.density
                     val perFrame = (holdRate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED)
-                    val scrolled = if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
-                        val sign = if (dy > 0f) -1f else 1f
-                        com.xxxx.emby_tv.util.PixelScroll.verticalBy(sign * perFrame * pxPerNotch)
+                    val verticalInPlayer = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
+                    /*
+                     * 记下这一拍实际用的方向，松手后的惯性直接沿用它 ——
+                     * 惯性另算一套公式时方向可能相反，表现是松手往回滑。
+                     */
+                    var signInPlayer = 0f
+                    val scrolled = if (verticalInPlayer) {
+                        signInPlayer = if (dy > 0f) -1f else 1f
+                        com.xxxx.emby_tv.util.PixelScroll.verticalBy(signInPlayer * perFrame * pxPerNotch)
                     } else {
-                        val sign = if (dx > 0f) 1f else -1f
-                        com.xxxx.emby_tv.util.PixelScroll.horizontalBy(sign * perFrame * pxPerNotch)
+                        signInPlayer = if (dx > 0f) 1f else -1f
+                        com.xxxx.emby_tv.util.PixelScroll.horizontalBy(signInPlayer * perFrame * pxPerNotch)
                     }
+                    lastScrollAxis = if (verticalInPlayer) 1 else 0
+                    lastScrollSign = signInPlayer.toInt()
+                    lastCursorSpeedPxPerSec = holdRate * 90f
                     if (!scrolled) {
                         val nowKey = SystemClock.uptimeMillis()
                         if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
@@ -257,17 +266,17 @@ class MainActivity : ComponentActivity() {
                                 lastPlayerKeyAt = nowKey
                                 fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
                             }
-                        } else if (nowKey - lastPlayerKeyAt > 120L) {
+                        } else if (nowKey - lastPlayerKeyAt > 200L) {
                             /*
-                             * 光点在播放区时，左右拨 = 快退/快进。
-                             * 指针往右是正 dx，但父亲 2026-10-29 实测"方向反了"：
-                             * 他往右拨要的是快进，所以这里把正负对调，与屏幕位移方向相反。
+                             * 左右拨 = 快退/快进，直连播放器 seek，不发方向键。
+                             * 发方向键时，控制条一展开左右键就归焦点系统接走 ——
+                             * 扳住几秒后快进会断，接着焦点在按钮之间一个个跳
+                             * （父亲 2026-10-29 实测 24:17→28:54 之后就停）。
+                             * 方向沿用已验证的语义：往右拨 = 快退。
                              */
                             lastPlayerKeyAt = nowKey
-                            fireScroll(
-                                if (dx > 0f) KeyEvent.KEYCODE_DPAD_LEFT
-                                else KeyEvent.KEYCODE_DPAD_RIGHT
-                            )
+                            val step = if (dx > 0f) -30_000L else 30_000L
+                            com.xxxx.emby_tv.util.PlayerSeekBus.seekBy?.invoke(step)
                         }
                     }
                     holdHandler.postDelayed(this, 16L)
@@ -287,7 +296,7 @@ class MainActivity : ComponentActivity() {
                  */
                 holdRate = (mag / 90f).coerceIn(3f, 12f)
                 lastScrollAxis = if (vertical) 1 else 0
-                lastScrollSign = if (vertical) (if (dy > 0f) 1 else -1) else (if (dx > 0f) 1 else -1)
+                lastScrollSign = (if (vertical) dirY else dirX).toInt()
                 lastCursorSpeedPxPerSec = holdRate * 120f
                 val perFrameNotches = (holdRate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED)
                 val consumed = doScroll(dirX, dirY, perFrameNotches)
@@ -360,12 +369,10 @@ class MainActivity : ComponentActivity() {
     private fun startScrollInertia() {
         val rate = holdRate
         if (rate < 1f) return
-        val dx = holdLastX - holdAnchorX
-        val dy = holdLastY - holdAnchorY
-        val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
-        inertiaDirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
-        // 与 holdTick 的滚动符号保持一致：往下拨 dy>0 → 向上滚（取 -1）
-        inertiaDirY = if (vertical) (if (dy > 0f) -1f else 1f) else 0f
+        /* 惯性沿用按住期间实际使用的方向，不再另算一套公式（会滑反） */
+        val sign = lastScrollSign.toFloat()
+        inertiaDirX = if (lastScrollAxis == 0) sign else 0f
+        inertiaDirY = if (lastScrollAxis == 1) sign else 0f
         inertiaRate = rate
         inertiaStartAt = SystemClock.uptimeMillis()
         holdHandler.removeCallbacks(inertiaTick)
