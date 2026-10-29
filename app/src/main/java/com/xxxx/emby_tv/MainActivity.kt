@@ -322,7 +322,8 @@ class MainActivity : ComponentActivity() {
         val dy = holdLastY - holdAnchorY
         val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
         inertiaDirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
-        inertiaDirY = if (vertical) (if (dy > 0f) 1f else -1f) else 0f
+        // 与 holdTick 的滚动符号保持一致：往下拨 dy>0 → 向上滚（取 -1）
+        inertiaDirY = if (vertical) (if (dy > 0f) -1f else 1f) else 0f
         inertiaRate = rate
         inertiaStartAt = SystemClock.uptimeMillis()
         holdHandler.removeCallbacks(inertiaTick)
