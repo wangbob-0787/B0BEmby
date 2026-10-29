@@ -31,6 +31,8 @@ import com.xxxx.emby_tv.R
 import kotlinx.coroutines.delay
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 
 /**
  * 文本输入弹窗（服务器地址 / 端口 / 用户名 / 密码都用它）。
