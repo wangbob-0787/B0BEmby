@@ -77,6 +77,9 @@ class MainActivity : ComponentActivity() {
     private var cursorY = 0f
     private var cursorAt = 0L
     private var pressPending = false
+    private var lastStickDiagAt = 0L
+    private var lastScrollDiagAt = 0L
+    private var lastKeyDiagAt = 0L
     private var pressX = 0f
     private var pressY = 0f
     private var lastInjectAt = 0L
@@ -356,10 +359,12 @@ class MainActivity : ComponentActivity() {
      */
     private fun homeStick(dx: Float, dy: Float, notches: Float) {
         /*
-         * 大海报（首页大片头）本身不是可滚容器：摇杆左右必须直接换片。
-         * 判据是光点落在大片头区域，或压根没有光标（遥控器/手柄）且焦点在大海报上。
+         * 首页：竖向交像素滚动（行往下走），横向必须换片。
+         * 大海报不是可滚容器，横向一旦先交给滚动就被吃掉，永远轮不到换片。
          */
-        if (doScroll(dx, dy, notches)) return
+        if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+            if (doScroll(dx, dy, notches)) return
+        }
         val now = SystemClock.uptimeMillis()
         if (now - lastStickKeyAt < 90L) return
         lastStickKeyAt = now
@@ -387,7 +392,15 @@ class MainActivity : ComponentActivity() {
         // 滚轮量与像素滚动同号：dy 在 holdTick 里已经翻成"屏幕方向"，这里不再额外取负
         val h = if (dx != 0f) dx * notches else 0f
         val v = if (dy != 0f) dy * notches else 0f
-        if (fireWheel(h, v, px, py)) return true
+        val diagNow = SystemClock.uptimeMillis()
+        if (fireWheel(h, v, px, py)) {
+            if (diagNow - lastScrollDiagAt > 400L) {
+                lastScrollDiagAt = diagNow
+                DiagLog.w(this, "scroll", "滚轮接住：dx=" + dx + " dy=" + dy +
+                    " 落点=(" + px.toInt() + "," + py.toInt() + ") 看门狗=" + InputBridge.axisInUse())
+            }
+            return true
+        }
         /*
          * 滚轮没人接时先自己按像素滚（2026-10-29 父亲实测：首页上下左右拨都是焦点在跳）。
          * 界面把当前页的竖向列表和当前有焦点的那一行注册在 PixelScroll 上，
@@ -395,8 +408,20 @@ class MainActivity : ComponentActivity() {
          * 一格滚轮按 56dp 折算，与系统滚轮一格的观感接近。
          */
         val pxPerNotch = 130f * resources.displayMetrics.density
-        if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) return true
-        if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) return true
+        if (dy != 0f && com.xxxx.emby_tv.util.PixelScroll.verticalBy(dy * notches * pxPerNotch)) {
+            if (diagNow - lastScrollDiagAt > 400L) {
+                lastScrollDiagAt = diagNow
+                DiagLog.w(this, "scroll", "像素竖向滚动：notches=" + notches)
+            }
+            return true
+        }
+        if (dx != 0f && com.xxxx.emby_tv.util.PixelScroll.horizontalBy(dx * notches * pxPerNotch)) {
+            if (diagNow - lastScrollDiagAt > 400L) {
+                lastScrollDiagAt = diagNow
+                DiagLog.w(this, "scroll", "像素横向滚动：notches=" + notches)
+            }
+            return true
+        }
         /*
          * 到此为止，不再退化成方向键（父亲 2026-10-29 01:25 明确：焦点移动全部取消，
          * 摇杆只按像素滚）。方向键由焦点系统消费，一旦发出去就是「焦点走一格」，
@@ -478,9 +503,9 @@ class MainActivity : ComponentActivity() {
         if (vertical) {
             if (dy < 0f) fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
         } else if (dx > 0f) {
-            fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
+            fireScroll(KeyEvent.KEYCODE_DPAD_LEFT)      // 右拨 = 快进（上一次是对调的，父亲 2026-10-29 报方向反）
         } else if (dx < 0f) {
-            fireScroll(KeyEvent.KEYCODE_DPAD_LEFT)
+            fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
         }
     }
 
@@ -563,6 +588,12 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
+        val nowKey = SystemClock.uptimeMillis()
+        if (nowKey - lastKeyDiagAt > 400L) {
+            lastKeyDiagAt = nowKey
+            DiagLog.w(this, "key", "按键通道：keyCode=" + event.keyCode +
+                " action=" + event.action + " 源=0x" + Integer.toHexString(event.source))
+        }
         val mapped = InputBridge.mapGamepadKey(event)
         return super.dispatchKeyEvent(mapped ?: event)
     }
@@ -597,6 +628,19 @@ class MainActivity : ComponentActivity() {
          * 事件频率也因设备而异，滚动手感时快时慢。
          */
         if (InputBridge.hasStickData(ev)) {
+            /*
+             * 现场取证（2026-10-29）：投影/头显到底把摇杆发成什么，只有设备说了算。
+             * 400 毫秒一条，日志 tag B0BDiag，用 adb logcat 直接读。
+             */
+            val nowDiag = SystemClock.uptimeMillis()
+            if (nowDiag - lastStickDiagAt > 400L) {
+                lastStickDiagAt = nowDiag
+                DiagLog.w(this, "stick", "摇杆通道：源=0x" + Integer.toHexString(ev.source) +
+                    " AXIS_X=" + ev.getAxisValue(MotionEvent.AXIS_X) +
+                    " AXIS_Y=" + ev.getAxisValue(MotionEvent.AXIS_Y) +
+                    " HAT_X=" + ev.getAxisValue(MotionEvent.AXIS_HAT_X) +
+                    " HAT_Y=" + ev.getAxisValue(MotionEvent.AXIS_HAT_Y))
+            }
             /*
              * 摇杆走滚动，不发方向键（父亲 2026-10-29 报"TV 滚动没 VR 丝滑"）。
              * 方向键由焦点系统消费：一步一格卡、跳完列表再把那张卡拉进视野，天生一格一格；

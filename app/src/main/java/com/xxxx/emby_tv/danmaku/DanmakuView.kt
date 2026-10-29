@@ -50,6 +50,17 @@ class DanmakuView(context: Context) : View(context) {
     }
 
     fun setTrack(t: DanmakuTrack?) {
+        /*
+         * 取证（2026-10-29）：电视上"弹幕两行仍然重叠、字还是黑的"，先确认到底哪套数据在画、
+         * 首条颜色与轨道 y 是多少。日志 tag B0BDiag。
+         */
+        com.xxxx.emby_tv.util.DiagLog.w(
+            context, "danmaku",
+            "装入轨道：条数=" + (t?.items?.size ?: 0) +
+                " PlayRes=" + (t?.playResX ?: 0f) + "x" + (t?.playResY ?: 0f) +
+                " 首条色=0x" + Integer.toHexString(t?.items?.firstOrNull()?.style?.primaryColor ?: 0) +
+                " y1=" + (t?.items?.firstOrNull()?.y1 ?: -1f) +
+                " 首条移动=" + (t?.items?.firstOrNull()?.isMove ?: false))
         track = t
         invalidate()
     }
