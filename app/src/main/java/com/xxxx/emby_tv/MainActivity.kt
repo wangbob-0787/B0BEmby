@@ -361,7 +361,21 @@ class MainActivity : ComponentActivity() {
                 inertiaRate = 0f
                 return
             }
-            doScroll(inertiaDirX, inertiaDirY, (rate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED))
+            /*
+             * 播放页按住期间滚的是像素（PixelScroll），惯性必须走同一条通道，
+             * 否则换算成正负号交给滚轮事件，方向会反过来（父亲 2026-10-29 实测菜单往回滑）。
+             */
+            if (com.xxxx.emby_tv.util.InputBridge.playerScreenActive) {
+                val pxPerNotch = 56f * resources.displayMetrics.density
+                val step = rate * 16f / 1000f * SPEED
+                if (inertiaDirY != 0f) {
+                    com.xxxx.emby_tv.util.PixelScroll.verticalBy(inertiaDirY * step * pxPerNotch)
+                } else if (inertiaDirX != 0f) {
+                    com.xxxx.emby_tv.util.PixelScroll.horizontalBy(inertiaDirX * step * pxPerNotch)
+                }
+            } else {
+                doScroll(inertiaDirX, inertiaDirY, (rate * 16f / 1000f * SPEED).coerceIn(0.02f * SPEED, 1.5f * SPEED))
+            }
             holdHandler.postDelayed(this, 16L)
         }
     }
