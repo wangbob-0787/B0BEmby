@@ -251,7 +251,7 @@ class MainActivity : ComponentActivity() {
                                 lastPlayerKeyAt = nowKey
                                 fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
                             }
-                        } else if (nowKey - lastPlayerKeyAt > 400L) {
+                        } else if (nowKey - lastPlayerKeyAt > 120L) {
                             /*
                              * 光点在播放区时，左右拨 = 快退/快进。
                              * 指针往右是正 dx，但父亲 2026-10-29 实测"方向反了"：
@@ -275,7 +275,11 @@ class MainActivity : ComponentActivity() {
                 val dirX = if (vertical) 0f else (if (dx > 0f) 1f else -1f)
                 val dirY = if (vertical) (if (dy > 0f) -1f else 1f) else 0f
                 // 偏移 120px 记 1 格/秒，封顶 20 格/秒；按帧折算成这一帧该滚多少
-                holdRate = (mag / 120f).coerceIn(1f, 20f)
+                /*
+                 * 力度换算照 VR：每 90 像素偏移记 1 格/秒，下限 3、上限 12（VR 的 VR_RATE_MIN/MAX）。
+                 * 原来按 120 像素、下限 1，实测滚动明显偏慢且推起来没惯性感。
+                 */
+                holdRate = (mag / 90f).coerceIn(3f, 12f)
                 lastScrollAxis = if (vertical) 1 else 0
                 lastScrollSign = if (vertical) (if (dy > 0f) 1 else -1) else (if (dx > 0f) 1 else -1)
                 lastCursorSpeedPxPerSec = holdRate * 120f
@@ -286,9 +290,14 @@ class MainActivity : ComponentActivity() {
                  * 此时左右拨必须换片，否则指针拖过去什么都不发生 ——
                  * 父亲 2026-10-29 报"首页左右拨不会换片"。
                  */
-                if (!consumed && !vertical) {
+                /*
+                 * 首页横向：照 VR 轮播区的做法，直接按 200ms 一张的节流连续换页
+                 * （VR 的 ZONE_STEP_MS），不等"横向没人吃" —— 大海报不是可滚容器，
+                 * 它接的是 PixelScroll 的横向回调，等 consumed 就永远轮不到它。
+                 */
+                if (!vertical) {
                     val nowKey = SystemClock.uptimeMillis()
-                    if (nowKey - lastStickKeyAt > 110L) {
+                    if (nowKey - lastStickKeyAt > 200L) {
                         lastStickKeyAt = nowKey
                         fireScroll(
                             if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT
