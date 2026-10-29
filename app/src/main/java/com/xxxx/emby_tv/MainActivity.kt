@@ -353,9 +353,9 @@ class MainActivity : ComponentActivity() {
         val vh = window.decorView.height
         val px = if (x > 0f && y > 0f) x else vw / 2f
         val py = if (x > 0f && y > 0f) y else vh / 2f
-        // 滚轮量竖向取负、横向取正（照 VR：向下推 = 列表往下走）
+        // 滚轮量与像素滚动同号：dy 在 holdTick 里已经翻成"屏幕方向"，这里不再额外取负
         val h = if (dx != 0f) dx * notches else 0f
-        val v = if (dy != 0f) -dy * notches else 0f
+        val v = if (dy != 0f) dy * notches else 0f
         if (fireWheel(h, v, px, py)) return
         /*
          * 滚轮没人接时先自己按像素滚（2026-10-29 父亲实测：首页上下左右拨都是焦点在跳）。
