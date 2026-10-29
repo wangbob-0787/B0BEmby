@@ -60,6 +60,8 @@ object LiveDanmakuApi {
         if (!root.get("ok").asBoolean) return null
         val arr = root.getAsJsonArray("items") ?: return null
         val items = ArrayList<DanmakuItem>(arr.size())
+        // 每次取弹幕都从零开始排轨道，别把上一集的占位带过来
+        java.util.Arrays.fill(laneNextFreeMs, 0L)
         for (i in 0 until arr.size()) {
             val row = arr.get(i).asJsonArray
             if (row.size() < 2) continue
@@ -74,29 +76,56 @@ object LiveDanmakuApi {
     }
 
     /**
-     * 服务端只给时间、文字、颜色，不给位置与模式，所以统一按「从右往左滚」生成：
-     * 八条轨道轮着放，避免全挤在一行。
+     * 服务端只给时间、文字、颜色，不给位置与模式，所以统一按「从右往左滚」生成。
+     *
+     * 两行轨道 + 防重叠（父亲 2026-10-29：原来全挤在一行、文字互相压住）：
+     * 先按字宽估算这条弹幕占多长，再看哪条轨道的上一条已经跑开足够距离，
+     * 有空位的轨道才用；两条都占着就挑最早空出来的那条。
      */
     private fun scrollItem(ms: Long, text: String, color: Int, seq: Int): DanmakuItem {
-        val lane = (seq % 8)
+        val length = text.length
+        val speed = (kStartX - kEndX) / kDurationMs          // PlayRes 单位/毫秒
+        val widthEst = length * kFontSize * 0.95f            // 中文按 1 字宽、混排略打折
+        var lane = 0
+        var bestClear = Long.MAX_VALUE
+        for (i in 0 until kLaneCount) {
+            val clearAt = laneNextFreeMs[i]
+            if (ms >= clearAt) { lane = i; break }
+            if (clearAt < bestClear) { bestClear = clearAt; lane = i }
+        }
+        // 这条占用的时长 = 自身宽度跑完 + 与后一条留出的间距
+        laneNextFreeMs[lane] = ms + ((widthEst + kLaneGap) / speed).toLong()
+        val y = kLaneTops[lane]
         return DanmakuItem(
             startMs = ms,
-            endMs = ms + 9_000L,
+            endMs = ms + kDurationMs,
             text = text,
             isMove = true,
-            x1 = 1920f,
-            y1 = 0f,
-            x2 = -400f,
-            y2 = 0f,
+            x1 = kStartX,
+            y1 = y,
+            x2 = kEndX,
+            y2 = y,
             posX = 0f,
-            posY = 60f + lane * 90f,
+            posY = y,
             style = DanmakuStyle(
-                fontSize = 44f,
+                fontSize = kFontSize,
                 primaryColor = color,
                 outlineColor = 0xFF000000.toInt(),
-                outline = 2f,
+                outline = kOutline,
                 alignment = 7,
             ),
         )
     }
 }
+
+/** 两行轨道：第一行离顶 70（PlayRes 1080 坐标），第二行再加一个字高多一点 */
+private const val kLaneCount = 2
+private const val kFontSize = 46f
+private const val kOutline = 2f
+private const val kStartX = 1920f
+private const val kEndX = -400f
+private const val kDurationMs = 9_000L
+private const val kLaneGap = 90f
+private val kLaneTops = floatArrayOf(66f, 66f + kFontSize * 1.45f)
+/** 各轨道「下一条可以进场」的时刻，逐条累加，保证同轨前后不重叠 */
+private val laneNextFreeMs = LongArray(kLaneCount)

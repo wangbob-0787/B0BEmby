@@ -348,6 +348,28 @@ class MainActivity : ComponentActivity() {
      * 一个滚动格：先派发滚轮给光点底下的容器（焦点不动）；没人接才退化发方向键。
      * 落点用摇杆推下去的起点，不用光点当前可能已顶到边缘的位置（照 VR）。
      */
+    /**
+     * 首页/列表页的摇杆：先按像素滚当前行，滚不动就把方向交给焦点系统。
+     *
+     * 大海报整块只有"当前这一张"，没有可滚容器，只靠滚动永远不动
+     * （父亲 2026-10-29：首页大海报左右扳动摇杆不切换，VR 版能切）。
+     */
+    private fun homeStick(dx: Float, dy: Float, notches: Float) {
+        if (doScroll(dx, dy, notches)) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastStickKeyAt < 90L) return
+        lastStickKeyAt = now
+        if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
+            if (dy > 0f) fireScroll(KeyEvent.KEYCODE_DPAD_UP)
+            else if (dy < 0f) fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
+        } else if (dx > 0f) {
+            fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
+        } else if (dx < 0f) {
+            fireScroll(KeyEvent.KEYCODE_DPAD_LEFT)
+        }
+    }
+
+
     private fun doScroll(dx: Float, dy: Float, notches: Float): Boolean {
         // 一格按 96dp 折算（原来 56dp）：父亲 2026-10-29 实测整体滚动偏慢，这一档与电视手感更接近
         val x = if (pressX > 0f) pressX else cursorX
@@ -411,7 +433,6 @@ class MainActivity : ComponentActivity() {
      */
     private var lastStickKeyAt = 0L
 
-
     /** 光点此刻是否落在播放页的控制条或展开的菜单里 */
     private fun cursorInPlayerUi(): Boolean {
         val x = com.xxxx.emby_tv.util.PointerTargets.cursorX
@@ -430,41 +451,25 @@ class MainActivity : ComponentActivity() {
      * 父亲 2026-10-29 实测：选集等菜单在播放页里滚得慢、没有惯性 —— 因为那一路原来只发方向键，
      * 一格一格跳、松开即停；取消后统一走像素滚动。
      */
+    /**
+     * 播放页的摇杆。
+     *
+     * 光点落在控制条或展开的菜单上 → 按像素滚那块面板（带惯性，速度比页面快一档）；
+     * 光点在播放区 → 左右是快退快进、往下是唤出控制条。
+     * 判据是光点位置，不是"菜单开着没有"：演职人员照片墙就是菜单开着而控制条收起的状态，
+     * 只看控制条可见会把它误判成播放区。
+     */
     private fun playerStick(dx: Float, dy: Float, notches: Float) {
         val now = SystemClock.uptimeMillis()
-        /*
-         * 光点在播放区（控制条收起、菜单没开、或者光点根本没落在控制条/菜单里）时，
-         * 摇杆左右就是快退快进、往下就是唤控制条 —— 不能先去滚菜单，否则会被隐藏菜单吃掉。
-         * 只有光点真的落在控制条或展开的菜单上，才按像素滚菜单（父亲 2026-10-29 口径）。
-         */
-        /*
-         * 只有控制条或菜单真的在画面上时才走像素滚动（演职人员照片墙就是"菜单开着但控制条收起"，
-         * 只看控制条可见会把它判成播放区，结果退化成方向键、一格一格跳还带不上惯性）。
-         */
-        val uiOpen = com.xxxx.emby_tv.util.InputBridge.playerPanelVisible ||
-                com.xxxx.emby_tv.util.InputBridge.playerMenuRect != null
-        if (!uiOpen) {
-            if (now - lastStickKeyAt < 90L) return
-            val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
-            lastStickKeyAt = now
-            if (vertical) {
-                if (dy < 0f) fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
-            } else {
-                fireScroll(if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
-            }
-            return
-        }
-        // 菜单里滚得比页面稍快一点（乘 1.6），父亲实测播放页菜单偏慢
-        if (doScroll(dx, dy, notches * 1.6f)) return
+        if (cursorInPlayerUi() && doScroll(dx, dy, notches * 2.4f)) return
         if (now - lastStickKeyAt < 90L) return
-        val vertical = kotlin.math.abs(dy) >= kotlin.math.abs(dx)
-        if (vertical) {
-            lastStickKeyAt = now
-            // 与滚动同一套符号：往下搬（滚动方向那一侧）唤出控制条，往上搬不动
+        lastStickKeyAt = now
+        if (kotlin.math.abs(dy) >= kotlin.math.abs(dx)) {
             if (dy < 0f) fireScroll(KeyEvent.KEYCODE_DPAD_DOWN)
-        } else if (kotlin.math.abs(dx) > 0f) {
-            lastStickKeyAt = now
-            fireScroll(if (dx > 0f) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+        } else if (dx > 0f) {
+            fireScroll(KeyEvent.KEYCODE_DPAD_RIGHT)
+        } else if (dx < 0f) {
+            fireScroll(KeyEvent.KEYCODE_DPAD_LEFT)
         }
     }
 
@@ -589,7 +594,11 @@ class MainActivity : ComponentActivity() {
              * 播放页例外：那里的摇杆本来就是方向语义（下唤控制条、上音量、左右快退快进）。
              */
             InputBridge.scrollDispatcher = { dx, dy, notches ->
-                if (InputBridge.playerScreenActive) playerStick(dx, dy, notches) else doScroll(dx, dy, notches)
+                if (InputBridge.playerScreenActive) {
+                    playerStick(dx, dy, notches)
+                } else {
+                    homeStick(dx, dy, notches)
+                }
             }
             InputBridge.onStick(ev)
         }

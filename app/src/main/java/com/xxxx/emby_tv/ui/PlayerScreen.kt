@@ -2148,7 +2148,7 @@ fun PlayerScreen(
                         // 靠右：从右侧的「更多」按钮上方长出（父亲 2026-09-30：原先落在屏幕中间、离右边太远）
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(end = 48.dp, bottom = 84.dp),
+                            .padding(end = 48.dp, bottom = 104.dp),
                         title = "",
                         contentWidth = 190.dp
                     ) {
@@ -2237,7 +2237,7 @@ fun PlayerScreen(
                             Modifier
                                 .align(Alignment.BottomStart)
                                 .offset { IntOffset(xPx, 0) }
-                                .padding(bottom = 84.dp)
+                                .padding(bottom = 104.dp)
                         },
                         title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
                         contentWidth = when (item) {

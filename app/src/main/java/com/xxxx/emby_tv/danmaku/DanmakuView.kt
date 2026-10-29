@@ -30,9 +30,18 @@ class DanmakuView(context: Context) : View(context) {
             invalidate()
         }
 
+    /*
+     * 字体与描边对齐 VR 版弹幕层（父亲 2026-10-29：TV 的字体和颜色也要像 VR）：
+     * 常规字重 + 黑色阴影，取代原来的加粗黑描边 —— 描边在 1080P 电视上会把细笔画糊死。
+     */
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = Typeface.DEFAULT
         style = Paint.Style.FILL
+    }
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = Typeface.DEFAULT
+        style = Paint.Style.FILL
+        color = Color.argb(200, 0, 0, 0)
     }
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Typeface.DEFAULT_BOLD
@@ -120,17 +129,14 @@ class DanmakuView(context: Context) : View(context) {
         val textSize = max(10f, item.style.fontSize * scale)
         fillPaint.textSize = textSize
         outlinePaint.textSize = textSize
-        outlinePaint.strokeWidth = max(1.5f, item.style.outline * scale)
         fillPaint.color = item.style.primaryColor
-        outlinePaint.color = if (item.style.outlineColor == Color.TRANSPARENT) {
-            Color.argb(160, 0, 0, 0)
-        } else {
-            item.style.outlineColor
-        }
+        shadowPaint.textSize = textSize
+        // 阴影偏移按字号缩放（VR 用的是静音 2~3px 的黑色投影，不是四周描边）
+        val off = max(1.5f, textSize * 0.05f)
 
         // Alignment 7(左上)语义:给出的坐标是文本左上角;drawText 需要基线
         val baseline = y + textSize
-        canvas.drawText(item.text, x, baseline, outlinePaint)
+        canvas.drawText(item.text, x + off, baseline + off, shadowPaint)
         canvas.drawText(item.text, x, baseline, fillPaint)
     }
 }
