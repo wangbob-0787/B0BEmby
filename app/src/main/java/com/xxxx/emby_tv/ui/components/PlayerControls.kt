@@ -1208,32 +1208,35 @@ fun BufferPresetSheet(
  */
 @Composable
 fun SubtitleSheet(
-    items: List<com.xxxx.emby_tv.ui.player.TextTrackItem>,
-    selectedKey: String?,
-    onSelect: (com.xxxx.emby_tv.ui.player.TextTrackItem?) -> Unit,
+    tracks: List<MediaStreamDto>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
     firstFocus: FocusRequester,
 ) {
-    /*
-     * 清单直接来自播放器报出的轨表（照 VR 的做法：菜单即内核真实轨表），
-     * 所以菜单里有的就能切、勾哪条就是哪条。勾着的再点一次 = 关字幕（VR 同一口径）。
-     */
+    // 内封在前、外挂在后（sortedWith 稳定排序，同组保持服务端给的顺序）
+    val sorted = tracks.sortedWith(compareBy({ it.isExternal == true }, { it.index ?: Int.MAX_VALUE }))
     Column {
-        if (items.isEmpty()) {
+        if (sorted.isEmpty()) {
             Text(
                 text = "（这部片没有字幕）",
                 color = Color(0xFFBDBDBD),
                 fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 10.dp)
             )
-            return@Column
         }
-        items.forEachIndexed { i, item ->
+        sorted.forEachIndexed { i, track ->
+            val index = track.index ?: -1
+            val label = track.displayTitle?.takeIf { it.isNotBlank() }
+                ?: track.language?.takeIf { it.isNotBlank() }
+                ?: track.codec?.uppercase()
+                ?: "字幕"
             SheetRow(
-                label = item.label,
-                selected = selectedKey == item.key,
-                onClick = { onSelect(if (selectedKey == item.key) null else item) },
+                label = label,
+                selected = selectedIndex == index,
+                // 点已勾上的那条 = 取消（关字幕），不再单列「关」
+                onClick = { onSelect(if (selectedIndex == index) -1 else index) },
                 firstFocus = if (i == 0) firstFocus else null,
-                sub = item.sub
+                sub = track.title?.takeIf { it.isNotBlank() && it != label }
             )
         }
     }
