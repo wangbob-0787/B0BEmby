@@ -71,8 +71,6 @@ fun MediaDetailScreen(
     
     val mediaInfo = detailViewModel.mediaInfo
     val playButtonFocusRequester = remember { FocusRequester() }
-    // 重播按钮的焦点锚点：播放/续播与重播之间显式互指左右，不再依赖几何位置推算
-    val replayButtonFocusRequester = remember { FocusRequester() }
     // 顶部块（标题/元数据/海报区域）的焦点锚点：进页面时焦点放这里，不自动滚到下面的按钮
     //（父亲 2026-10-02：一进来标题和元数据就被"聚焦续播按钮"带得滚出屏幕）
     val headerFocusRequester = remember { FocusRequester() }
@@ -335,18 +333,15 @@ fun MediaDetailScreen(
                                 else stringResource(R.string.play),
                                 focusRequester = playButtonFocusRequester,
                                 upFocus = headerFocusRequester,
-                                downFocus = seasonFocusers.getOrNull(lastPillIndex),
-                                rightFocus = replayButtonFocusRequester
+                                downFocus = seasonFocusers.getOrNull(lastPillIndex)
                             ) {
                                 playTarget?.let { onNavigateToPlayer(it) }
                             }
                             ActionTile(
                                 icon = Icons.Default.Replay,
                                 label = stringResource(R.string.replay),
-                                focusRequester = replayButtonFocusRequester,
                                 upFocus = headerFocusRequester,
-                                downFocus = seasonFocusers.getOrNull(lastPillIndex),
-                                leftFocus = playButtonFocusRequester
+                                downFocus = seasonFocusers.getOrNull(lastPillIndex)
                             ) {
                                 // 抹掉 userData → 播放页拿不到续播位置，即从 0 分钟开始
                                 playTarget?.let { onNavigateToPlayer(it.copy(userData = null)) }
@@ -892,8 +887,6 @@ private fun ActionTile(
     focusRequester: FocusRequester? = null,
     upFocus: FocusRequester? = null,
     downFocus: FocusRequester? = null,
-    leftFocus: FocusRequester? = null,
-    rightFocus: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     // 指针悬停（PICO 光标）也要能选到这颗按钮
@@ -917,13 +910,9 @@ private fun ActionTile(
             .focusRequester(anchor)
             .hoverToFocus(anchor)
             // ↑ 回背景（顶部）；↓ 落到**当前季**那颗胶囊（多季时不会跑到第一季去）
-            // ←→ 显式互指：左右顺序按按钮视觉排列写死，不交给几何推算
-            // （父亲 2026-10-31 实测：详情页播放/重播之间按左右，焦点往反方向走）
             .focusProperties {
                 if (upFocus != null) up = upFocus
                 if (downFocus != null) down = downFocus
-                if (leftFocus != null) left = leftFocus
-                if (rightFocus != null) right = rightFocus
             }
     ) {
         Row(
