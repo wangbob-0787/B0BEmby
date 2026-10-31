@@ -1681,14 +1681,18 @@ fun PlayerScreen(
         }
     }
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(120); runCatching { playerRootFocus.requestFocus() } }
-    // 焦点丢了就把焦点要回来（见根容器 onFocusChanged 处的说明）
-    var focusLostTick by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    LaunchedEffect(focusLostTick) {
-        if (focusLostTick > 0) {
-            kotlinx.coroutines.delay(150)
-            if (focusLostTick > 0) {
+    /*
+     * 焦点守护（父亲 2026-10-31 build-210 实测：控制条唤不出，日志里方向键到了 App
+     * 却没有任何根容器焦点记录 —— 焦点根本没建立）。
+     * 边沿触发不可靠，这里改成常驻轮询：只要播放页活着，就保证根容器一定有焦点。
+     * 每 600ms 查一次，没焦点就申请；成功即停手（hasFocus 含子节点，不会跟按钮抢）。
+     */
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(600)
+            if (!com.xxxx.emby_tv.util.InputBridge.playerRootHasFocus) {
                 val ok = runCatching { playerRootFocus.requestFocus() }.isSuccess
-                com.xxxx.emby_tv.util.DiagLog.w(context, "focusRoot", "尝试夺回焦点 结果=" + ok)
+                com.xxxx.emby_tv.util.DiagLog.w(context, "focusRoot", "焦点守护：重新申请 调用成功=" + ok)
             }
         }
     }
@@ -1744,7 +1748,7 @@ fun PlayerScreen(
                         "播放页根容器 hasFocus=" + it.hasFocus + " 面板=" + showPanel +
                             " 二级=" + activeItem + " 更多=" + inMoreMenu
                     )
-                    focusLostTick = if (it.hasFocus) 0 else focusLostTick + 1
+                    com.xxxx.emby_tv.util.InputBridge.playerRootHasFocus = it.hasFocus
                 }
                 .onPreviewKeyEvent { event ->
                     /*
