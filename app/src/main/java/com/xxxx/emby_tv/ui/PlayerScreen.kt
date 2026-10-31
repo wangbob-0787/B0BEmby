@@ -1681,6 +1681,17 @@ fun PlayerScreen(
         }
     }
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(120); runCatching { playerRootFocus.requestFocus() } }
+    // 焦点丢了就把焦点要回来（见根容器 onFocusChanged 处的说明）
+    var focusLostTick by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(focusLostTick) {
+        if (focusLostTick > 0) {
+            kotlinx.coroutines.delay(150)
+            if (focusLostTick > 0) {
+                val ok = runCatching { playerRootFocus.requestFocus() }.isSuccess
+                com.xxxx.emby_tv.util.DiagLog.w(context, "focusRoot", "尝试夺回焦点 结果=" + ok)
+            }
+        }
+    }
 
     // UI 结构 - 最外层纯黑背景
     // 左上角片名 Logo 的地址：剧集/单集用所属剧集的 ClearLogo，电影用条目自己的 Logo。
@@ -1721,13 +1732,19 @@ fun PlayerScreen(
                 // 播放页没有可聚焦控件时按键会直接丢掉（父亲 2026-10-28 实测「手柄完全没反应」）
                 .focusRequester(playerRootFocus)
                 .focusable()
-                // 临时诊断（父亲 2026-10-31 排查「按过左右键后整页控制失灵」）
+                /*
+                 * 焦点自愈（父亲 2026-10-31：控制条自动收起后整页按键失灵，只能退出重进）。
+                 * 收起时持有焦点的按钮从树里消失，Compose 不会把焦点交还父容器，
+                 * 之后没有任何节点在焦点路径上 → 方向键再也到不了播放页。
+                 * 这里在「整棵子树都没焦点」时补一次请求；成功即 hasFocus=true，计数归零，不会反复抢。
+                 */
                 .onFocusChanged {
                     com.xxxx.emby_tv.util.DiagLog.w(
                         context, "focusRoot",
                         "播放页根容器 hasFocus=" + it.hasFocus + " 面板=" + showPanel +
                             " 二级=" + activeItem + " 更多=" + inMoreMenu
                     )
+                    focusLostTick = if (it.hasFocus) 0 else focusLostTick + 1
                 }
                 .onPreviewKeyEvent { event ->
                     /*
