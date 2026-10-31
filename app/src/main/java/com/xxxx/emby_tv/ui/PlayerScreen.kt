@@ -1662,6 +1662,21 @@ fun PlayerScreen(
         }
     }
 
+    // 播放页根容器的焦点：这一页所有按键都从它往下分发
+    val playerRootFocus = remember { FocusRequester() }
+
+    /*
+     * 收起面板 / 关闭二级菜单的统一出口：先把焦点交回根容器，再让控件从组合里消失。
+     *
+     * 顺序不能反。持有焦点的按钮一旦先被移除，Compose 只会把焦点清空、不会交还父容器，
+     * 之后整页按键就没人接（父亲 2026-10-31 反复遇到"控制条唤不出、只能退出重进"）。
+     * 所有收起动作走同一条路径，就不需要定时轮询兜底。
+     */
+    val collapseThen: (() -> Unit) -> Unit = { collapse ->
+        runCatching { playerRootFocus.requestFocus() }
+        collapse()
+    }
+
     /*
      * 返回键：播放页无条件接管。
      *
@@ -1677,41 +1692,17 @@ fun PlayerScreen(
         if (now - lastBackAt < 300) return@BackHandler
         lastBackAt = now
         when {
-            activeItem != null -> activeItem = null
-            inMoreMenu -> inMoreMenu = false
-            showPanel -> showPanel = false
+            activeItem != null -> collapseThen { activeItem = null }
+            inMoreMenu -> collapseThen { inMoreMenu = false }
+            showPanel -> collapseThen { showPanel = false }
             else -> onExit()
         }
     }
 
     // 监听按键显示菜单
     val focusRequester = remember { FocusRequester() }
-    // 播放页根容器的焦点：进页面就拿到，手柄按键才有落点
-    val playerRootFocus = remember { FocusRequester() }
-    // 面板收起/二级菜单关闭后把焦点还给根容器：控制条按钮消失时焦点会一起丢，
-    // 之后摇杆与扳机就再也没有落点（父亲 2026-10-28：第一次能唤出，播起来就失灵）
-    LaunchedEffect(showPanel, activeItem, inMoreMenu) {
-        if (!showPanel && activeItem == null && !inMoreMenu) {
-            kotlinx.coroutines.delay(80)
-            runCatching { playerRootFocus.requestFocus() }
-        }
-    }
+    // 进页面就把焦点放到根容器
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(120); runCatching { playerRootFocus.requestFocus() } }
-    /*
-     * 焦点守护（父亲 2026-10-31 build-210 实测：控制条唤不出，日志里方向键到了 App
-     * 却没有任何根容器焦点记录 —— 焦点根本没建立）。
-     * 边沿触发不可靠，这里改成常驻轮询：只要播放页活着，就保证根容器一定有焦点。
-     * 每 600ms 查一次，没焦点就申请；成功即停手（hasFocus 含子节点，不会跟按钮抢）。
-     */
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(600)
-            if (!com.xxxx.emby_tv.util.InputBridge.playerRootHasFocus) {
-                val ok = runCatching { playerRootFocus.requestFocus() }.isSuccess
-                com.xxxx.emby_tv.util.DiagLog.w(context, "focusRoot", "焦点守护：重新申请 调用成功=" + ok)
-            }
-        }
-    }
 
     // UI 结构 - 最外层纯黑背景
     // 左上角片名 Logo 的地址：剧集/单集用所属剧集的 ClearLogo，电影用条目自己的 Logo。
@@ -1865,14 +1856,14 @@ fun PlayerScreen(
                         if (now - lastBackAt < 300) return@onKeyEvent true
                         lastBackAt = now
                         if (activeItem != null) {
-                            activeItem = null
+                            collapseThen { activeItem = null }
                             return@onKeyEvent true
                         }
                         if (inMoreMenu) {
-                            inMoreMenu = false
+                            collapseThen { inMoreMenu = false }
                             return@onKeyEvent true
                         }
-                        showPanel = false
+                        collapseThen { showPanel = false }
                         return@onKeyEvent true
                     }
                     // 左右键:控制条未展开时快退/快进,并唤出进度条(seekHud);
@@ -1942,10 +1933,12 @@ fun PlayerScreen(
                         // Menu 键:开关面板
                         if (event.key == Key.Menu) {
                             if (activeItem != null) {
-                                activeItem = null
+                                collapseThen { activeItem = null }
                             } else if (showPanel) {
-                                showPanel = false
-                                inMoreMenu = false
+                                collapseThen {
+                                    showPanel = false
+                                    inMoreMenu = false
+                                }
                             } else {
                                 seekHud = false
                                 showPanel = true
@@ -2426,7 +2419,8 @@ fun PlayerScreen(
                     if (activeItem != null || inMoreMenu) return@LaunchedEffect
                     if (isPlaying) {
                         kotlinx.coroutines.delay(8000)
-                        showPanel = false
+                        // 收起前先把焦点交回根容器，否则控制条按钮消失时焦点一起丢
+                        collapseThen { showPanel = false }
                     }
                 }
 

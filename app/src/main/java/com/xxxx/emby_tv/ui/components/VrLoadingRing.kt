@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 fun VrLoadingRing(
     modifier: Modifier = Modifier,
     size: androidx.compose.ui.unit.Dp = 56.dp,
-    color: Color = Color(0xFF21DBF0),
+    color: Color = Color(0xFF2FD57C),
 ) {
     val angle by produceState(0f) {
         while (true) {

@@ -868,20 +868,25 @@ fun SheetRow(
     // 行自己的焦点锚点：firstFocus 没给时也能被指针悬停选中（PICO 光标 / 鼠标）
     val rowFocus = remember { FocusRequester() }
     val anchor = firstFocus ?: rowFocus
+    var rowFocused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(4.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            // 选中（当前生效项）与焦点（光标所在）都用 VR 的绿 24%，未选中透明
-            containerColor = if (selected) Color(0x3D2FD57C) else Color.Transparent,
+            /*
+             * 焦点与选中必须一眼分开（父亲 2026-10-31：两行都是绿底，分不清哪行才是当前生效项）：
+             * 选中 = 常驻淡绿底 + 行尾对勾；焦点 = 一圈亮绿描边 + 更浅的底，只表示"光标在这儿"。
+             */
+            containerColor = if (selected) Color(0x2E2FD57C) else Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecHover,
+            focusedContainerColor = Color(0x1A2FD57C),
             focusedContentColor = Color.White
         ),
         modifier = Modifier
             .fillMaxWidth()
             .bringIntoViewRequester(bringIntoView)
             .onFocusChanged {
+                rowFocused = it.isFocused
                 if (it.isFocused) scope.launch { bringIntoView.bringIntoView() }
             }
             .focusRequester(anchor)
@@ -891,7 +896,11 @@ fun SheetRow(
         Row(
             modifier = Modifier
                 .padding(horizontal = 8.dp, vertical = 11.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .then(
+                    if (rowFocused) Modifier.border(2.dp, Color(0xFF2FD57C), RoundedCornerShape(4.dp))
+                    else Modifier
+                ),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
