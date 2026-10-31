@@ -2447,7 +2447,8 @@ fun PlayerScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            CircularProgressIndicator(color = Color.White)
+                            // 起播/缓冲用 VR 那套绿色带箭头的环，不再用系统白色细弧
+                            com.xxxx.emby_tv.ui.components.VrLoadingRing()
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = Utils.formatBandwidth(downloadSpeed),
