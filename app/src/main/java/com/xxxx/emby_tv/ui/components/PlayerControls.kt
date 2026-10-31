@@ -890,6 +890,14 @@ fun SheetRow(
                 if (it.isFocused) scope.launch { bringIntoView.bringIntoView() }
             }
             .focusRequester(anchor)
+            /*
+             * 菜单里的上下键只在这一列内部走。走到最后一项再按下键时，焦点不许溜到下面那排
+             * 按钮上（父亲 2026-10-31 报）；关闭菜单请用返回键。
+             */
+            .focusProperties {
+                up = FocusRequester.Cancel
+                down = FocusRequester.Cancel
+            }
             .hoverToFocus(anchor),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
     ) {

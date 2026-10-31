@@ -924,15 +924,19 @@ fun PlayerScreen(
 
     // 提供一个函数供 UI 调用切换（例如点击列表时调用）
     fun changeTrack(audioIndex: Int, subIndex: Int) {
-        val needChange =
-            (selectedAudioIndex != audioIndex && audioIndex > -1) || (selectedSubtitleIndex != subIndex && subIndex > -1)
+        val audioChanged = selectedAudioIndex != audioIndex && audioIndex > -1
         selectedAudioIndex = audioIndex
         selectedSubtitleIndex = subIndex
         hasTriedTranscodeFallback = false
         fallbackAttempts = 0
-        if (needChange && !(media.mediaSources?.firstOrNull()?.supportsDirectPlay
-                ?: false)
-        ) playbackTrigger++ // 只有手动修改时，才递增触发器，重启协程
+        /*
+         * 字幕切换不重建播放器：PlayerTrackManager 会把新字幕轨直接应用到当前播放上，
+         * 重建等于重新起播（父亲 2026-10-31：切个字幕不该重头缓冲一遍）。
+         * 音轨切换仍按原逻辑处理——转码流里换音轨必须换一路，直连时不需要。
+         */
+        if (audioChanged && !(media.mediaSources?.firstOrNull()?.supportsDirectPlay ?: false)) {
+            playbackTrigger++
+        }
     }
 
     // 控制面板标题:剧名 + S/E(电影用片名)
