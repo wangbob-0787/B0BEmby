@@ -81,15 +81,6 @@ object InputBridge {
      */
     @Volatile var playerFocusInPanel = false
 
-    /**
-     * 播放页根容器当前是否持有焦点（含子节点）。
-     *
-     * 为什么需要它：播放页的按键全靠根容器上的按键处理，一旦整棵子树都没焦点，
-     * 方向键会直接掉到系统那里，表现为「控制条唤不出、快进快退没反应」，
-     * 且焦点状态不变就不会再有回调 —— 只能靠定时守护去轮询这个标志。
-     */
-    @Volatile var playerRootHasFocus = false
-
     private val choreographer = android.view.Choreographer.getInstance()
     private var frameScheduled = false
     private var lastFrameAt = 0L

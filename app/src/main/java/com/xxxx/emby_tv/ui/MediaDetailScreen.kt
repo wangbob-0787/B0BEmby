@@ -439,12 +439,7 @@ fun MediaDetailScreen(
                                     .focusRequester(seasonFocusers[index])
                                     .hoverToFocus(seasonFocusers[index])
                                     .onFocusChanged {
-                                        if (it.isFocused) {
-                                            lastPillIndex = index
-                                            com.xxxx.emby_tv.util.DiagLog.w(
-                                                context, "focusDir", "焦点落在季胶囊：" + (season.name ?: "")
-                                            )
-                                        }
+                                        if (it.isFocused) lastPillIndex = index
                                     }
                                     .focusProperties {
                                         // 上键回「续播」按钮；下键进集行"上次停的那一集"（默认第一集）
@@ -899,8 +894,6 @@ private fun ActionTile(
     // 指针悬停（PICO 光标）也要能选到这颗按钮
     val ownFocus = remember { FocusRequester() }
     val anchor = focusRequester ?: ownFocus
-    // 临时诊断（父亲 2026-10-31 排查左右反向），与 MainActivity 的 focusDir 日志一起删
-    val diagCtx = LocalContext.current
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -918,9 +911,6 @@ private fun ActionTile(
             .height(DetailButtonHeight)
             .focusRequester(anchor)
             .hoverToFocus(anchor)
-            .onFocusChanged {
-                if (it.isFocused) com.xxxx.emby_tv.util.DiagLog.w(diagCtx, "focusDir", "焦点落在按钮：$label")
-            }
             // ↑ 回背景（顶部）；↓ 落到**当前季**那颗胶囊（多季时不会跑到第一季去）
             .focusProperties {
                 if (upFocus != null) up = upFocus
@@ -976,8 +966,6 @@ private fun EpisodeRow(
     // 指针悬停（PICO 光标）也要能选中这一集
     val ownFocus = remember { FocusRequester() }
     val anchor = focusRequester ?: ownFocus
-    // 临时诊断（父亲 2026-10-31 排查左右反向）
-    val diagCtx = LocalContext.current
     Surface(
         onClick = onPlay,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
@@ -993,9 +981,6 @@ private fun EpisodeRow(
             .fillMaxWidth()
             .focusRequester(anchor)
             .hoverToFocus(anchor)
-            .onFocusChanged {
-                if (it.isFocused) com.xxxx.emby_tv.util.DiagLog.w(diagCtx, "focusDir", "焦点落在集卡片：" + meta)
-            }
     ) {
         Row(
             modifier = Modifier

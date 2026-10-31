@@ -79,7 +79,6 @@ class MainActivity : ComponentActivity() {
     private var pressPending = false
     private var lastStickDiagAt = 0L
     private var lastScrollDiagAt = 0L
-    private var lastKeyDiagAt = 0L
     private var pressX = 0f
     private var pressY = 0f
     private var lastInjectAt = 0L
@@ -657,7 +656,6 @@ class MainActivity : ComponentActivity() {
          */
         if (event.keyCode == KeyEvent.KEYCODE_BACK && InputBridge.playerScreenActive) {
             if (event.action == KeyEvent.ACTION_DOWN) {
-                DiagLog.w(this, "backKey", "播放页返回：直接走系统返回分发器")
                 onBackPressedDispatcher.onBackPressed()
             }
             return true
@@ -677,38 +675,8 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
-        /*
-         * 方向键逐条落日志（其余按键仍按 400ms 节流）。
-         * 父亲 2026-10-31 报详情页播放/重播左右反向：一次左右操作要把
-         * 「收到哪个方向」和「焦点落到谁」成对记下来，才分得清是键送反还是焦点搜反。
-         * 查完即删，不留长期日志。
-         */
-        if (event.action == KeyEvent.ACTION_DOWN && isDirectionKey(event.keyCode)) {
-            DiagLog.w(this, "focusDir", "收到方向键 keyCode=" + keyCodeName(event.keyCode) +
-                "(" + event.keyCode + ") 源=0x" + Integer.toHexString(event.source) +
-                " 光标新鲜=" + cursorFresh())
-        }
-        val nowKey = SystemClock.uptimeMillis()
-        if (nowKey - lastKeyDiagAt > 400L) {
-            lastKeyDiagAt = nowKey
-            DiagLog.w(this, "key", "按键通道：keyCode=" + event.keyCode +
-                " action=" + event.action + " 源=0x" + Integer.toHexString(event.source))
-        }
         val mapped = InputBridge.mapGamepadKey(event)
         return super.dispatchKeyEvent(mapped ?: event)
-    }
-
-    private fun isDirectionKey(code: Int): Boolean = code == KeyEvent.KEYCODE_DPAD_UP ||
-        code == KeyEvent.KEYCODE_DPAD_DOWN ||
-        code == KeyEvent.KEYCODE_DPAD_LEFT ||
-        code == KeyEvent.KEYCODE_DPAD_RIGHT
-
-    private fun keyCodeName(code: Int): String = when (code) {
-        KeyEvent.KEYCODE_DPAD_UP -> "UP"
-        KeyEvent.KEYCODE_DPAD_DOWN -> "DOWN"
-        KeyEvent.KEYCODE_DPAD_LEFT -> "LEFT"
-        KeyEvent.KEYCODE_DPAD_RIGHT -> "RIGHT"
-        else -> "OTHER"
     }
 
     /**

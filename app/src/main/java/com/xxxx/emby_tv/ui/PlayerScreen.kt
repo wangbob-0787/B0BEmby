@@ -1689,8 +1689,6 @@ fun PlayerScreen(
      * 系统那条路不一定把它收掉，所以最后一层必须由这里显式 onExit()。
      */
     androidx.activity.compose.BackHandler(enabled = true) {
-        com.xxxx.emby_tv.util.DiagLog.w(context, "backKey", "BackHandler 收到返回 面板=" + showPanel +
-            " 二级=" + activeItem + " 更多=" + inMoreMenu)
         // 防连按;若上面的 onKeyEvent 刚处理过这次返回就跳过(避免一次退两层)
         val now = System.currentTimeMillis()
         if (now - lastBackAt < 300) return@BackHandler
@@ -1747,20 +1745,6 @@ fun PlayerScreen(
                 // 播放页没有可聚焦控件时按键会直接丢掉（父亲 2026-10-28 实测「手柄完全没反应」）
                 .focusRequester(playerRootFocus)
                 .focusable()
-                /*
-                 * 焦点自愈（父亲 2026-10-31：控制条自动收起后整页按键失灵，只能退出重进）。
-                 * 收起时持有焦点的按钮从树里消失，Compose 不会把焦点交还父容器，
-                 * 之后没有任何节点在焦点路径上 → 方向键再也到不了播放页。
-                 * 这里在「整棵子树都没焦点」时补一次请求；成功即 hasFocus=true，计数归零，不会反复抢。
-                 */
-                .onFocusChanged {
-                    com.xxxx.emby_tv.util.DiagLog.w(
-                        context, "focusRoot",
-                        "播放页根容器 hasFocus=" + it.hasFocus + " 面板=" + showPanel +
-                            " 二级=" + activeItem + " 更多=" + inMoreMenu
-                    )
-                    com.xxxx.emby_tv.util.InputBridge.playerRootHasFocus = it.hasFocus
-                }
                 .onPreviewKeyEvent { event ->
                     /*
                      * 光点决定语义（父亲 2026-10-28）：
