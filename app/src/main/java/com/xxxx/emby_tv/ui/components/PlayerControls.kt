@@ -51,6 +51,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -780,6 +782,28 @@ private fun PanelIcon(
     }
 }
 
+/**
+ * 菜单底部的焦点挡板。
+ *
+ * 菜单最后一行的下键原本会让焦点顺着空间往下掉到控制条按钮上（父亲 2026-10-31 报）。
+ * 在内容末尾摆一个 1dp 的极窄焦点节点接住这次移动，一拿到焦点立刻把焦点推回上一行，
+ * 表现就是「在最后一项按下去，焦点留在原地」；菜单内部上下移动完全不受影响。
+ */
+@Composable
+private fun DownEdgeGuard() {
+    val focusManager = LocalFocusManager.current
+    val guard = remember { FocusRequester() }
+    Box(
+        modifier = Modifier
+            .size(1.dp)
+            .focusRequester(guard)
+            .focusable()
+            .onFocusChanged {
+                if (it.isFocused) focusManager.moveFocus(FocusDirection.Up)
+            }
+    )
+}
+
 /** 二级菜单外壳:半透明深色框(这里允许半透明) */
 @Composable
 fun SheetShell(
@@ -831,10 +855,12 @@ fun SheetShell(
             com.xxxx.emby_tv.util.RegisterVerticalScroll(menuScroll)
             Column(modifier = boxModifier.then(menuRectModifier).verticalScroll(menuScroll)) {
                 content()
+                DownEdgeGuard()
             }
         } else {
             Column(modifier = boxModifier.then(menuRectModifier)) {
                 content()
+                DownEdgeGuard()
             }
         }
     }
@@ -1418,7 +1444,8 @@ fun DanmakuSheet(
             label = "弹幕推后 10 秒",
             selected = false,
             onClick = { onOffsetChange(offsetMs - 10_000L) },
-            showCheckbox = false
+            showCheckbox = false,
+            isLast = true
         )
     }
 }
