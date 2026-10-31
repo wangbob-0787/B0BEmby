@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.focus.FocusRequester
@@ -21,7 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -98,6 +102,9 @@ fun TopStatusBar(
                     updatePhase == com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Failed ||
                     updatePhase == com.xxxx.emby_tv.ui.viewmodel.UpdatePhase.Downloading
                 val versionColor = if (versionClickable) MaterialTheme.colorScheme.secondary else Color.White
+                // 版本号是可聚焦的更新入口，但原先没有焦点表现：首页从大海报往上按，焦点停在这里
+                // 屏幕上却看不出来（父亲 2026-10-31）。给它补上与控制条一致的一圈绿底。
+                var versionFocused by remember { mutableStateOf(false) }
                 Text(
                     text = "B0BEmby " + currentVersion + updateSuffix,
                     color = versionColor,
@@ -105,7 +112,14 @@ fun TopStatusBar(
                     fontWeight = FontWeight.Bold,
                     // 版本号也是更新入口：可聚焦 + 登记坐标表，光标能选中、扳机能触发
                     modifier = (if (onVersionClick != null) {
-                        Modifier.clickable { onVersionClick() }
+                        Modifier
+                            .onFocusChanged { versionFocused = it.isFocused }
+                            .background(
+                                if (versionFocused) FocusGreenContainer else Color.Transparent,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .clickable { onVersionClick() }
                     } else Modifier)
                         .then(
                             if (onVersionClick != null) {

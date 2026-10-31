@@ -72,6 +72,15 @@ object InputBridge {
     @Volatile var playerMenuRect: android.graphics.RectF? = null
     @Volatile var playerTapToggle: (() -> Unit)? = null
 
+    /**
+     * 播放页控制条上是否真的有焦点。
+     *
+     * 判「确认键该不该顺带切播放」不能看光标：遥控器没有光标，光标判定永远是 false，
+     * 于是每次在按钮上按确认都会被当成"点了一下画面"而暂停（父亲 2026-10-31 实测）。
+     * 这里由控制条按钮自己上报焦点状态，作为唯一判据。
+     */
+    @Volatile var playerFocusInPanel = false
+
     private val choreographer = android.view.Choreographer.getInstance()
     private var frameScheduled = false
     private var lastFrameAt = 0L

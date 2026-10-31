@@ -1720,6 +1720,14 @@ fun PlayerScreen(
                 // 播放页没有可聚焦控件时按键会直接丢掉（父亲 2026-10-28 实测「手柄完全没反应」）
                 .focusRequester(playerRootFocus)
                 .focusable()
+                // 临时诊断（父亲 2026-10-31 排查「按过左右键后整页控制失灵」）
+                .onFocusChanged {
+                    com.xxxx.emby_tv.util.DiagLog.w(
+                        context, "focusRoot",
+                        "播放页根容器 hasFocus=" + it.hasFocus + " 面板=" + showPanel +
+                            " 二级=" + activeItem + " 更多=" + inMoreMenu
+                    )
+                }
                 .onPreviewKeyEvent { event ->
                     /*
                      * 光点决定语义（父亲 2026-10-28）：
@@ -1775,7 +1783,13 @@ fun PlayerScreen(
                         when (event.key) {
                             // 菜单开着时扳机只给菜单，不暂停/播放
                             Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                                if (!overBar && activeItem == null && !inMoreMenu) {
+                                /*
+                                 * 焦点在控制条按钮上时，确认键只交给按钮（展开菜单），不再切播放/暂停。
+                                 * 原判据 only 看光标落点，遥控器没光标 → 永远判"不在这根条上"，
+                                 * 于是每按一次确认都顺带暂停（父亲 2026-10-31 实测：所有按钮都有）。
+                                 */
+                                val focusOnBar = com.xxxx.emby_tv.util.InputBridge.playerFocusInPanel
+                                if (!overBar && !focusOnBar && activeItem == null && !inMoreMenu) {
                                     if (isPlaying) player.pause() else player.play()
                                     interactionTick++
                                     return@onPreviewKeyEvent true

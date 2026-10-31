@@ -214,6 +214,11 @@ val SpecFocusBox = 84.dp
 val SpecIconSize = 46.dp
 val SpecButtonGap = 4.dp
 val SpecGroupGap = 40.dp
+/**
+ * 焦点绿底相对按钮盒向内收的边距：按钮仍占 SpecFocusBox 那么大（点击范围、坐标表不变），
+ * 只是绿底比外框小一圈（父亲 2026-10-31：整块绿比图标大一圈，看着笨重）。
+ */
+val SpecFocusInset = 10.dp
 
 val OverlayTextStyleSoft = TextStyle(
     shadow = Shadow(color = Color.Black, offset = Offset(1.5f, 1.5f), blurRadius = 5f)
@@ -633,20 +638,27 @@ private fun PanelMenuButton(
     onClick: () -> Unit,
     onPositioned: ((Int, Int) -> Unit)? = null,
 ) {
-    // 形态照 VR 控制条：按钮盒 84dp 圆角，焦点/菜单开着时铺绿 24%，图标白色；
-    // 焦点不放大（VR 那侧也是纯换底色，放大在电视上会让相邻按钮抖动）。
+    // 形态照 VR 控制条：按钮盒 84dp 圆角，焦点/菜单开着时铺绿，图标白色；焦点不放大。
+    // 绿底由内部 Box 画并内缩一圈（父亲 2026-10-31：整块绿比图标大一圈，看着笨重），
+    // 按钮本体尺寸不动，点击范围与坐标表登记的位置都不受影响。
+    var focused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) SpecSelected else Color.Transparent,
+            containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecHover,
+            focusedContainerColor = Color.Transparent,
             focusedContentColor = Color.White
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         modifier = Modifier
             .size(SpecFocusBox)
+            .onFocusChanged {
+                focused = it.isFocused
+                // 遥控器没有光标，确认键的语义只能靠这个标志判断（见 InputBridge.playerFocusInPanel）
+                com.xxxx.emby_tv.util.InputBridge.playerFocusInPanel = it.isFocused
+            }
             .focusRequester(focusRequester)
             .hoverToFocus(focusRequester)
             .then(
@@ -657,7 +669,18 @@ private fun PanelMenuButton(
                 } else Modifier
             )
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val background = when {
+            focused -> SpecHover
+            selected -> SpecSelected
+            else -> Color.Transparent
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(SpecFocusInset)
+                .background(background, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = item.label,
@@ -676,18 +699,23 @@ private fun PanelIcon(
     onClick: () -> Unit,
     downFocus: FocusRequester? = null,
 ) {
-    // 与菜单按钮同构：同一尺寸盒、同一种焦点底色（绿 24%），焦点不放大
+    // 与菜单按钮同构：同一尺寸盒、同一种焦点底色，焦点不放大；绿底同样内缩一圈
+    var focused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
-            focusedContainerColor = SpecHover,
+            focusedContainerColor = Color.Transparent,
             focusedContentColor = Color.White
         ),
         modifier = Modifier
             .size(SpecFocusBox)
+            .onFocusChanged {
+                focused = it.isFocused
+                com.xxxx.emby_tv.util.InputBridge.playerFocusInPanel = it.isFocused
+            }
             .then(
                 if (focusRequester != null) {
                     Modifier.focusRequester(focusRequester).hoverToFocus(focusRequester)
@@ -702,7 +730,13 @@ private fun PanelIcon(
             ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(SpecFocusInset)
+                .background(if (focused) SpecHover else Color.Transparent, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = description,
