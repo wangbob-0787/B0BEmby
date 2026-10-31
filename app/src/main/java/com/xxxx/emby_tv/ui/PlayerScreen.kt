@@ -278,6 +278,11 @@ fun PlayerScreen(
 
     // 用于跟踪是否已经尝试过转码回退
     var hasTriedTranscodeFallback by remember { mutableStateOf(false) }
+    /*
+     * 换路重试计数。服务端在起转码的瞬间会偶发 500（2026-10-31 实测：报错那一刻服务端刚
+     * 起 ffmpeg，三秒后同样请求就是 200），只允许换一次太容易白白失败一次给父亲看。
+     */
+    var fallbackAttempts by remember { mutableIntStateOf(0) }
     var currentTracks by remember { mutableStateOf<Tracks?>(null) }
 
     val preferencesManager = remember { PreferencesManager(context) }
@@ -821,8 +826,8 @@ fun PlayerScreen(
 
 
     // 实现转码回退逻辑
-    fun fallbackToServerTranscode() {
-        if (hasTriedTranscodeFallback) {
+    fun fallbackToServerTranscode(force: Boolean = false) {
+        if (hasTriedTranscodeFallback && !force) {
             return
         }
 
@@ -924,6 +929,7 @@ fun PlayerScreen(
         selectedAudioIndex = audioIndex
         selectedSubtitleIndex = subIndex
         hasTriedTranscodeFallback = false
+        fallbackAttempts = 0
         if (needChange && !(media.mediaSources?.firstOrNull()?.supportsDirectPlay
                 ?: false)
         ) playbackTrigger++ // 只有手动修改时，才递增触发器，重启协程
@@ -1571,12 +1577,16 @@ fun PlayerScreen(
                     !error.message.isNullOrBlank() -> error.message.orEmpty()
                     else -> error.errorCodeName
                 }
-                hudText = if (hasTriedTranscodeFallback) {
-                    "起播失败：" + reason.take(60)
+                val canRetry = fallbackAttempts < 2
+                hudText = if (canRetry) {
+                    "这一段没取到，正在换一种播放方式重试（" + reason.take(40) + "）"
                 } else {
-                    "这一路播不了，正在换一路重试（" + reason.take(40) + "）"
+                    "起播失败：" + reason.take(60)
                 }
-                fallbackToServerTranscode()
+                if (canRetry) {
+                    fallbackAttempts++
+                    fallbackToServerTranscode(force = true)
+                }
             }
         }
 
