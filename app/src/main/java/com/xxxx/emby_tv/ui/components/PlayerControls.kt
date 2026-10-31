@@ -1171,7 +1171,8 @@ fun EpisodeListSheet(
                 selected = ep.id == currentId,
                 onClick = { if (ep.id != currentId) onPlay(ep) },
                 firstFocus = if (i == if (currentIndex >= 0) currentIndex else 0) firstFocus else null,
-                externalBringIntoView = if (i == currentIndex) currentRequester else null
+                externalBringIntoView = if (i == currentIndex) currentRequester else null,
+                isLast = i == episodes.lastIndex
             )
         }
     }
