@@ -1660,6 +1660,8 @@ fun PlayerScreen(
      * 系统那条路不一定把它收掉，所以最后一层必须由这里显式 onExit()。
      */
     androidx.activity.compose.BackHandler(enabled = true) {
+        com.xxxx.emby_tv.util.DiagLog.w(context, "backKey", "BackHandler 收到返回 面板=" + showPanel +
+            " 二级=" + activeItem + " 更多=" + inMoreMenu)
         // 防连按;若上面的 onKeyEvent 刚处理过这次返回就跳过(避免一次退两层)
         val now = System.currentTimeMillis()
         if (now - lastBackAt < 300) return@BackHandler
@@ -2287,8 +2289,13 @@ fun PlayerScreen(
                             val menuWidthPx = (density.density * menuWidthDp).toInt()
                             val minPx = (density.density * 24f).toInt()
                             val maxPx = (screenWidthPx - menuWidthPx - minPx).coerceAtLeast(minPx)
+                            /*
+                             * 菜单右边缘贴住触发按钮的右边缘，不按中心居中：最右侧那颗（画质）
+                             * 居中会被安全区夹到屏幕边上，看着像跑出去了；右对齐时菜单始终
+                             * 长在自己按钮上方，左侧按钮再由下面夹取兜住。
+                             */
                             val xPx = if (pos != null) {
-                                (pos.first + pos.second / 2 - menuWidthPx / 2).coerceIn(minPx, maxPx)
+                                (pos.first + pos.second - menuWidthPx).coerceIn(minPx, maxPx)
                             } else minPx
                             Modifier
                                 .align(Alignment.BottomStart)
