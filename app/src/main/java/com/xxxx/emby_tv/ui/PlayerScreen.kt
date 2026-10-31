@@ -1652,19 +1652,23 @@ fun PlayerScreen(
         }
     }
 
-    // 返回键分层收起(兜底:焦点不在控制条里时按键走不到下面的 onKeyEvent):
-    // 二级菜单/信息页 → 一级菜单(「更多」列 → 图标行) → 收起控制条,再按一次才交给系统退出播放
-    androidx.activity.compose.BackHandler(
-        enabled = activeItem != null || inMoreMenu || showPanel
-    ) {
-        // 兜底路径同样防连按;若上面的 onKeyEvent 刚处理过这次返回就跳过(避免一次退两层)
+    /*
+     * 返回键：播放页无条件接管。
+     *
+     * 原先把 enabled 挂成「面板/菜单开着」，都关着就把返回交还系统；实测遥控器按返回
+     * 画面毫无反应、也退不出去（父亲 2026-10-31）。播放页是应用内的界面状态而不是独立页面，
+     * 系统那条路不一定把它收掉，所以最后一层必须由这里显式 onExit()。
+     */
+    androidx.activity.compose.BackHandler(enabled = true) {
+        // 防连按;若上面的 onKeyEvent 刚处理过这次返回就跳过(避免一次退两层)
         val now = System.currentTimeMillis()
         if (now - lastBackAt < 300) return@BackHandler
         lastBackAt = now
         when {
             activeItem != null -> activeItem = null
             inMoreMenu -> inMoreMenu = false
-            else -> showPanel = false
+            showPanel -> showPanel = false
+            else -> onExit()
         }
     }
 

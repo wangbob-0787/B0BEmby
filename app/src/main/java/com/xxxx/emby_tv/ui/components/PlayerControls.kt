@@ -564,6 +564,17 @@ fun PlayerControlPanel(
             // 尺寸按 VR 规格换算（按钮盒 84dp、图标 46dp、按钮缝 4dp、组间 40dp、左右 56dp），
             // 12 颗在 1280dp 宽的电视屏上正好放下。
             val shownMenu = menuItems
+            /*
+             * 按钮尺寸按屏幕宽度反算（父亲 2026-10-31：整排塞不下，右边的「更多」被挤到屏幕外；
+             * 而且按钮本身偏大）。算法：可用宽度扣掉组间距与按钮缝，平均分给每一颗按钮；
+             * 上限仍是原规格，屏更宽时不会跟着变大。
+             */
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val buttonCount = shownMenu.size + 3   // 左右两组的菜单键 + 中组三颗
+            val gapTotal = SpecButtonGap * (buttonCount - 1) + SpecGroupGap * 2
+            val perButton = ((maxWidth - gapTotal) / buttonCount).coerceIn(36.dp, 76.dp)
+            val perIcon = (perButton * 0.55f).coerceIn(20.dp, SpecIconSize)
+            val perInset = (perButton * 0.12f).coerceIn(4.dp, SpecFocusInset)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -578,7 +589,10 @@ fun PlayerControlPanel(
                             lastIconIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
                             onMenuSelect(item)
                         },
-                        onPositioned = { x, w -> btnPositions[item] = x to w }
+                        onPositioned = { x, w -> btnPositions[item] = x to w },
+                        boxSize = perButton,
+                        iconSize = perIcon,
+                        inset = perInset
                     )
                     Spacer(modifier = Modifier.width(SpecButtonGap))
                 }
@@ -590,7 +604,10 @@ fun PlayerControlPanel(
                     icon = Icons.Default.Replay10,
                     description = "后退10秒",
                     focusRequester = playKeyFocus[0],
-                    onClick = onSeekBack
+                    onClick = onSeekBack,
+                    boxSize = perButton,
+                    iconSize = perIcon,
+                    inset = perInset
                 )
                 Spacer(modifier = Modifier.width(SpecButtonGap))
                 PanelIcon(
@@ -598,14 +615,20 @@ fun PlayerControlPanel(
                     description = "播放暂停",
                     focusRequester = playKeyFocus[1],
                     onClick = onPlayPause,
-                    downFocus = itemFocus[0]
+                    downFocus = itemFocus[0],
+                    boxSize = perButton,
+                    iconSize = perIcon,
+                    inset = perInset
                 )
                 Spacer(modifier = Modifier.width(SpecButtonGap))
                 PanelIcon(
                     icon = Icons.Default.Forward10,
                     description = "前进10秒",
                     focusRequester = playKeyFocus[2],
-                    onClick = onSeekForward
+                    onClick = onSeekForward,
+                    boxSize = perButton,
+                    iconSize = perIcon,
+                    inset = perInset
                 )
 
                 Spacer(modifier = Modifier.width(SpecGroupGap))
@@ -620,10 +643,14 @@ fun PlayerControlPanel(
                             lastIconIndex = PLAYER_MAIN_MENU.indexOf(item).coerceAtLeast(0)
                             onMenuSelect(item)
                         },
-                        onPositioned = { x, w -> btnPositions[item] = x to w }
+                        onPositioned = { x, w -> btnPositions[item] = x to w },
+                        boxSize = perButton,
+                        iconSize = perIcon,
+                        inset = perInset
                     )
                     Spacer(modifier = Modifier.width(SpecButtonGap))
                 }
+            }
             }
         }
 
@@ -637,6 +664,9 @@ private fun PanelMenuButton(
     focusRequester: FocusRequester,
     onClick: () -> Unit,
     onPositioned: ((Int, Int) -> Unit)? = null,
+    boxSize: Dp = SpecFocusBox,
+    iconSize: Dp = SpecIconSize,
+    inset: Dp = SpecFocusInset,
 ) {
     // 形态照 VR 控制条：按钮盒 84dp 圆角，焦点/菜单开着时铺绿，图标白色；焦点不放大。
     // 绿底由内部 Box 画并内缩一圈（父亲 2026-10-31：整块绿比图标大一圈，看着笨重），
@@ -653,7 +683,7 @@ private fun PanelMenuButton(
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         modifier = Modifier
-            .size(SpecFocusBox)
+            .size(boxSize)
             .onFocusChanged {
                 focused = it.isFocused
                 // 遥控器没有光标，确认键的语义只能靠这个标志判断（见 InputBridge.playerFocusInPanel）
@@ -677,7 +707,7 @@ private fun PanelMenuButton(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(SpecFocusInset)
+                .padding(inset)
                 .background(background, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
@@ -685,7 +715,7 @@ private fun PanelMenuButton(
                 imageVector = item.icon,
                 contentDescription = item.label,
                 tint = Color.White,
-                modifier = Modifier.size(SpecIconSize)
+                modifier = Modifier.size(iconSize)
             )
         }
     }
@@ -698,6 +728,9 @@ private fun PanelIcon(
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
     downFocus: FocusRequester? = null,
+    boxSize: Dp = SpecFocusBox,
+    iconSize: Dp = SpecIconSize,
+    inset: Dp = SpecFocusInset,
 ) {
     // 与菜单按钮同构：同一尺寸盒、同一种焦点底色，焦点不放大；绿底同样内缩一圈
     var focused by remember { mutableStateOf(false) }
@@ -711,7 +744,7 @@ private fun PanelIcon(
             focusedContentColor = Color.White
         ),
         modifier = Modifier
-            .size(SpecFocusBox)
+            .size(boxSize)
             .onFocusChanged {
                 focused = it.isFocused
                 com.xxxx.emby_tv.util.InputBridge.playerFocusInPanel = it.isFocused
@@ -733,7 +766,7 @@ private fun PanelIcon(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(SpecFocusInset)
+                .padding(inset)
                 .background(if (focused) SpecHover else Color.Transparent, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
@@ -741,7 +774,7 @@ private fun PanelIcon(
                 imageVector = icon,
                 contentDescription = description,
                 tint = Color.White,
-                modifier = Modifier.size(SpecIconSize)
+                modifier = Modifier.size(iconSize)
             )
         }
     }
