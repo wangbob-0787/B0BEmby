@@ -1444,8 +1444,7 @@ fun DanmakuSheet(
             label = "弹幕推后 10 秒",
             selected = false,
             onClick = { onOffsetChange(offsetMs - 10_000L) },
-            showCheckbox = false,
-            isLast = true
+            showCheckbox = false
         )
     }
 }
