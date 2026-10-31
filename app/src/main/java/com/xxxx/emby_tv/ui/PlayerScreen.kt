@@ -2287,11 +2287,16 @@ fun PlayerScreen(
                         // 菜单左边缘 = 按钮中心 − 菜单宽/2（左右都夹在安全边距内）。
                         modifier = run {
                             /*
-                             * 锚点必须是真正被点的那个按钮。原先画质/播放模式/缓冲指向「更多」，
-                             * 而「更多」是右组最靠边的一颗，于是画质菜单永远贴着屏幕右边出来
-                             * （父亲 2026-10-31 实拍）。这三项现在都在一级控制条上，各有自己的按钮。
+                             * 锚点 = 真正被点的那个按钮；没有独立按钮的项跟着「更多」走。
+                             *
+                             * 画质在一级控制条上有自己的按钮，锚到「更多」会把它推到屏幕最右边；
+                             * 播放模式/缓冲只存在于「更多」列里，锚到自己会取不到位置而落到最左边
+                             * （父亲 2026-10-31 实拍两张图）。
                              */
-                            val anchor = item
+                            val anchor = when (item) {
+                                PlayerMenuItem.PLAY_MODE, PlayerMenuItem.BUFFER -> PlayerMenuItem.MORE
+                                else -> item
+                            }
                             val pos = btnPositions[anchor]
                             val menuWidthDp = if (item == PlayerMenuItem.BUFFER) 270f else 210f
                             // 用 density 系数直接换算（不用 Dp 的扩展函数，避免依赖不确定性）
