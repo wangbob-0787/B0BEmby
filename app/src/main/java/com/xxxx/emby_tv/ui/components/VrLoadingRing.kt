@@ -37,14 +37,14 @@ fun VrLoadingRing(
      * 原来用自绘的逐帧循环 + withFrameNanos 推角度，实机上表现为"环画出来了但不动"：
      * 播放页里 Canvas 的重绘被播放器那层渲染压着，自起帧循环拿不到稳定的帧回调。
      * rememberInfiniteTransition 走 Compose 的动画时钟，动画值变化必然触发重绘。
-     * 149°/秒 → 一圈约 2.42 秒。
+     * 一圈 1.6 秒（父亲 2026-10-31 要求比 VR 原速再快 1.5 倍）。
      */
     val transition = rememberInfiniteTransition(label = "vrLoading")
     val angle by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2416, easing = LinearEasing),
+            animation = tween(durationMillis = 1611, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "angle"
