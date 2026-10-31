@@ -12,7 +12,7 @@ import java.util.Locale
  * 落点选择（2026-10-31 实测定下的口径）：
  *   · 投影（Vidda）不给 logcat（`adb logcat` 返回 0 行）；
  *   · 装机一律用 release 包，而 release 不是 debuggable，`adb shell run-as` 直接被拒；
- *   · 所以日志必须写在 **/sdcard/Android/media/<包名>/** —— 应用自己有写权限，
+ *   · 所以日志必须写在 /sdcard/Android/media/<包名>/ 这个外部媒体目录 —— 应用自己有写权限，
  *     adb shell 不用 root 也能读，release 包同样适用。
  * 内置 filesDir 只在没有外置媒体目录时兜底（debug 包可以用 run-as 读）。
  * 排查结束后整体删除本文件与调用点。
