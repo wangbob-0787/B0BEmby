@@ -647,6 +647,21 @@ class MainActivity : ComponentActivity() {
      * （A/扳机 = OK、B = 返回、START = 菜单）。
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        /*
+         * 播放页的返回键在这里直接交给系统的返回分发器。
+         *
+         * 实测（2026-10-31，build-214）：返回键能到达 dispatchKeyEvent，但页面里的返回处理
+         * 一次都没被调用 —— 事件在往下传给视图树时就被吃掉了，到不了 Compose 那一层。
+         * onBackPressedDispatcher 是系统统一的返回出口，页面里注册的返回处理都挂在它上面，
+         * 直接派发可以绕开视图树的拦截。
+         */
+        if (event.keyCode == KeyEvent.KEYCODE_BACK && InputBridge.playerScreenActive) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                DiagLog.w(this, "backKey", "播放页返回：直接走系统返回分发器")
+                onBackPressedDispatcher.onBackPressed()
+            }
+            return true
+        }
         if (cursorFresh() && InputBridge.isConfirmKey(event.keyCode)) {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 pressPending = true

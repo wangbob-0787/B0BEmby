@@ -2278,24 +2278,21 @@ fun PlayerScreen(
                         // 按钮的屏幕坐标由 PlayerControlPanel 通过 onButtonPositions 上报，
                         // 菜单左边缘 = 按钮中心 − 菜单宽/2（左右都夹在安全边距内）。
                         modifier = run {
-                            val anchor = when (item) {
-                                PlayerMenuItem.QUALITY, PlayerMenuItem.PLAY_MODE,
-                                PlayerMenuItem.BUFFER -> PlayerMenuItem.MORE
-                                else -> item
-                            }
+                            /*
+                             * 锚点必须是真正被点的那个按钮。原先画质/播放模式/缓冲指向「更多」，
+                             * 而「更多」是右组最靠边的一颗，于是画质菜单永远贴着屏幕右边出来
+                             * （父亲 2026-10-31 实拍）。这三项现在都在一级控制条上，各有自己的按钮。
+                             */
+                            val anchor = item
                             val pos = btnPositions[anchor]
                             val menuWidthDp = if (item == PlayerMenuItem.BUFFER) 270f else 210f
                             // 用 density 系数直接换算（不用 Dp 的扩展函数，避免依赖不确定性）
                             val menuWidthPx = (density.density * menuWidthDp).toInt()
                             val minPx = (density.density * 24f).toInt()
                             val maxPx = (screenWidthPx - menuWidthPx - minPx).coerceAtLeast(minPx)
-                            /*
-                             * 菜单右边缘贴住触发按钮的右边缘，不按中心居中：最右侧那颗（画质）
-                             * 居中会被安全区夹到屏幕边上，看着像跑出去了；右对齐时菜单始终
-                             * 长在自己按钮上方，左侧按钮再由下面夹取兜住。
-                             */
+                            // 菜单左边缘 = 按钮中心 − 菜单宽/2，左右夹在安全边距内
                             val xPx = if (pos != null) {
-                                (pos.first + pos.second - menuWidthPx).coerceIn(minPx, maxPx)
+                                (pos.first + pos.second / 2 - menuWidthPx / 2).coerceIn(minPx, maxPx)
                             } else minPx
                             Modifier
                                 .align(Alignment.BottomStart)
