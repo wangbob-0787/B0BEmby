@@ -878,6 +878,8 @@ fun SheetRow(
     // 操作型条目(如"字幕提前/延后")不要勾选框:它们不是可选项,方框看着像"取消按钮"
     showCheckbox: Boolean = true,
     externalBringIntoView: BringIntoViewRequester? = null,
+    // 本菜单的最后一行：这一行按「下」不再移动焦点（下方就是控制条按钮）
+    isLast: Boolean = false,
     // 副行（字幕菜单用）：主行 Emby 的 DisplayTitle，副行母语名 Title。
     // 只有一行时中文轨认不出来，看着像全是英文字幕（VR 侧同款，父亲 2026-10-28 定）
     sub: String? = null,
@@ -916,6 +918,12 @@ fun SheetRow(
                 if (it.isFocused) scope.launch { bringIntoView.bringIntoView() }
             }
             .focusRequester(anchor)
+            .then(
+                if (isLast) Modifier.onPreviewKeyEvent { e ->
+                    // 消费掉这一下：焦点不移动，也就不会掉到下面的控制条按钮上
+                    e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown
+                } else Modifier
+            )
             .hoverToFocus(anchor),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
     ) {
@@ -1294,7 +1302,8 @@ fun BufferPresetSheet(
                 selected = currentMinBufferMs == minMs,
                 onClick = { onApplyPreset(minMs, maxMs) },
                 firstFocus = if (i == 0) firstFocus else null,
-                trailing = "起播 " + (minMs / 1000) + " 秒 · 上限 " + (maxMs / 1000) + " 秒"
+                trailing = "起播 " + (minMs / 1000) + " 秒 · 上限 " + (maxMs / 1000) + " 秒",
+                isLast = i == presets.lastIndex
             )
         }
     }
@@ -1340,7 +1349,8 @@ fun SubtitleSheet(
                 // 点已勾上的那条 = 取消（关字幕），不再单列「关」
                 onClick = { onSelect(if (selectedIndex == index) -1 else index) },
                 firstFocus = if (i == 0) firstFocus else null,
-                sub = track.title?.takeIf { it.isNotBlank() && it != label }
+                sub = track.title?.takeIf { it.isNotBlank() && it != label },
+                isLast = i == sorted.lastIndex
             )
         }
     }
@@ -1379,7 +1389,8 @@ fun AudioSheet(
                 selected = selectedIndex == index,
                 onClick = { onSelect(index) },
                 firstFocus = if (i == 0) firstFocus else null,
-                sub = extra.takeIf { it.isNotBlank() && it != label }
+                sub = extra.takeIf { it.isNotBlank() && it != label },
+                isLast = i == tracks.lastIndex
             )
         }
     }
@@ -1444,7 +1455,8 @@ fun DanmakuSheet(
             label = "弹幕推后 10 秒",
             selected = false,
             onClick = { onOffsetChange(offsetMs - 10_000L) },
-            showCheckbox = false
+            showCheckbox = false,
+            isLast = true
         )
     }
 }
@@ -1463,7 +1475,8 @@ fun SpeedSheet(
                 label = if (value == 1.0f) "1.0x（正常）" else "" + value + "x",
                 selected = kotlin.math.abs(current - value) < 0.01f,
                 onClick = { onChange(value) },
-                firstFocus = if (i == 0) firstFocus else null
+                firstFocus = if (i == 0) firstFocus else null,
+                isLast = i == options.lastIndex
             )
         }
     }
@@ -1494,7 +1507,8 @@ fun QualitySheet(
                 selected = current == value,
                 onClick = { onChange(value) },
                 firstFocus = if (i == 0) firstFocus else null,
-                trailing = note
+                trailing = note,
+                isLast = i == options.lastIndex
             )
         }
     }
@@ -1514,7 +1528,8 @@ fun PlayModeSheet(
                 label = label,
                 selected = current == value,
                 onClick = { onChange(value) },
-                firstFocus = if (i == 0) firstFocus else null
+                firstFocus = if (i == 0) firstFocus else null,
+                isLast = i == options.lastIndex
             )
         }
     }

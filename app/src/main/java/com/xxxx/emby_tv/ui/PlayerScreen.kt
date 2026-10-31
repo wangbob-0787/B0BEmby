@@ -2243,7 +2243,8 @@ fun PlayerScreen(
                                     activeItem = if (item == PlayerMenuItem.BACK) null else item
                                 },
                                 firstFocus = if (index == 0) sheetFirstFocus else null,
-                                showArrow = item != PlayerMenuItem.BACK
+                                showArrow = item != PlayerMenuItem.BACK,
+                                isLast = index == PLAYER_MORE_MENU.lastIndex
                             )
                         }
                     }
