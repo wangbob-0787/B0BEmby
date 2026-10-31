@@ -2295,7 +2295,8 @@ fun PlayerScreen(
                                 .offset { IntOffset(xPx, 0) }
                                 .padding(bottom = 132.dp)
                         },
-                        title = if (item == PlayerMenuItem.SUBTITLE) "" else item.label,
+                        // 三个二级菜单标题统一：字幕那颗原先没写标题，看着像半截弹窗
+                        title = item.label,
                         contentWidth = when (item) {
                             PlayerMenuItem.BUFFER -> 270.dp
                             else -> 210.dp

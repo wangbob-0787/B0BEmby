@@ -1029,8 +1029,19 @@ fun EmbyTvApp() {
                             // 选片 = 回打开这部片的那张海报墙（退一层，通常就是库页/首页）
                             onPickPoster = { navController.popBackStack() },
                             // 退出 = 直接回首页，不是退出应用（父亲 2026-10-28 口径）
+                            /*
+                             * 回首页必须检查返回值：popBackStack("home") 在栈里没有 home 时
+                             * 直接返回 false 且什么都不做 —— 表现就是「按返回毫无反应、退不出去」
+                             * （父亲 2026-10-31 遥控器实测）。这里按三级兜底：回首页 → 退一层 → 重建首页。
+                             */
                             onExit = {
-                                navController.popBackStack("home", inclusive = false)
+                                if (!navController.popBackStack("home", inclusive = false)) {
+                                    if (!navController.popBackStack()) {
+                                        runCatching {
+                                            navController.navigate("home") { popUpTo(0) }
+                                        }
+                                    }
+                                }
                                 Unit
                             }
                         )
