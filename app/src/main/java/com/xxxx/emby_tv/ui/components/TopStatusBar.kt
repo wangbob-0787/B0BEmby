@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
@@ -154,9 +155,9 @@ fun TopStatusBar(
                         // 父亲 2026-10-02：聚焦 = 绿底白图标
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = Color(0x24FFFFFF),
+                            focusedContainerColor = FocusGreenContainer,
                             contentColor = Color.White,
-                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                            focusedContentColor = Color.White
                         )
                     ) {
                         Box(
@@ -187,9 +188,9 @@ fun TopStatusBar(
                         shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.CircleShape),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.Transparent,
-                            focusedContainerColor = Color(0x24FFFFFF),
+                            focusedContainerColor = FocusGreenContainer,
                             contentColor = Color.White,
-                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                            focusedContentColor = Color.White
                         )
                     ) {
                         Box(

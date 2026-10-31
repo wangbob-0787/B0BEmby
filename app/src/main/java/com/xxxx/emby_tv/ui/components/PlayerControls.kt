@@ -95,7 +95,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.foundation.gestures.scrollBy
 
 /** 播放控制面板上的一级菜单项（名称与顺序照 VR 版，父亲 2026-10-28 定） */
@@ -195,8 +194,11 @@ val SpecAccent = Color(0xFF2FD57C)
 /** 选中/活动底色：绿 24%（VR 同值 0x3D2FD57C） */
 val SpecSelected = Color(0x3D2FD57C)
 
-/** 光点扫到（得焦点）的底色，照 VR：白色 14%；与「已选中」的绿块区分开 */
-val SpecHover = Color(0x24FFFFFF)
+/**
+ * 得焦点（光点扫到）的底色：半透明绿（父亲 2026-10-31：焦点不用透明乳白）。
+ * 与「已选中」的 SpecSelected（绿 24%）靠浓度区分，焦点更亮一档。
+ */
+val SpecHover = Color(0x662FD57C)
 /** 焦点容器边长：官方实测 56px @1080p = 28dp；父亲要求图标更醒目，容器放大到 40dp */
 val SpecFocusBox = 84.dp
 /**

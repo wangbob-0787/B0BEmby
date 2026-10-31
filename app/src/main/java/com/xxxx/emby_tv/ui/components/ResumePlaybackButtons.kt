@@ -1,5 +1,7 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenBorder
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -92,13 +94,13 @@ fun ResumePlaybackButtons(
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                 border = ClickableSurfaceDefaults.border(
                     border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))),
-                    focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+                    focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
                 ),
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color.White.copy(alpha = 0.1f),
-                    focusedContainerColor = Color(0x24FFFFFF),
+                    focusedContainerColor = FocusGreenContainer,
                     contentColor = Color.White,
-                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                    focusedContentColor = Color.White
                 )
             ) {
                 Box(
@@ -126,13 +128,13 @@ fun ResumePlaybackButtons(
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                 border = ClickableSurfaceDefaults.border(
                     border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))),
-                    focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+                    focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
                 ),
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color.White.copy(alpha = 0.1f),
-                    focusedContainerColor = Color(0x24FFFFFF),
+                    focusedContainerColor = FocusGreenContainer,
                     contentColor = Color.White,
-                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                    focusedContentColor = Color.White
                 )
             ) {
                 Box(

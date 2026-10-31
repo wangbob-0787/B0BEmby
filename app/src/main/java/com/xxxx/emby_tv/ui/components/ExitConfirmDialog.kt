@@ -1,5 +1,7 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenBorder
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -97,13 +99,13 @@ private fun DialogButton(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+            focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
         ),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color(0xFF333333),
             contentColor = Color.White,
-            focusedContainerColor = Color(0x24FFFFFF),
-            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+            focusedContainerColor = FocusGreenContainer,
+            focusedContentColor = Color.White
         ),
         modifier = Modifier.then(
             if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier

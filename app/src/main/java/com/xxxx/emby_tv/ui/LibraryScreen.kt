@@ -1,5 +1,7 @@
 package com.xxxx.emby_tv.ui
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenBorder
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import com.xxxx.emby_tv.ui.components.BuildItem
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -167,11 +169,11 @@ fun LibraryScreen(
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color.White.copy(alpha = 0.15f),
                     contentColor = Color.White,
-                    focusedContainerColor = Color(0x24FFFFFF),
-                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                    focusedContainerColor = FocusGreenContainer,
+                    focusedContentColor = Color.White
                 ),
                 border = ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+                    focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
                 ),
                 modifier = Modifier.padding(end = 12.dp)
             ) {
@@ -212,14 +214,14 @@ fun LibraryScreen(
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = if (isSelected) Color(0x3D2FD57C) else Color.Transparent,
                         contentColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
-                        focusedContainerColor = Color(0x24FFFFFF),
+                        focusedContainerColor = FocusGreenContainer,
                         focusedContentColor = Color.White
                     ),
                     border = ClickableSurfaceDefaults.border(
                         border = if (!isSelected) Border(
                             BorderStroke(1.dp, Color.White.copy(alpha = 0.45f))
                         ) else Border(BorderStroke(0.dp, Color.Transparent)),
-                        focusedBorder = Border(BorderStroke(2.dp, Color(0xFF2FD57C)))
+                        focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
                     )
                 ) {
                     Text(
@@ -416,8 +418,8 @@ private fun SortDialog(
                                         Color.Transparent
                                     },
                                     contentColor = Color.White,
-                                    focusedContainerColor = Color(0x24FFFFFF),
-                                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                                    focusedContainerColor = FocusGreenContainer,
+                                    focusedContentColor = Color.White
                                 )
                             ) {
                                 Row(

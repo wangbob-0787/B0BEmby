@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import com.xxxx.emby_tv.util.hoverToFocus
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -209,9 +209,9 @@ fun SearchScreen(
                                 containerColor = if (isAllSelected) MaterialTheme.colorScheme.primary.copy(
                                     alpha = 0.2f
                                 ) else Color.White.copy(alpha = 0.05f),
-                                focusedContainerColor = Color(0x24FFFFFF),
+                                focusedContainerColor = FocusGreenContainer,
                                 contentColor = Color.White,
-                                focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                                focusedContentColor = Color.White
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 border = if (isAllSelected) Border(
@@ -284,7 +284,7 @@ fun SearchScreen(
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = if (isSelected) Color(0x3D2FD57C) else Color.White.copy(alpha = 0.05f),
-                            focusedContainerColor = Color(0x24FFFFFF),
+                            focusedContainerColor = FocusGreenContainer,
                             contentColor = Color.White,
                             focusedContentColor = Color.White
                         ),
@@ -393,7 +393,7 @@ fun SearchScreen(
                     ),
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = Color.White.copy(alpha = 0.1f),
-                        focusedContainerColor = Color(0x24FFFFFF),
+                        focusedContainerColor = FocusGreenContainer,
                         contentColor = Color.White
                     )
                 ) {

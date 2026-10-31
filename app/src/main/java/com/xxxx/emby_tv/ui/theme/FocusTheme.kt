@@ -3,7 +3,6 @@ package com.xxxx.emby_tv.ui.theme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -12,6 +11,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+/*
+ * 焦点配色口径（父亲 2026-10-31 定：得焦点不用透明乳白，用半透明绿）。
+ *
+ * 绿色沿用 VR 侧 VrButtonColors 的 #2FD57C（VR 里这一档是"选中"色）；
+ * 电视十尺观看下 24% 太淡，这里抬到 40%，焦点一眼可辨又不遮住海报图。
+ * 边框用同一绿的实心底色，方便在浅色海报上也看出焦点位置。
+ */
+val FocusGreen = Color(0xFF2FD57C)
+val FocusGreenContainer = Color(0x662FD57C)
+val FocusGreenBorder = Color(0xFF2FD57C)
 
 /**
  * 全局聚焦主题样式定义
@@ -24,11 +34,9 @@ object FocusTheme {
      */
     @Composable
     fun primaryFocusBackground(): Brush {
+        // 主题里 primary 是纯白，直接用会变成"一聚焦变白底"，焦点色只认绿色常量
         return Brush.linearGradient(
-            colors = listOf(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-            )
+            colors = listOf(FocusGreenContainer, FocusGreen.copy(alpha = 0.30f))
         )
     }
     
@@ -38,10 +46,7 @@ object FocusTheme {
     @Composable
     fun secondaryFocusBackground(): Brush {
         return Brush.linearGradient(
-            colors = listOf(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-            )
+            colors = listOf(FocusGreen.copy(alpha = 0.28f), FocusGreen.copy(alpha = 0.14f))
         )
     }
     
@@ -50,7 +55,7 @@ object FocusTheme {
      */
     @Composable
     fun focusBorderColor(): Color {
-        return MaterialTheme.colorScheme.primary
+        return FocusGreenBorder
     }
     
     /**

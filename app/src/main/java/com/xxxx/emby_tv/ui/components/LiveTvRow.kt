@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import com.xxxx.emby_tv.util.pixelScrollRow
 import androidx.tv.material3.MaterialTheme
 import androidx.compose.foundation.background
@@ -134,7 +135,7 @@ private fun ChannelCard(
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
-            focusedContainerColor = Color(0x24FFFFFF),
+            focusedContainerColor = FocusGreenContainer,
             contentColor = Color.White
         ),
         modifier = Modifier

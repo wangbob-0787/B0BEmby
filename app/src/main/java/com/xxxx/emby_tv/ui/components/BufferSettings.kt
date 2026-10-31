@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -66,7 +67,7 @@ fun BufferSettingsTab(
                 onClick = onReplay,
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    focusedContainerColor = Color(0x24FFFFFF),
+                    focusedContainerColor = FocusGreenContainer,
                     focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -182,7 +183,7 @@ fun BufferSettingsTab(
                 onClick = onReplay,
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    focusedContainerColor = Color(0x24FFFFFF),
+                    focusedContainerColor = FocusGreenContainer,
                     focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSecondary
@@ -214,7 +215,7 @@ fun BufferSettingsTab(
                 onClick = onResetDefault,
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    focusedContainerColor = Color(0x24FFFFFF),
+                    focusedContainerColor = FocusGreenContainer,
                     focusedContentColor = TvMaterialTheme.colorScheme.onTertiary,
                     containerColor = Color.Transparent,
                     contentColor = TvMaterialTheme.colorScheme.onSecondary
@@ -305,11 +306,11 @@ private fun BufferSettingRow(
                         .scale(focusedScale = 1.06f),
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                        focusedContainerColor = Color(0x24FFFFFF),
+                        focusedContainerColor = FocusGreenContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         pressedContentColor = MaterialTheme.colorScheme.onSecondary,
                         pressedContainerColor = MaterialTheme.colorScheme.secondary,
-                        focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                        focusedContentColor = Color.White
                     ),
                     modifier = Modifier
                         .onKeyEvent { keyEvent ->

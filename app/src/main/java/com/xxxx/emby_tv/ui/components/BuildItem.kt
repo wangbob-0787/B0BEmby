@@ -1,5 +1,6 @@
 package com.xxxx.emby_tv.ui.components
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -123,7 +124,7 @@ fun BuildItem(
             // 海报完全盖住它，却要多付一次整卡面积的混合（同屏十来张 = 一屏多余混合）。
             // 焦点态保留高亮（同屏只有一张卡带焦点）。
             containerColor = Color.Transparent,
-            focusedContainerColor = Color(0x24FFFFFF),
+            focusedContainerColor = FocusGreenContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
             pressedContentColor = MaterialTheme.colorScheme.secondary,
             focusedContentColor = Color.White

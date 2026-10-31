@@ -1,5 +1,7 @@
 package com.xxxx.emby_tv.ui
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenBorder
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -169,9 +171,9 @@ fun AccountScreen(
                         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = Color.White.copy(alpha = 0.08f),
-                            focusedContainerColor = Color(0x24FFFFFF),
+                            focusedContainerColor = FocusGreenContainer,
                             contentColor = Color.White,
-                            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                            focusedContentColor = Color.White
                         )
                     ) {
                         Row(
@@ -240,16 +242,16 @@ private fun AccountListItem(
                 } else {
                     Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)))
                 },
-                focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+                focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
             ),
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = if (isCurrentAccount)  MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.2f)
                 else  Color.White.copy(alpha = 0.05f)
                 ,
-                focusedContainerColor = Color(0x24FFFFFF),
+                focusedContainerColor = FocusGreenContainer,
                 contentColor = if (isCurrentAccount)  MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.tertiary,
-                focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                focusedContentColor = Color.White
             )
         ) {
             Row(
@@ -418,9 +420,9 @@ private fun DeleteConfirmDialog(
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = Color.White.copy(alpha = 0.1f),
-                                focusedContainerColor = Color(0x24FFFFFF),
+                                focusedContainerColor = FocusGreenContainer,
                                 contentColor = Color.White,
-                                focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                                focusedContentColor = Color.White
                             )
                         ) {
                             Box(

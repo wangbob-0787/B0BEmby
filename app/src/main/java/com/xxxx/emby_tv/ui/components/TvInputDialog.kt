@@ -128,7 +128,7 @@ fun TvInputDialog(
                 colors = ButtonDefaults.colors(
                     containerColor = androidx.compose.ui.graphics.Color(0xFF333333),
                     contentColor = androidx.compose.ui.graphics.Color.White,
-                    focusedContainerColor = androidx.compose.ui.graphics.Color(0x24FFFFFF),
+                    focusedContainerColor = com.xxxx.emby_tv.ui.theme.FocusGreenContainer,
                     focusedContentColor = androidx.compose.ui.graphics.Color.White
                 ),
             ) {
@@ -150,7 +150,7 @@ fun TvInputDialog(
                 colors = ButtonDefaults.colors(
                     containerColor = androidx.compose.ui.graphics.Color(0xFF333333),
                     contentColor = androidx.compose.ui.graphics.Color.White,
-                    focusedContainerColor = androidx.compose.ui.graphics.Color(0x24FFFFFF),
+                    focusedContainerColor = com.xxxx.emby_tv.ui.theme.FocusGreenContainer,
                     focusedContentColor = androidx.compose.ui.graphics.Color.White
                 ),
             ) {

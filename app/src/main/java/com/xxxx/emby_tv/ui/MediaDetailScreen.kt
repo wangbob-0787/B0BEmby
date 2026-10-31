@@ -1,5 +1,7 @@
 package com.xxxx.emby_tv.ui
 
+import com.xxxx.emby_tv.ui.theme.FocusGreenBorder
+import com.xxxx.emby_tv.ui.theme.FocusGreenContainer
 import com.xxxx.emby_tv.util.pixelScrollRow
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -428,8 +430,8 @@ fun MediaDetailScreen(
                                     // 父亲 2026-10-02：**只有聚焦才是绿底**；当前季不聚焦时也是暗灰
                                     containerColor = Color(0xFF3A3A3A),
                                     contentColor = Color.White,
-                                    focusedContainerColor = Color(0x24FFFFFF),
-                                    focusedContentColor = MaterialTheme.colorScheme.onTertiary
+                                    focusedContainerColor = FocusGreenContainer,
+                                    focusedContentColor = Color.White
                                 ),
                                 modifier = Modifier
                                     .width(DetailButtonWidth)
@@ -713,10 +715,10 @@ fun PersonCard(
             .scale(focusedScale = 1.06f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Black.copy(alpha = 0.2f),
-            focusedContainerColor = Color(0x24FFFFFF),
+            focusedContainerColor = FocusGreenContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
             pressedContentColor = MaterialTheme.colorScheme.surface,
-            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+            focusedContentColor = Color.White
         ),
         modifier = Modifier
             .width(imgWidth)
@@ -835,7 +837,7 @@ private fun SongRow(
         onClick = onPlay,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+            focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         colors = ClickableSurfaceDefaults.colors(
@@ -899,8 +901,8 @@ private fun ActionTile(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color(0xFF3A3A3A),
             contentColor = Color.White,
-            focusedContainerColor = Color(0x24FFFFFF),
-            focusedContentColor = MaterialTheme.colorScheme.onTertiary
+            focusedContainerColor = FocusGreenContainer,
+            focusedContentColor = Color.White
         ),
         modifier = Modifier
             .width(DetailButtonWidth)
@@ -966,7 +968,7 @@ private fun EpisodeRow(
         onClick = onPlay,
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(2.dp, MaterialTheme.colorScheme.secondary))
+            focusedBorder = Border(BorderStroke(2.dp, FocusGreenBorder))
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         colors = ClickableSurfaceDefaults.colors(
@@ -1220,7 +1222,7 @@ private fun DetailRowShell(
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color(0x1AFFFFFF),
                     contentColor = Color.White,
-                    focusedContainerColor = Color(0x24FFFFFF),
+                    focusedContainerColor = FocusGreenContainer,
                     focusedContentColor = Color.White
                 ),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
@@ -1257,7 +1259,7 @@ private fun DetailOptionRow(
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) Color(0x3D2FD57C) else Color(0x14FFFFFF),
             contentColor = Color.White,
-            focusedContainerColor = Color(0x24FFFFFF),
+            focusedContainerColor = FocusGreenContainer,
             focusedContentColor = Color.White
         ),
         modifier = Modifier
