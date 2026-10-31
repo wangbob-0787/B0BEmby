@@ -1,11 +1,15 @@
 package com.xxxx.emby_tv.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -28,12 +32,23 @@ fun VrLoadingRing(
     size: androidx.compose.ui.unit.Dp = 56.dp,
     color: Color = Color(0xFF2FD57C),
 ) {
-    val angle by produceState(0f) {
-        while (true) {
-            value = (System.currentTimeMillis() / 1000f * 149f) % 360f
-            withFrameNanos { }
-        }
-    }
+    /*
+     * 角度交给动画系统驱动。
+     * 原来用自绘的逐帧循环 + withFrameNanos 推角度，实机上表现为"环画出来了但不动"：
+     * 播放页里 Canvas 的重绘被播放器那层渲染压着，自起帧循环拿不到稳定的帧回调。
+     * rememberInfiniteTransition 走 Compose 的动画时钟，动画值变化必然触发重绘。
+     * 149°/秒 → 一圈约 2.42 秒。
+     */
+    val transition = rememberInfiniteTransition(label = "vrLoading")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2416, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "angle"
+    )
     Canvas(modifier = modifier.size(size)) {
         val radius = this.size.minDimension / 2f * 0.82f
         val center = Offset(this.size.width / 2f, this.size.height / 2f)
