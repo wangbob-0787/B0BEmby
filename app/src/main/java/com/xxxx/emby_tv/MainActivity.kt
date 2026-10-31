@@ -662,6 +662,17 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
+        /*
+         * 方向键逐条落日志（其余按键仍按 400ms 节流）。
+         * 父亲 2026-10-31 报详情页播放/重播左右反向：一次左右操作要把
+         * 「收到哪个方向」和「焦点落到谁」成对记下来，才分得清是键送反还是焦点搜反。
+         * 查完即删，不留长期日志。
+         */
+        if (event.action == KeyEvent.ACTION_DOWN && isDirectionKey(event.keyCode)) {
+            DiagLog.w(this, "focusDir", "收到方向键 keyCode=" + keyCodeName(event.keyCode) +
+                "(" + event.keyCode + ") 源=0x" + Integer.toHexString(event.source) +
+                " 光标新鲜=" + cursorFresh())
+        }
         val nowKey = SystemClock.uptimeMillis()
         if (nowKey - lastKeyDiagAt > 400L) {
             lastKeyDiagAt = nowKey
@@ -670,6 +681,19 @@ class MainActivity : ComponentActivity() {
         }
         val mapped = InputBridge.mapGamepadKey(event)
         return super.dispatchKeyEvent(mapped ?: event)
+    }
+
+    private fun isDirectionKey(code: Int): Boolean = code == KeyEvent.KEYCODE_DPAD_UP ||
+        code == KeyEvent.KEYCODE_DPAD_DOWN ||
+        code == KeyEvent.KEYCODE_DPAD_LEFT ||
+        code == KeyEvent.KEYCODE_DPAD_RIGHT
+
+    private fun keyCodeName(code: Int): String = when (code) {
+        KeyEvent.KEYCODE_DPAD_UP -> "UP"
+        KeyEvent.KEYCODE_DPAD_DOWN -> "DOWN"
+        KeyEvent.KEYCODE_DPAD_LEFT -> "LEFT"
+        KeyEvent.KEYCODE_DPAD_RIGHT -> "RIGHT"
+        else -> "OTHER"
     }
 
     /**
